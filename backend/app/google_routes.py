@@ -20,7 +20,7 @@ class GoogleRoutes:
         }
         if mode == 'pt':
             body['departureTime'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-        fields = 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.navigationInstruction,routes.legs.steps.transitDetails,routes.warnings'
+        fields = 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.navigationInstruction,routes.legs.steps.transitDetails,routes.legs.steps.travelMode,routes.legs.steps.staticDuration,routes.legs.steps.distanceMeters,routes.warnings'
         async with httpx.AsyncClient(timeout=3.5) as client:
             response = await client.post('https://routes.googleapis.com/directions/v2:computeRoutes', json=body,
                 headers={'X-Goog-Api-Key': key, 'X-Goog-FieldMask': fields})
@@ -33,7 +33,7 @@ class GoogleRoutes:
         geometry = decode_polyline(route['polyline']['encodedPolyline'])
         if len(geometry) < 2:
             raise ValueError('Route geometry missing')
-        instructions, agencies, transit_legs = [], {}, 0
+        instructions, agencies, transit_legs, journey = [], {}, 0, []
         for leg in route.get('legs', []):
             for step in leg.get('steps', []):
                 transit = step.get('transitDetails')
@@ -52,6 +52,14 @@ class GoogleRoutes:
                     if transit.get('stopCount'):
                         text += f" ? {transit['stopCount']} stops"
                     instructions.append(text)
+                    if journey and journey[-1]['mode'] == 'WALK':
+                        journey[-1]['instruction'] = f"Walk to {start}"
+                    localized = transit.get('localizedValues', {})
+                    journey.append({'mode': 'TRANSIT', 'label': f"{vehicle} {label}".strip(), 'instruction': f"{start} to {end}",
+                        'headsign': headsign or '', 'stop_count': transit.get('stopCount', 0),
+                        'departure': localized.get('departureTime', {}).get('time', {}).get('text', ''),
+                        'arrival': localized.get('arrivalTime', {}).get('time', {}).get('text', ''),
+                        'duration_minutes': float(step.get('staticDuration', '0s').removesuffix('s')) / 60})
                     for agency in line.get('agencies', []):
                         if agency.get('name'):
                             agencies[agency['name']] = {'name': agency['name'], 'url': agency.get('uri', '')}
@@ -59,9 +67,17 @@ class GoogleRoutes:
                     text = step.get('navigationInstruction', {}).get('instructions')
                     if text:
                         instructions.append(text)
+                    duration = float(step.get('staticDuration', '0s').removesuffix('s')) / 60
+                    if not journey or journey[-1]['mode'] != 'WALK':
+                        journey.append({'mode': 'WALK', 'label': 'Walk', 'instruction': 'Walk to destination',
+                            'duration_minutes': 0, 'distance_meters': 0, 'instructions': []})
+                    journey[-1]['duration_minutes'] += duration
+                    journey[-1]['distance_meters'] += step.get('distanceMeters', 0)
+                    if text:
+                        journey[-1]['instructions'].append(text)
         return {'available': True, 'mode': mode, 'distance_km': route.get('distanceMeters', 0) / 1000,
             'duration_minutes': float(route['duration'].removesuffix('s')) / 60,
-            'geometry': geometry, 'instructions': instructions, 'transfers': max(0, transit_legs - 1),
+            'geometry': geometry, 'instructions': instructions, 'journey_steps': journey, 'transfers': max(0, transit_legs - 1),
             'attribution': 'Google Maps', 'agencies': list(agencies.values()), 'warnings': route.get('warnings', [])}
 
 

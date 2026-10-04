@@ -5,6 +5,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-apex-club-of-bukit-timah",
+      "access_method": "provider_assessment",
+      "location_type": "no_confirmed_collection_site",
       "name": "Apex Club of Bukit Timah",
       "support_types": [
         "Food Rations",
@@ -334,6 +336,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-ascending-hope-community-services",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Ascending Hope Community Services",
       "support_types": [
         "Cooked Meals",
@@ -656,6 +660,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-blessed-grace-social-services-limited",
+      "access_method": "unverified",
+      "location_type": "no_confirmed_collection_site",
       "name": "Blessed Grace Social Services Limited",
       "support_types": [
         "Cooked Meals",
@@ -1005,6 +1011,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-club-rainbow-singapore",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Club Rainbow (Singapore)",
       "support_types": [
         "Food Rations",
@@ -1349,6 +1357,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-en-community-services-society",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "En Community Services Society",
       "support_types": [
         "Food Vouchers"
@@ -1603,6 +1613,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-filos-community-services",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Filos Community Services",
       "support_types": [
         "Food Vouchers"
@@ -1859,6 +1871,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-food-from-the-heart",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Food From The Heart",
       "support_types": [
         "Food Rations",
@@ -2177,6 +2191,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-free-food-for-all",
+      "access_method": "application_required",
+      "location_type": "no_confirmed_collection_site",
       "name": "Free Food For All",
       "support_types": [
         "Food Rations"
@@ -2465,6 +2481,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-hao-ren-hao-shi-limited",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Hao Ren Hao Shi Limited",
       "support_types": [
         "Food Rations"
@@ -2745,6 +2763,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-hopes-in-meals",
+      "access_method": "unverified",
+      "location_type": "no_confirmed_collection_site",
       "name": "Hopes in Meals",
       "support_types": [
         "Cooked Meals",
@@ -3073,6 +3093,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-krsnas-free-meals",
+      "access_method": "contact_to_confirm",
+      "location_type": "confirmed_collection_site",
       "name": "Krsna's Free Meals",
       "support_types": [
         "Cooked Meals",
@@ -3377,6 +3399,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-loving-heart-multi-service-centre",
+      "access_method": "unverified",
+      "location_type": "no_confirmed_collection_site",
       "name": "Loving Heart Multi-Service Centre",
       "support_types": [
         "Food Rations"
@@ -3662,6 +3686,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-loving-heart-multi-service-centre-jurong",
+      "access_method": "application_required",
+      "location_type": "no_confirmed_collection_site",
       "name": "Loving Heart Multi-Service Centre (Jurong)",
       "support_types": [
         "Food Rations"
@@ -3954,6 +3980,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-metropolitan-ymca-singapore",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Metropolitan YMCA Singapore",
       "support_types": [
         "Food Rations"
@@ -4218,6 +4246,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-mummy-yummy",
+      "access_method": "unverified",
+      "location_type": "no_confirmed_collection_site",
       "name": "Mummy Yummy",
       "support_types": [
         "Cooked Meals"
@@ -4506,6 +4536,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-realm-of-tranquility",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Realm of Tranquility",
       "support_types": [
         "Food Rations"
@@ -4794,6 +4826,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-singapore-association-of-the-visually-handicapped",
+      "access_method": "contact_to_confirm",
+      "location_type": "no_confirmed_collection_site",
       "name": "Singapore Association of the Visually Handicapped",
       "support_types": [
         "Food Rations"
@@ -5093,6 +5127,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-singapore-buddhist-welfare-services",
+      "access_method": "referral_required",
+      "location_type": "no_confirmed_collection_site",
       "name": "Singapore Buddhist Welfare Services",
       "support_types": [
         "Cooked Meals",
@@ -5396,6 +5432,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-singapore-red-cross-society",
+      "access_method": "referral_required",
+      "location_type": "no_confirmed_collection_site",
       "name": "Singapore Red Cross Society",
       "support_types": [
         "Food Rations",
@@ -5694,6 +5732,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-united-indian-muslim-association",
+      "access_method": "application_required",
+      "location_type": "no_confirmed_collection_site",
       "name": "United Indian Muslim Association",
       "support_types": [
         "Food Rations"
@@ -5967,6 +6007,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-willing-hearts",
+      "access_method": "referral_required",
+      "location_type": "no_confirmed_collection_site",
       "name": "Willing Hearts",
       "support_types": [
         "Cooked Meals"
@@ -6277,6 +6319,8 @@
     {
       "kind": "provider",
       "id": "foodconnect-yong-en-care-centre",
+      "access_method": "referral_required",
+      "location_type": "no_confirmed_collection_site",
       "name": "Yong-en Care Centre",
       "support_types": [
         "Food Rations"

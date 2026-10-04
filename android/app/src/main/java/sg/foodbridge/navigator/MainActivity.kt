@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
         locationRequest?.cancel()
         val signal = CancellationSignal()
         locationRequest = signal
-        model.update { it.copy(notice = "Finding your current location…") }
+        model.locationStarted()
         try {
             val manager = getSystemService(LocationManager::class.java)
             val providers = manager.getProviders(true)
@@ -157,7 +157,7 @@ class MainActivity : ComponentActivity() {
             if (s.services.any { it.demo }) TextButton(onClick = { showDemoInfo = true }) { Text("Demo data", color = Muted, fontSize = 12.sp) }
         }
     }, bottomBar = {
-        if (!s.staff && s.page != "login") NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
+        NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
             listOf("Find" to Icons.Outlined.Search, "Map" to Icons.Outlined.Map, "Saved" to Icons.Outlined.BookmarkBorder, "Preferences" to Icons.Outlined.Tune).forEach { (name, icon) ->
                 NavigationBarItem(selected = s.tab == name, onClick = { model.tab(name) }, icon = { Icon(icon, null, Modifier.size(23.dp)) }, label = { Text(if (name == "Preferences") "Settings" else name, fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = Mint, selectedIconColor = Teal, selectedTextColor = Teal))
@@ -170,8 +170,6 @@ class MainActivity : ComponentActivity() {
             s.error?.let { Banner(it, Icons.Outlined.Info, Color(0xFFFFE9E6), onClose = { model.error(null) }) }
             s.notice?.let { Banner(it, Icons.Outlined.CheckCircle, Mint, onClose = { model.update { it.copy(notice = null) } }) }
             when (s.page) {
-                "login" -> LoginScreen(s, model)
-                "staff", "staffDetail", "staffImport" -> StaffScreen(s, model)
                 "detail" -> s.selected?.let { DetailScreen(it, s, model) }
                 "nameResults" -> OrganisationResultsScreen(s, model)
                 "allSupport" -> OrganisationResultsScreen(s, model, browseAll = true)
@@ -414,6 +412,7 @@ fun SearchSummary(s: UiState): String = buildList {
             }
             Text(service.organisationName, fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
             if (service.organisationName != service.name) Text(service.name, fontSize = 13.sp, color = Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text("${accessMethodLabel(service.json.optString("access_method", "contact_to_confirm"))} · ${collectionLocationLabel(service.json.optString("location_role"))}", color = Teal, fontSize = 12.sp, lineHeight = 18.sp)
             Availability(service.availability)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(when(service.operating) { "OPEN" -> "Scheduled open now"; "CLOSED" -> "Outside scheduled hours"; else -> "Hours not confirmed" }, color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
@@ -447,7 +446,6 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
         TextButton(onClick = { model.update { it.copy(page = "privacy") } }) { Icon(Icons.Outlined.Shield, null); Text("  Privacy & data use") }
         OutlinedButton(onClick = model::clearLocal, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Clear local saves & preferences") }
     }
-    TextButton(onClick = { model.update { it.copy(page = "login") } }) { Icon(Icons.Outlined.AdminPanelSettings, null); Text("  FoodBridge staff sign-in") }
     Text("FoodBridge Navigator · 1.0.0", color = Muted, fontSize = 12.sp)
 } }
 
@@ -496,167 +494,5 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
 } }
 @Composable fun PrivacyScreen() { Page {
     Text("Privacy & data use", style = MaterialTheme.typography.headlineMedium)
-    Panel { Text("You can browse, save and report without an account."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground. It is not saved in bookmarks or app backups."); Text("OneMap receives address searches. Google Maps receives map requests and the start/destination coordinates for walking, public transport and driving routes. Route origins and results are held only for the current session."); Text("Saved IDs, dietary preferences and approved service snapshots are kept locally. Clear them from Settings."); Text("Submitted correction text and evidence links are stored for staff review. Avoid sending personal details."); Text("Staff sessions expire. Short-lived request metadata supports abuse prevention. A production operator must publish its contact and retention policy before release.", color = Muted) }
+    Panel { Text("You can browse, save and report without an account."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground. It is not saved in bookmarks or app backups."); Text("OneMap receives address searches. Google Maps receives map requests and the start/destination coordinates for walking, public transport and driving routes. Route origins and results are held only for the current session."); Text("Saved IDs, dietary preferences and approved service snapshots are kept locally. Clear them from Settings."); Text("Submitted correction text and evidence links are stored for staff review. Avoid sending personal details."); Text("Short-lived request metadata supports abuse prevention. A production operator must publish its contact and retention policy before release.", color = Muted) }
 } }
-
-@Composable fun LoginScreen(s: UiState, model: AppViewModel) {
-    var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }
-    Page { Eyebrow("For the people behind the service"); Text("Staff sign-in", style = MaterialTheme.typography.headlineLarge); Text("Manage trusted information and review corrections.", color = Muted)
-        Panel {
-            OutlinedTextField(email, { email = it }, label = { Text("Staff email") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-            OutlinedTextField(password, { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
-            Primary("Sign in", Icons.Outlined.Login, !s.loading && email.isNotBlank() && password.isNotBlank()) { model.login(email, password); password = "" }
-        }
-        Text("Staff accounts are provisioned by the operator. Public browsing does not need sign-in.", color = Muted)
-    }
-}
-
-@Composable fun StaffScreen(s: UiState, model: AppViewModel) {
-    if (s.page == "staffDetail") { StaffDetail(s, model); return }
-    if (s.page == "staffImport") { ImportScreen(s, model); return }
-    var sectionMenu by remember { mutableStateOf(false) }
-    Page {
-        Row(verticalAlignment = Alignment.CenterVertically) { Text("Staff workspace", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f)); IconButton(onClick = model::logout) { Icon(Icons.Outlined.Logout, "Sign out") } }
-        Box {
-            OutlinedButton(onClick = { sectionMenu = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                Text(s.staffSection.replaceFirstChar { it.uppercase() }, modifier = Modifier.weight(1f)); Icon(Icons.Outlined.ExpandMore, null)
-            }
-            DropdownMenu(expanded = sectionMenu, onDismissRequest = { sectionMenu = false }) {
-                listOf("reports", "changes", "services", "providers", "organisations", "sources", "quarantine", "duplicates", "audit", "operations").forEach { section ->
-                    DropdownMenuItem(text = { Text(section.replaceFirstChar { it.uppercase() }) }, onClick = { sectionMenu = false; model.staffLoad(section) })
-                }
-            }
-        }
-        if (s.staffSection == "services" || s.staffSection == "sources") OutlinedButton(onClick = { model.update { it.copy(page = "staffImport") } }, modifier = Modifier.fillMaxWidth()) { Text("Import authorised records / add organisation") }
-        Text("${s.staffItems.size} items · current stored information", color = Muted, fontSize = 12.sp)
-        if (s.staffItems.isEmpty()) Empty("You're up to date", "No items in this collection.", Icons.Outlined.CheckCircle)
-        s.staffItems.forEach { item ->
-            Surface(color = Color.White, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().clickable { model.update { it.copy(staffSelected = item, page = "staffDetail") } }) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Eyebrow(item.optString("state", item.optString("status", item.optString("action"))))
-                    Text(item.optString("service_name", item.optString("name", item.optString("category", item.optString("action", "Review item")))), fontWeight = FontWeight.SemiBold)
-                    Text(item.optString("description", item.optString("reason", item.optString("permission", item.optString("target", "")))).take(180), color = Muted, fontSize = 13.sp)
-                    Text(item.optString("id"), color = Muted, fontSize = 11.sp)
-                }
-            }
-        }
-    }
-}
-
-@Composable fun StaffDetail(s: UiState, model: AppViewModel) {
-    val item = s.staffSelected ?: return
-    if (s.staffSection == "providers") { ProviderStaffDetail(item, s, model); return }
-    val isRecord = s.staffSection in listOf("services", "organisations")
-    val current = if (isRecord) item else item.optJSONObject("current")
-    var name by remember(item) { mutableStateOf(current?.optString("name").orEmpty()) }
-    var address by remember(item) { mutableStateOf(current?.optString("address").orEmpty()) }
-    var eligibility by remember(item) { mutableStateOf(current?.optString("eligibility").orEmpty()) }
-    var phone by remember(item) { mutableStateOf(current?.optString("phone").orEmpty().takeUnless { it == "null" }.orEmpty()) }
-    var raw by remember(item) { mutableStateOf((item.optJSONObject("proposed") ?: current ?: item).toString(2)) }
-    var reason by remember(item) { mutableStateOf("") }
-    var fullRecord by remember(item) { mutableStateOf(false) }
-    var website by remember(item) { mutableStateOf(current?.optString("website").orEmpty().takeUnless { it == "null" }.orEmpty()) }
-    var source by remember(item) { mutableStateOf(current?.optString("source").orEmpty()) }
-    var postal by remember(item) { mutableStateOf(current?.optString("postal").orEmpty()) }
-    var latitude by remember(item) { mutableStateOf(current?.optString("latitude").orEmpty()) }
-    var longitude by remember(item) { mutableStateOf(current?.optString("longitude").orEmpty()) }
-    var serviceType by remember(item) { mutableStateOf(current?.optString("support_type").orEmpty()) }
-    var active by remember(item) { mutableStateOf(current?.optBoolean("active", true) ?: true) }
-    var observationStatus by remember(item) { mutableStateOf("UNKNOWN") }
-    var observationSource by remember(item) { mutableStateOf("") }
-    var confidence by remember(item) { mutableStateOf("LOW") }
-    var validity by remember(item) { mutableStateOf(6) }
-    fun proposal(): JSONObject = JSONObject(raw).put("name", name).apply {
-        put("source", source)
-        if (current?.has("support_type") == true) {
-            put("address", address); put("eligibility", eligibility); put("phone", phone.ifBlank { null } ?: JSONObject.NULL); put("website", website.ifBlank { null } ?: JSONObject.NULL)
-            put("postal", postal); put("latitude", latitude.toDouble()); put("longitude", longitude.toDouble()); put("support_type", serviceType); put("active", active)
-            if (observationSource.isNotBlank()) {
-                val observations = optJSONArray("observations") ?: JSONArray()
-                observations.put(JSONObject().put("status", observationStatus).put("source", observationSource).put("confidence", confidence)
-                    .put("observed_at", Instant.now().toString()).put("valid_until", Instant.now().plusSeconds(validity * 3600L).toString()))
-                put("observations", observations)
-            }
-        }
-        put("verified_at", Instant.now().toString())
-    }
-    Page {
-        Eyebrow(s.staffSection); Text("Review information", style = MaterialTheme.typography.headlineMedium)
-        Panel {
-            Text("Submitted information", fontWeight = FontWeight.SemiBold)
-            listOf("state" to "Status", "category" to "Category", "description" to "Description", "evidence" to "Evidence", "source" to "Source", "permission" to "Permission", "reason" to "Reason", "last_success" to "Last successful update", "action" to "Action", "actor" to "Staff member", "target" to "Target", "candidate_organisation" to "Candidate organisation", "existing_organisation" to "Existing organisation").forEach { (key, label) ->
-                item.optString(key).takeUnless { it.isBlank() || it == "null" }?.let { Text("$label: $it", color = Muted) }
-            }
-            Text("Reference: ${item.optString("id")}", color = Muted, fontSize = 12.sp)
-        }
-        if (current != null && s.staffSection in listOf("reports", "changes", "services", "organisations")) {
-            Panel {
-                Text("Current → proposed", style = MaterialTheme.typography.titleLarge)
-                Text("Review source evidence before approving. Public values change only when this action succeeds.", color = Muted)
-                Text("Current name: ${current.optString("name")}", color = Muted, fontSize = 12.sp)
-                OutlinedTextField(name, { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
-                if (current.has("support_type")) {
-                    OutlinedTextField(address, { address = it }, label = { Text("Address") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(eligibility, { eligibility = it }, label = { Text("Eligibility") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(phone, { phone = it }, label = { Text("Approved phone (optional)") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(website, { website = it }, label = { Text("Approved website (optional)") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(postal, { postal = it }, label = { Text("Singapore postal code") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(latitude, { latitude = it }, label = { Text("Latitude") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                        OutlinedTextField(longitude, { longitude = it }, label = { Text("Longitude") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                    }
-                    Text("Support type", fontWeight = FontWeight.SemiBold)
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Hot meals", "Groceries", "Food bank", "Delivery").forEach { value -> Filter(value, serviceType == value) { serviceType = value } } }
-                    Toggle("Service is active", active) { active = it }
-                    Text("Add verified availability evidence", fontWeight = FontWeight.SemiBold)
-                    Text("Leave the evidence source empty to keep existing observations. Opening schedules do not prove stock.", color = Muted, fontSize = 12.sp)
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("AVAILABLE", "LIMITED", "UNAVAILABLE", "UNKNOWN").forEach { value -> Filter(value.lowercase().replaceFirstChar { it.uppercase() }, observationStatus == value) { observationStatus = value } } }
-                    OutlinedTextField(observationSource, { observationSource = it }, label = { Text("Observation source / verification method") }, modifier = Modifier.fillMaxWidth())
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("LOW", "MEDIUM", "HIGH").forEach { value -> Filter("$value confidence", confidence == value) { confidence = value } } }
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(1, 3, 6, 12, 24).forEach { value -> Filter("${value}h validity", validity == value) { validity = value } } }
-                }
-                OutlinedTextField(source, { source = it }, label = { Text("Verified record source") }, modifier = Modifier.fillMaxWidth())
-                TextButton(onClick = { fullRecord = !fullRecord }) { Text(if (fullRecord) "Hide advanced record fields" else "Schedules, dietary evidence & advanced fields") }
-                if (fullRecord) OutlinedTextField(raw, { raw = it }, modifier = Modifier.fillMaxWidth(), minLines = 6, label = { Text("Complete proposed record") }, supportingText = { Text("Preserve schedule and provenance structure. Server validates every field.") })
-                if (item.optString("state") == "PENDING" || isRecord) Primary(if (isRecord) "Save record" else "Approve & publish", Icons.Outlined.CheckCircle, !s.loading) {
-                    try {
-                        val body = if (isRecord) JSONObject().put("version", current.getInt("version")).put("proposed", proposal())
-                        else JSONObject().put("decision", "APPROVED").put("target_version", current.getInt("version")).put("proposed", proposal())
-                        model.staffAction(if (isRecord) "/api/admin/${s.staffSection}/${item.getString("id")}" else "/api/admin/${s.staffSection}/${item.getString("id")}/decision", if (isRecord) "PATCH" else "POST", body)
-                    } catch (_: Exception) { model.error("The proposed JSON is invalid. Please correct it before publishing.") }
-                }
-                if (isRecord && item.optString("state") == "PENDING") Primary("Publish imported record", Icons.Outlined.Publish, !s.loading) { model.staffAction("/api/admin/${s.staffSection}/${item.getString("id")}/publish", body = JSONObject()) }
-            }
-        }
-        if (s.staffSection in listOf("reports", "changes", "duplicates") && item.optString("state") == "PENDING") Panel {
-            OutlinedTextField(reason, { reason = it }, label = { Text("Decision reason (required for rejection)") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-            if (s.staffSection == "duplicates") {
-                Primary("Mark as distinct", Icons.Outlined.Check, reason.isNotBlank() && !s.loading) { model.staffAction("/api/admin/duplicates/${item.getString("id")}/resolve", body = JSONObject().put("decision", "DISTINCT").put("reason", reason)) }
-                OutlinedButton(onClick = { model.staffAction("/api/admin/duplicates/${item.getString("id")}/resolve", body = JSONObject().put("decision", "DUPLICATE").put("reason", reason)) }, enabled = reason.isNotBlank() && !s.loading) { Text("Reject duplicate candidate") }
-            } else OutlinedButton(onClick = { model.staffAction("/api/admin/${s.staffSection}/${item.getString("id")}/decision", body = JSONObject().put("decision", "REJECTED").put("reason", reason)) }, enabled = reason.isNotBlank() && !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Reject with reason") }
-        }
-    }
-}
-
-@Composable fun ImportScreen(s: UiState, model: AppViewModel) {
-    var source by remember { mutableStateOf("") }; var permission by remember { mutableStateOf("") }; var records by remember { mutableStateOf("[]") }; var organisation by remember { mutableStateOf("") }
-    Page { Text("Authorised data", style = MaterialTheme.typography.headlineMedium)
-        Panel {
-            Text("Add an organisation", style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(organisation, { organisation = it }, label = { Text("Organisation name") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(source, { source = it }, label = { Text("Record source") }, modifier = Modifier.fillMaxWidth())
-            Primary("Create organisation", Icons.Outlined.Add, !s.loading && source.isNotBlank() && organisation.isNotBlank()) { model.staffAction("/api/admin/organisations", body = JSONObject().put("name", organisation).put("source", source)) }
-        }
-        Panel {
-            Text("Import an authorised export", style = MaterialTheme.typography.titleLarge)
-            Text("Valid records await publication. Invalid records go to quarantine. Existing published records cannot be overwritten.", color = Muted)
-            OutlinedTextField(source, { source = it }, label = { Text("Data source") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(permission, { permission = it }, label = { Text("Permission / export reference") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(records, { records = it }, label = { Text("Service records JSON array") }, minLines = 8, modifier = Modifier.fillMaxWidth())
-            Primary("Validate & import", Icons.Outlined.Upload, !s.loading && source.isNotBlank() && permission.isNotBlank()) {
-                try { model.staffAction("/api/admin/import", body = JSONObject().put("source", source).put("permission", permission).put("records", JSONArray(records))) }
-                catch (_: Exception) { model.error("Enter a valid JSON array of service records.") }
-            }
-        }
-    }
-}

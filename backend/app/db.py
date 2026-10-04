@@ -41,13 +41,14 @@ class Record(Base):
 
 class Admin(Base):
     __tablename__ = 'admins'
-    email: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # Keep the existing physical column so deployed databases need no destructive migration.
+    username: Mapped[str] = mapped_column('email', String(200), primary_key=True)
     password_hash: Mapped[str] = mapped_column(Text)
 
 class Token(Base):
     __tablename__ = 'sessions'
     digest: Mapped[str] = mapped_column(String(64), primary_key=True)
-    email: Mapped[str] = mapped_column(String(200))
+    username: Mapped[str] = mapped_column('email', String(200))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 class Audit(Base):

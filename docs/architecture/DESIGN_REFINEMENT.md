@@ -51,7 +51,7 @@ Rejected approach: keep all chips visible and shrink their text. That would pres
 
 Results retain name/type/distance, explicit availability and hours, evidence timestamp when present, a matching explanation, asynchronous ETA or unavailable state, and a bookmark. Description and full evidence live in details. Stable IDs and `LazyColumn` defer composing offscreen result rows. Returning from Map to Find preserves the results screen.
 
-Details show contact before eligibility/location information. Hours and verification expand in response to a tap; there are no automatic decorative animations. Mandatory information remains reachable. Staff collections and correction categories use menus rather than long rows of competing choices.
+Details show contact before eligibility/location information. Hours and verification expand in response to a tap; there are no automatic decorative animations. Mandatory information remains reachable. Android correction categories use a menu rather than a long row of competing choices. Staff work lives in the separate browser portal, with collection navigation, searchable lists and dedicated edit forms.
 
 ## Review and limits
 
@@ -104,3 +104,12 @@ All-support page and actual provider distribution cards visually reviewed in the
 ## Directions on Map
 
 Get directions opens the existing Map tab instead of embedding a second map in service details. Route mode keeps a floating starting-address search and device-location action; a bottom panel names the destination, offers Walk/Public transport/Drive, and shows real duration/distance, source and expandable steps. Searching an origin recalculates the destination route. Close/Back returns to map exploration. No nearby-result filters or saved-name suggestions compete with route entry. No origin means a clear start-address prompt. Unavailable transit remains explicit; no route is inferred.
+
+
+## Google-style map refinement - 4 October
+
+User asks to follow Google Maps. Design uses white#FFFFFF chrome, existing deep teal#00535B actions, mint#E2F3EA selection, Google blue#4285F4 location and muted#617175 secondary text. Atkinson Hyperlegible stays as the app typeface; compact body/label sizes preserve readability. Map gets the largest area. Floating pill search and small filter/provider chips; full-width bottom place/journey sheet with rounded top and compact actions. Directions gets a separate start/destination card with icon mode controls. This follows the requested navigation convention while keeping food-support content and the existing visual identity. Saved places stay in the search dropdown. Dynamic measured padding keeps route endpoints and Google attribution clear of UI.
+
+Device location is requested automatically on map entry if access is already granted and location is enabled. Otherwise a starting-location sheet offers permission/device location or a typed address. Failed/time-out/out-of-Singapore location also opens this sheet. New directions use a session device origin by default, then allow manual changes. Mode changes preserve the chosen start. Location stays in memory and clears on background.
+
+Follow-up: manual starts and route modes remain selected across tabs/destinations during the session. Map organisation name matches open a local preview with View support details above Navigate here. Transit journeys show grouped walking/transport sections with real timetable/stop information; operator names appear as plain attribution, with no SBS website action.

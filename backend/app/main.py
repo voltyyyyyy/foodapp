@@ -8,12 +8,14 @@ from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
+from pathlib import Path
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field, ValidationError
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy import func, select, text, update
 
 from .db import Admin, Audit, Base, Record, Session, Token, engine, iso, now
@@ -32,19 +34,22 @@ async def lifespan(_):
     if os.getenv('ENVIRONMENT') == 'production' and engine.dialect.name == 'sqlite':
         raise RuntimeError('Production requires PostgreSQL')
     Base.metadata.create_all(engine)
-    email, password = os.getenv('ADMIN_EMAIL'), os.getenv('ADMIN_PASSWORD')
-    if email and password:
-        if len(password) < 12:
-            raise RuntimeError('ADMIN_PASSWORD must be at least 12 characters')
+    username, password = os.getenv('ADMIN_USERNAME') or os.getenv('ADMIN_EMAIL'), os.getenv('ADMIN_PASSWORD')
+    if username and password:
+        username = username.strip().lower()
         with Session.begin() as db:
-            if not db.get(Admin, email.lower()):
-                db.add(Admin(email=email.lower(), password_hash=hasher.hash(password)))
+            if not db.get(Admin, username):
+                if len(password) < 12:
+                    raise RuntimeError('New bootstrap accounts require ADMIN_PASSWORD of at least 12 characters')
+                db.add(Admin(username=username, password_hash=hasher.hash(password)))
     if os.getenv('DEMO_DATA', 'false').lower() == 'true':
         from .seed import seed
         seed()
     yield
 
 app = FastAPI(title='FoodBridge Navigator', version='1.0.0', lifespan=lifespan)
+portal_dir = Path(os.getenv('STAFF_PORTAL_DIR', str(Path(__file__).resolve().parents[2] / 'staff-portal')))
+app.mount('/staff', StaticFiles(directory=portal_dir, html=True), name='staff')
 
 @app.middleware('http')
 async def limits(request: Request, call_next):
@@ -56,6 +61,10 @@ async def limits(request: Request, call_next):
     response = await call_next(request)
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Cache-Control'] = 'no-store'
+    if request.url.path.startswith('/staff'):
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Server-Timing'] = f'api;dur={(time.monotonic() - started) * 1000:.1f}'
     return response
 
@@ -81,7 +90,7 @@ def administrator(credentials: HTTPAuthorizationCredentials | None = Depends(sec
         session = db.get(Token, digest)
         if not session or datetime.fromisoformat(iso(session.expires_at)) <= now():
             raise HTTPException(401, 'Your staff session has expired')
-        return session.email
+        return session.username
 
 def item(db, id_, kind=None, approved=False):
     record = db.get(Record, id_)
@@ -223,23 +232,23 @@ def report(body: Report, request: Request):
     return {'reference': reference, 'state': 'PENDING'}
 
 class Login(BaseModel):
-    email: str = Field(max_length=200)
+    username: str = Field(min_length=1, max_length=200)
     password: str = Field(max_length=200)
 
 @app.post('/api/admin/login')
 def login(body: Login, request: Request):
     throttle(request, 'login', 8)
     with Session.begin() as db:
-        admin = db.get(Admin, body.email.lower().strip())
+        admin = db.get(Admin, body.username.lower().strip())
         try:
             hasher.verify(admin.password_hash if admin else dummy_hash, body.password)
         except VerificationError:
-            raise HTTPException(401, 'Email or password is incorrect')
+            raise HTTPException(401, 'User ID or password is incorrect')
         if not admin:
-            raise HTTPException(401, 'Email or password is incorrect')
+            raise HTTPException(401, 'User ID or password is incorrect')
         token = secrets.token_urlsafe(32)
-        db.add(Token(digest=hashlib.sha256(token.encode()).hexdigest(), email=admin.email, expires_at=now() + timedelta(hours=8)))
-        return {'token': token, 'email': admin.email}
+        db.add(Token(digest=hashlib.sha256(token.encode()).hexdigest(), username=admin.username, expires_at=now() + timedelta(hours=8)))
+        return {'token': token, 'username': admin.username}
 
 @app.post('/api/admin/logout')
 def logout(actor=Depends(administrator), credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -266,7 +275,7 @@ def queue(collection: str, actor=Depends(administrator)):
     if collection not in kinds:
         raise HTTPException(404, 'Collection not found')
     with Session() as db:
-        records = db.scalars(select(Record).where(Record.kind == kinds[collection]).order_by(Record.created_at.desc()).limit(500)).all()
+        records = db.scalars(select(Record).where(Record.kind == kinds[collection]).order_by(Record.created_at.desc())).all()
         result = []
         for record in records:
             value = serial(record)
@@ -278,6 +287,24 @@ def queue(collection: str, actor=Depends(administrator)):
                 value['current'] = serial(db.get(Record, target))
             result.append(value)
         return result
+
+@app.get('/api/admin/{collection}/{id_}')
+def admin_record(collection: str, id_: str, actor=Depends(administrator)):
+    kinds = {'services': 'service', 'organisations': 'organisation', 'providers': 'provider',
+        'reports': 'report', 'changes': 'change', 'duplicates': 'duplicate', 'quarantine': 'quarantine',
+        'sources': 'source', 'operations': 'operation'}
+    if collection not in kinds:
+        raise HTTPException(404, 'Collection not found')
+    with Session() as db:
+        record = item(db, id_, kinds[collection])
+        value = serial(record)
+        if collection == 'operations' and record.data.get('last_success'):
+            last_success = datetime.fromisoformat(record.data['last_success'])
+            value['status'] = 'OVERDUE' if now() - last_success > timedelta(hours=24) else record.data['status']
+        target = record.data.get('service_id') or record.data.get('target_id')
+        if target and db.get(Record, target):
+            value['current'] = serial(db.get(Record, target))
+        return value
 
 class Edit(BaseModel):
     version: int
@@ -299,8 +326,14 @@ def publish(db, target, proposal, expected_version):
         except ValidationError as error:
             raise HTTPException(422, str(error))
     else:
-        if not merged.get('name') or not merged.get('source'):
-            raise HTTPException(422, 'Organisation requires a name and source')
+        try:
+            values = Organisation.model_validate(merged).model_dump()
+            verified = datetime.fromisoformat(merged['verified_at'])
+            if verified.tzinfo is None or verified > now():
+                raise ValueError('Last verification requires a timezone and cannot be in the future')
+            merged.update(values)
+        except (ValidationError, ValueError, KeyError) as error:
+            raise HTTPException(422, str(error))
     before = dict(target.data)
     updated = db.execute(update(Record).where(Record.id == target.id, Record.version == expected_version)
         .values(data=merged, version=expected_version + 1, updated_at=now()))
@@ -505,6 +538,11 @@ def edit_organisation(id_: str, body: Edit, actor=Depends(administrator)):
 class Organisation(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     source: str = Field(min_length=1, max_length=300)
+
+    @field_validator('name', 'source', mode='before')
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 @app.post('/api/admin/organisations', status_code=201)
 def organisation(body: Organisation, actor=Depends(administrator)):

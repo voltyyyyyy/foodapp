@@ -11,6 +11,8 @@
     },
     {
       "id": "krsnas-free-meals-public-meal-site",
+      "access_method": "contact_to_confirm",
+      "location_role": "collection_site",
       "organisation_id": "org-krsnas-free-meals",
       "name": "Krsna's Free Meals",
       "support_type": "Hot meals",

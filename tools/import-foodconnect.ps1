@@ -1,11 +1,12 @@
 param([string]$ApiUrl = 'http://localhost:8000')
 $ErrorActionPreference = 'Stop'
 $seedPath = Join-Path $PSScriptRoot '../backend/seeds/foodconnect-providers.json'
-$passwordPath = Join-Path $PSScriptRoot '../backend/data/local-admin-password.txt'
+$passwordPath = Join-Path $PSScriptRoot '../backend/data/local-staff-password.txt'
 if (!(Test-Path -LiteralPath $seedPath)) { throw 'FoodConnect reviewed provider seed is not prepared yet.' }
 if (!(Test-Path -LiteralPath $passwordPath)) { throw 'Start the local stack first.' }
 $seed = Get-Content -LiteralPath $seedPath -Raw -Encoding UTF8 | ConvertFrom-Json
-$loginBody = @{email='admin@foodbridge.local'; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
+$staffId = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../backend/data/local-staff-user-id.txt') -Raw).Trim()
+$loginBody = @{username=$staffId; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
 $login = Invoke-RestMethod "$ApiUrl/api/admin/login" -Method Post -ContentType 'application/json' -Body $loginBody
 $headers = @{Authorization="Bearer $($login.token)"}
 try {

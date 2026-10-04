@@ -3,14 +3,15 @@ $ErrorActionPreference = 'Stop'
 $seedPath = if ($SeedPath) { $SeedPath } else { Join-Path $PSScriptRoot '../backend/seeds/verified-services.json' }
 $seed = Get-Content -LiteralPath $seedPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $serviceIds = @($seed.records | Where-Object { $_.kind -ne 'organisation' } | ForEach-Object { $_.id })
-$passwordPath = Join-Path $PSScriptRoot '../backend/data/local-admin-password.txt'
+$passwordPath = Join-Path $PSScriptRoot '../backend/data/local-staff-password.txt'
 if (!(Test-Path -LiteralPath $passwordPath)) { throw 'Start the local stack first.' }
 $public = Invoke-RestMethod "$ApiUrl/api/services"
 if (@($serviceIds | Where-Object { $_ -notin $public.services.id }).Count -eq 0) {
     Write-Output 'Reviewed seed already published.'
     exit 0
 }
-$loginBody = @{email='admin@foodbridge.local'; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
+$staffId = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../backend/data/local-staff-user-id.txt') -Raw).Trim()
+$loginBody = @{username=$staffId; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
 $login = Invoke-RestMethod "$ApiUrl/api/admin/login" -Method Post -ContentType 'application/json' -Body $loginBody
 $headers = @{Authorization="Bearer $($login.token)"}
 try {

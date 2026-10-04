@@ -158,7 +158,7 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
 
 @Composable fun DetailScreen(service: Service, s: UiState, model: AppViewModel) {
     val context = LocalContext.current
-    var mode by remember(service.id) { mutableStateOf("walk") }
+    val mode = s.routeMode
     var evidenceExpanded by remember(service.id) { mutableStateOf(false) }
     var calendarExpanded by remember(service.id) { mutableStateOf(false) }
     var contactError by remember(service.id) { mutableStateOf<String?>(null) }
@@ -197,7 +197,9 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
         HorizontalDivider()
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             DetailHeading("Support details", Icons.Outlined.VolunteerActivism)
+            DetailFact("Application / referral", accessMethodDetail(service.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Groups)
             DetailFact("Who can receive support / how to apply", service.json.detailText("eligibility") ?: "Eligibility not confirmed. Ask the provider how to apply.", Icons.Outlined.Groups)
+            service.json.detailText("delivery_information")?.let { DetailFact("Delivery / collection arrangements", it, Icons.Outlined.LocalShipping) }
             DetailFact("Confirmed dietary options", service.strings("diets").joinToString().ifBlank { "Not confirmed. Ask about dietary requirements and allergies." }, Icons.Outlined.RestaurantMenu)
             DetailFact("Wheelchair access", if (service.json.isNull("wheelchair")) "Not confirmed" else if (service.json.optBoolean("wheelchair")) "Accessible according to the listing" else "Not recorded as accessible", Icons.Outlined.Accessible)
             val reasons = service.strings("explanations")
@@ -221,12 +223,13 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
         HorizontalDivider()
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             DetailHeading("Location & directions", Icons.Outlined.LocationOn)
+            Text(collectionLocationLabel(service.json.optString("location_role")), fontWeight = FontWeight.Bold, color = Teal)
             Text(service.address)
             Text("Singapore ${service.json.optString("postal")}", color = Muted)
+            if (service.json.optString("location_role") == "coordination_site") Text("This is a meal-delivery coordination site, not a confirmed walk-in collection point. ${accessMethodDetail(service.json.optString("access_method", "contact_to_confirm"))}", color = Muted, style = MaterialTheme.typography.bodyMedium)
             if (!service.distance.isNaN()) Text("%.1f km from your search address (straight-line distance)".format(service.distance), color = Muted, style = MaterialTheme.typography.bodySmall)
-            if (service.type == "Delivery") Text("This may be a coordination site. Confirm delivery or collection arrangements before visiting.", color = Muted, style = MaterialTheme.typography.bodySmall)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("walk" to "Walk", "pt" to "Public transport", "drive" to "Drive").forEach { (value, label) -> Filter(label, mode == value) { mode = value } } }
-            OutlinedButton(onClick = { model.route(mode) }, enabled = !s.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Icon(Icons.Outlined.NearMe, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Get directions") }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("walk" to "Walk", "pt" to "Public transport", "drive" to "Drive").forEach { (value, label) -> Filter(label, mode == value) { model.update { it.copy(routeMode = value) } } } }
+            OutlinedButton(onClick = { model.route(mode) }, enabled = !s.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Icon(Icons.Outlined.NearMe, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text(directionsButtonLabel(service.json.optString("location_role"))) }
 
         }
         HorizontalDivider()

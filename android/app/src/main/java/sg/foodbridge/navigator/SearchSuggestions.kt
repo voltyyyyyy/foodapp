@@ -42,13 +42,13 @@ fun organisationMatches(s: UiState): List<OrganisationMatch> {
     }
 }
 
-@Composable fun SearchSuggestions(s: UiState, model: AppViewModel, onSelect: () -> Unit = {}) {
+@Composable fun SearchSuggestions(s: UiState, model: AppViewModel, onMatch: ((OrganisationMatch) -> Unit)? = null, onSelect: () -> Unit = {}) {
     if (s.origin.trim().length < 2 || s.originLatitude != null) return
     val matches = organisationMatches(s)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (matches.isNotEmpty()) {
             Text("Organisations & services", color = Muted, style = MaterialTheme.typography.labelMedium)
-            matches.take(4).forEach { match -> OrganisationMatchRow(match) { onSelect(); model.openOrganisation(match) } }
+            matches.take(4).forEach { match -> OrganisationMatchRow(match) { onSelect(); if (onMatch != null) onMatch(match) else model.openOrganisation(match) } }
             if (matches.size > 4) TextButton(onClick = { onSelect(); model.showOrganisations() }) { Text("View all ${matches.size} name matches") }
         }
         TextButton(onClick = { onSelect(); model.searchAddress() }, enabled = !s.loading && s.origin.trim().length >= 3) {

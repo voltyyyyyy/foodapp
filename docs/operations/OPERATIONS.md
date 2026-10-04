@@ -2,7 +2,7 @@
 
 ## Production configuration
 
-Use one always-on API service and managed PostgreSQL in the same region, with HTTPS at the ingress and a durable database. Store credentials in deployment secrets. Disable demonstration fixtures (`DEMO_DATA=false`), provide permissioned verified data, provision a unique staff password and supply restricted Google Maps/Routes keys (docs/GOOGLE_MAPS_SETUP.md). Set the release APK API URL to the production HTTPS endpoint. Sign the APK with an operator-owned key kept outside the repository. `compose.yaml` is a local PostgreSQL deployment recipe; production should prefer managed database backups and service monitoring.
+Use one always-on API service and managed PostgreSQL in the same region, with HTTPS at the ingress and a durable database. Store credentials in deployment secrets. Disable demonstration fixtures (`DEMO_DATA=false`), provide permissioned verified data, provision a unique staff password and supply restricted Google Maps/Routes keys (docs/setup/GOOGLE_MAPS_SETUP.md). Set the release APK API URL to the production HTTPS endpoint. Sign the APK with an operator-owned key kept outside the repository. `compose.yaml` is a local PostgreSQL deployment recipe; production should prefer managed database backups and service monitoring.
 
 The local JSON record store is organised by entity kind with explicit version and state columns. Before substantial production growth, migrate to dedicated organisation/service/report/observation tables with foreign keys and schema migrations; preserve all source and audit history. Production schema changes must be versioned and reviewed; `create_all` only creates the initial schema and does not migrate existing data.
 

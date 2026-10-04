@@ -9,11 +9,11 @@ from datetime import timedelta
 from pathlib import Path
 from statistics import quantiles
 
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parents[2]
 temporary = tempfile.TemporaryDirectory(prefix='foodbridge-verify-')
 verification_database = os.getenv('TEST_DATABASE_URL')
 os.environ['DATABASE_URL'] = verification_database or ('sqlite:///' + (Path(temporary.name) / 'verification.db').as_posix())
-os.environ['ADMIN_EMAIL'] = 'verify@foodbridge.local'
+os.environ['ADMIN_USERNAME'] = 'verify'
 os.environ['ADMIN_PASSWORD'] = 'isolated-verification-only-2026'
 os.environ['DEMO_DATA'] = 'true'
 sys.path.insert(0, str(root / 'backend'))
@@ -42,7 +42,7 @@ with TestClient(app) as client:
     check('blank correction rejected', client.post('/api/reports', json={'service_id': 'harmony', 'category': 'Hours', 'description': ' '}).status_code == 422)
     report = client.post('/api/reports', json={'service_id': 'harmony', 'category': 'Hours', 'description': 'Please confirm hours'}).json()
     check('unique pending correction reference', report['state'] == 'PENDING' and report['reference'].startswith('FB-'))
-    auth = client.post('/api/admin/login', json={'email': 'verify@foodbridge.local', 'password': os.environ['ADMIN_PASSWORD']}).json()
+    auth = client.post('/api/admin/login', json={'username': 'verify', 'password': os.environ['ADMIN_PASSWORD']}).json()
     headers = {'Authorization': 'Bearer ' + auth['token']}
     queue = client.get('/api/admin/reports', headers=headers).json()
     check('pending moderation and current comparison', queue[0]['current']['name'] == 'Harmony Community Kitchen')
@@ -109,7 +109,7 @@ with TestClient(app) as client:
     results = {'checks': checks, 'search_local_p95_ms': round(p95, 2), 'requests': 100, 'concurrency': 20,
         'dataset_services': 2000, 'database': 'isolated PostgreSQL' if verification_database else 'isolated SQLite', 'production_evidence': False}
     report_name = 'backend-postgres-verification.json' if verification_database else 'backend-verification.json'
-    (root / 'docs' / report_name).write_text(json.dumps(results, indent=2))
+    (root / 'docs' / 'verification' / report_name).write_text(json.dumps(results, indent=2))
     print(json.dumps(results, indent=2))
 engine.dispose()
 temporary.cleanup()

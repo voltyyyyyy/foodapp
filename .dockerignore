@@ -1,0 +1,11 @@
+# Only application source and portal assets are sent to Docker.
+**
+!backend/
+!backend/Dockerfile
+!backend/requirements.txt
+!backend/app/
+!backend/app/**
+!staff-portal/
+!staff-portal/**
+**/__pycache__/
+**/*.pyc

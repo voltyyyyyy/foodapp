@@ -152,6 +152,7 @@ private fun supportIcon(type: String): ImageVector = when (type) {
                     Icon(Icons.Outlined.ChevronRight, "View provider", tint = Muted)
                 }
                 ProviderBadges(provider.types())
+                Text("${accessMethodLabel(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified"))} · ${collectionLocationLabel(provider.optString("location_type"))}", color = Muted, style = MaterialTheme.typography.bodySmall)
                 provider.optJSONObject("directory_facts")?.optJSONArray("aggregate_regions")?.takeIf { it.length() > 0 }?.let { regions ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Outlined.LocationOn, null, Modifier.size(16.dp), tint = Muted)
@@ -180,6 +181,15 @@ private fun supportIcon(type: String): ImageVector = when (type) {
             Text(provider.getString("name"), style = MaterialTheme.typography.headlineMedium)
             ProviderBadges(provider.types())
             ReportInformationButton(model)
+            Surface(color = Peach, shape = RoundedCornerShape(14.dp)) {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(collectionLocationLabel(provider.optString("location_type")), fontWeight = FontWeight.Bold)
+                    Text(if (provider.optString("location_type") == "confirmed_collection_site")
+                        provider.text("location_notes") ?: "The provider publishes this as a service location. Contact them to confirm before travelling."
+                    else "No public collection point is confirmed for this listing. Do not travel to an office or programme address unless the provider confirms it is where you should go.", style = MaterialTheme.typography.bodySmall)
+                    Text(accessMethodDetail(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified")), style = MaterialTheme.typography.bodySmall)
+                }
+            }
             if (provider.optString("verification_status") != "provider_reviewed") Text("This listing comes from FoodConnect. Current programme and contact details need confirmation.", color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -191,15 +201,16 @@ private fun supportIcon(type: String): ImageVector = when (type) {
             actionError?.let { Text(it, color = Muted) }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProviderHeading("Getting support", Icons.Outlined.VolunteerActivism)
+            ProviderHeading("Application and referral", Icons.Outlined.VolunteerActivism)
+            Text(accessMethodDetail(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified")), fontWeight = FontWeight.SemiBold)
             Text(provider.text("eligibility") ?: "Contact the provider to ask how to apply and whether you are eligible.")
             Text("Confirm current availability, dietary needs and any collection arrangements with the provider.", color = Muted, style = MaterialTheme.typography.bodyMedium)
         }
         provider.text("address")?.let { address ->
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProviderHeading("Address", Icons.Outlined.LocationOn)
+                ProviderHeading(if (provider.optString("location_type") == "confirmed_collection_site") "Confirmed service location" else "Provider address", Icons.Outlined.LocationOn)
                 Text(address)
-                Text(provider.text("location_notes") ?: "This address may be an office. Food collection is only available if the provider confirms it.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text(provider.text("location_notes") ?: "This is not confirmed as a public food collection point. Contact the provider before travelling.", color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
         DirectoryDistributionInfo(provider)
@@ -220,39 +231,6 @@ private fun supportIcon(type: String): ImageVector = when (type) {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable fun ProviderStaffDetail(item: JSONObject, s: UiState, model: AppViewModel) {
-    var name by remember(item) { mutableStateOf(item.getString("name")) }
-    var description by remember(item) { mutableStateOf(item.getString("description")) }
-    var eligibility by remember(item) { mutableStateOf(item.optString("eligibility")) }
-    var notes by remember(item) { mutableStateOf(item.getString("verification_notes")) }
-    var phone by remember(item) { mutableStateOf(item.text("phone").orEmpty()) }
-    var email by remember(item) { mutableStateOf(item.text("email").orEmpty()) }
-    var website by remember(item) { mutableStateOf(item.text("website").orEmpty()) }
-    var active by remember(item) { mutableStateOf(item.optBoolean("active", true)) }
-    Page {
-        Text("Review provider", style = MaterialTheme.typography.headlineMedium)
-        Text("${item.optString("state")} · ${item.optString("source")}", color = Muted)
-        OutlinedTextField(name, { name = it }, label = { Text("Provider name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(description, { description = it }, label = { Text("Support description") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-        OutlinedTextField(eligibility, { eligibility = it }, label = { Text("Getting support") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-        OutlinedTextField(phone, { phone = it }, label = { Text("Approved phone (optional)") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(email, { email = it }, label = { Text("Public contact email (optional)") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(website, { website = it }, label = { Text("Provider website (optional)") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(notes, { notes = it }, label = { Text("Source review notes") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-        Toggle("Provider listing is active", active) { active = it }
-        Text("Review contact details and programme arrangements against the provider's current sources before publishing.", color = Muted)
-        Primary("Save provider", Icons.Outlined.Check, !s.loading) {
-            model.staffAction("/api/admin/providers/${item.getString("id")}", "PATCH", JSONObject().put("version", item.getInt("version")).put("proposed", JSONObject()
-                .put("name", name).put("description", description).put("eligibility", eligibility).put("verification_notes", notes)
-                .put("phone", phone.ifBlank { null } ?: JSONObject.NULL).put("email", email.ifBlank { null } ?: JSONObject.NULL)
-                .put("website", website.ifBlank { null } ?: JSONObject.NULL).put("active", active)))
-        }
-        if (item.optString("state") == "PENDING") Primary("Publish provider", Icons.Outlined.Publish, !s.loading) {
-            model.staffAction("/api/admin/providers/${item.getString("id")}/publish", body = JSONObject())
         }
     }
 }

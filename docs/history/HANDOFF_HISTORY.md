@@ -1,5 +1,7 @@
 # FoodBridge development handoff
 
+> Historical snapshot. Current startup and staff sign-in instructions are in [the repository README](../../README.md) and [staff portal guide](../operations/STAFF_PORTAL.md). Android is now user-facing only; staff sign in through the browser using a User ID.
+
 Last updated: 1 October 2026, Singapore time. Update this file after each meaningful milestone and before ending a session.
 
 ## User instructions and authorisation
@@ -12,7 +14,7 @@ Continue implementation autonomously. No deployment/account credentials have bee
 
 All eleven reference HTML exports, PRD, DESIGN.md and complete DOCX text were read. All twelve embedded images were inspected, including both use case diagrams, dialog maps and entity/boundary/control class diagram. DOCX images were extracted read-only to `%TEMP%/foodbridge-plan-review`. Original references remain unchanged.
 
-`docs/BUILD_PLAN.md` contains the chosen stack, source precedence, contradiction table, domain/API decisions, design direction, implementation sequence and a requirement coverage table. User's Android requirement takes precedence over PWA wording in PRD. Stack: native Kotlin/Compose/Material3, Android12+ minSdk31, FastAPI/Pydantic/SQLAlchemy API, SQLite local and PostgreSQL production, DataStore local IDs/preferences/approved snapshots. OneMap routing/geocoding is server-side; a restricted Leaflet WebView renders maps. Public search, reporting and bookmarks are anonymous. Profile became Preferences. Surplus-sharing market is future scope, not a Lab requirement. UK/London/miles and unsupported safety guarantees removed.
+`docs/architecture/BUILD_PLAN.md` contains the chosen stack, source precedence, contradiction table, domain/API decisions, design direction, implementation sequence and a requirement coverage table. User's Android requirement takes precedence over PWA wording in PRD. Stack: native Kotlin/Compose/Material3, Android12+ minSdk31, FastAPI/Pydantic/SQLAlchemy API, SQLite local and PostgreSQL production, DataStore local IDs/preferences/approved snapshots. OneMap routing/geocoding is server-side; a restricted Leaflet WebView renders maps. Public search, reporting and bookmarks are anonymous. Profile became Preferences. Surplus-sharing market is future scope, not a Lab requirement. UK/London/miles and unsupported safety guarantees removed.
 
 ## Files created
 
@@ -21,8 +23,8 @@ All eleven reference HTML exports, PRD, DESIGN.md and complete DOCX text were re
 - API endpoints cover search, geocode, routes, approved details, reports, staff login/logout, queues, direct service edit, organisation creation, proposed changes, approve/reject, import/quarantine/duplicates, pending import publication, audit/source health and health checks.
 - `tools/setup-android.ps1`: installs repo-local JDK17, Gradle8.13 and SDK (see installer issues below; needs repair).
 - `tools/build-android.ps1`: assembles debug APK with optional `-ApiUrl`.
-- `tools/verify-backend.py`: isolated acceptance probes and concurrent search timings, writes `docs/backend-verification.json` if successful.
-- `README.md`, `docs/OPERATIONS.md`, `backend/Dockerfile`, `compose.yaml`, `.gitignore`.
+- `backend/tests/verify_backend.py`: isolated acceptance probes and concurrent search timings, writes `docs/verification/backend-verification.json` if successful.
+- `README.md`, `docs/operations/OPERATIONS.md`, `backend/Dockerfile`, `compose.yaml`, `.gitignore`.
 
 ## Installed environment and live processes
 
@@ -32,7 +34,7 @@ API is running on host port8000 using uvicorn with access logging disabled. Exec
 
 Other process/session IDs at handoff creation:
 
-- 27374: `backend/.venv/Scripts/python.exe tools/verify-backend.py`, running isolated checks. Poll for result. It uses a temporary DB and synthetic 2,000-service data, with100 requests and20 concurrent workers. No running-app database writes.
+- 27374: `backend/.venv/Scripts/python.exe backend/tests/verify_backend.py`, running isolated checks. Poll for result. It uses a temporary DB and synthetic 2,000-service data, with100 requests and20 concurrent workers. No running-app database writes.
 - 23857: direct platform35 archive download and Expand-Archive repair; currently running. Poll. Script downloads `https://dl.google.com/android/repository/platform-35_r02.zip` into `tools/.local/platform35.zip`, extracts into `tools/.local/platform-unpacked`, copies `android-35` into SDK platforms directory.
 - 41578: first Gradle build FINISHED FAILED due incomplete platform35 (no android.jar), before Kotlin compilation.
 - 5404: SDK setup FINISHED; incorrectly reports successful install even though latest sdkmanager shim split semicolon package names.
@@ -59,11 +61,11 @@ Repair setup script to use absolute SDK/native android.exe and verify android.ja
 
 Running backend smoke check: health ready, search returns five fictional services. Anonymous report accepted, appears in staff queue, rejected with reason, second decision returns409, audit exists. Local backup succeeded via `python -m app.maintenance --backup-dir data/backups` and is in ignored backend data. An integration report remains REJECTED in local DB with an explicit verification reason; no real records modified.
 
-NOT yet claimed: successful Android compilation, installed APK, Android emulator UI, live successful OneMap routes, production PostgreSQL execution, production performance, 99% monthly availability or first-time user study. `docs/OPERATIONS.md` distinguishes implementation from production evidence.
+NOT yet claimed: successful Android compilation, installed APK, Android emulator UI, live successful OneMap routes, production PostgreSQL execution, production performance, 99% monthly availability or first-time user study. `docs/operations/OPERATIONS.md` distinguishes implementation from production evidence.
 
 ## Immediate next actions
 
-Milestone update: isolated backend acceptance checks now PASS (22 checks). The first performance run failed because `latest_update` materialised all 2,000 JSON records for every query. Fixed it to use SQL MAX(updated_at). Search also prefilters a latitude/longitude bounding box. Latest measured local p95 is324.27ms with2,000 synthetic services,20 concurrent workers and100 requests; results in `docs/backend-verification.json`. This is local evidence, not production proof. Verification process finished and engine was disposed before temporary cleanup. Backend live process still needs restart to pick up these improvements.
+Milestone update: isolated backend acceptance checks now PASS (22 checks). The first performance run failed because `latest_update` materialised all 2,000 JSON records for every query. Fixed it to use SQL MAX(updated_at). Search also prefilters a latitude/longitude bounding box. Latest measured local p95 is324.27ms with2,000 synthetic services,20 concurrent workers and100 requests; results in `docs/verification/backend-verification.json`. This is local evidence, not production proof. Verification process finished and engine was disposed before temporary cleanup. Backend live process still needs restart to pick up these improvements.
 
 Android emulator milestone: AVD `FoodBridge_API31` created via avdmanager (pixel5 profile, Google APIs x86_64), acceleration WHPX usable. Started headless via hidden Start-Process, PID13672. `adb shell getprop sys.boot_completed` returned1. Emulator logs are in ignored `tools/.local/emulator-out.log` and `emulator-error.log`. AVD is under user's `.android/avd`.
 
@@ -83,9 +85,9 @@ Emulator evidence after latest install: postal560123 + persisted Halal preferenc
 
 More runtime evidence: Get directions returned honest Route unavailable while service detail stayed visible. Saved tab displayed the bookmarked Northside service without sign-in. Docker Desktop started hidden for PostgreSQL verification; Docker engine now responds (29.6.2). Creating task-owned postgres17 container `foodbridge-postgres`, port127.0.0.1:5433, volume `foodbridge-pg-data`; random password stored only in ignored `backend/data/local-postgres-password.txt`. Do not expose it. New organisation import/publication/edit paths and staff organisation tab added; backend acceptance script expanded to cover pending visibility, imported organisation names and duplicate review. Rerun after these changes. Demo banner now visible across app to identify fictional fixtures prominently.
 
-Latest checks:30PASS, SQLite2,000services/20concurrent/100requests p95=418.15ms while emulator/Docker are active; `docs/backend-verification.json` updated. Container `foodbridge-postgres` created successfully. Backend image build session91183 running; final Android build session14669 running. Dockerfile was changed afterward to create /backups with correct ownership, so rebuild image before Compose deployment if needed. Backend .dockerignore excludes secrets/data/venv. Default backups now use named writable volume, configurable with BACKUP_PATH.
+Latest checks:30PASS, SQLite2,000services/20concurrent/100requests p95=418.15ms while emulator/Docker are active; `docs/verification/backend-verification.json` updated. Container `foodbridge-postgres` created successfully. Backend image build session91183 running; final Android build session14669 running. Dockerfile was changed afterward to create /backups with correct ownership, so rebuild image before Compose deployment if needed. Backend .dockerignore excludes secrets/data/venv. Default backups now use named writable volume, configurable with BACKUP_PATH.
 
-Build14669 completed SUCCESSFULLY (30s), latest APK includes organisation screens, top demo banner and proper nullable-contact clearing. Image91183 completed SUCCESSFULLY; it predates /backups ownership and rate-salt edits but verification mounts latest source. Isolated PostgreSQL verification database name in ignored `backend/data/postgres-verification-db.txt`; runs inside API image with mounted workspace and TEST_DATABASE_URL, emits separate `docs/backend-postgres-verification.json`. Do not rerun on populated verification database; create a new isolated DB each run. Test script overwrites only its dedicated verification data, never production. Latest APK installed on API31 emulator.
+Build14669 completed SUCCESSFULLY (30s), latest APK includes organisation screens, top demo banner and proper nullable-contact clearing. Image91183 completed SUCCESSFULLY; it predates /backups ownership and rate-salt edits but verification mounts latest source. Isolated PostgreSQL verification database name in ignored `backend/data/postgres-verification-db.txt`; runs inside API image with mounted workspace and TEST_DATABASE_URL, emits separate `docs/verification/backend-postgres-verification.json`. Do not rerun on populated verification database; create a new isolated DB each run. Test script overwrites only its dedicated verification data, never production. Latest APK installed on API31 emulator.
 
 PostgreSQL milestone:30checks PASS; p95=443.25ms,2,000services,20concurrent,100requests. Separate PostgreSQL report saved. Successful pg_dump/pg_restore round trip into a fresh task-owned restore DB returned2,000approvedservices and7auditentries. Retained ignored backup `backend/data/postgres-verified-backup.dump`. Restore DB name began foodbridge_restore_; list via psql if needed.
 

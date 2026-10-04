@@ -12,10 +12,12 @@ services:
       interval: 10s
       retries: 5
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://foodbridge:${DB_PASSWORD}@db:5432/foodbridge
-      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
       ONEMAP_EMAIL: ${ONEMAP_EMAIL:-}
       ONEMAP_PASSWORD: ${ONEMAP_PASSWORD:-}
@@ -27,7 +29,9 @@ services:
     ports: ["8000:8000"]
     restart: unless-stopped
   maintenance:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     command: ["python", "-m", "app.scheduler"]
     environment:
       DATABASE_URL: postgresql+psycopg://foodbridge:${DB_PASSWORD}@db:5432/foodbridge

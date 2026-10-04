@@ -9,6 +9,8 @@
     },
     {
       "id": "willing-hearts-meal-assistance",
+      "access_method": "referral_required",
+      "location_role": "coordination_site",
       "organisation_id": "org-willing-hearts",
       "name": "Willing Hearts meal-delivery assistance",
       "support_type": "Delivery",

@@ -27,11 +27,11 @@ data class UiState(
     val loading: Boolean = false, val offline: Boolean = false, val error: String? = null,
     val candidates: List<JSONObject> = emptyList(), val reference: String? = null,
     val route: JSONObject? = null, val routeDestination: Service? = null, val routeMode: String = "walk", val routeLoading: Boolean = false, val eta: Map<String, String> = emptyMap(),
-    val staff: Boolean = false, val staffSection: String = "reports", val staffItems: List<JSONObject> = emptyList(),
-    val staffSelected: JSONObject? = null, val notice: String? = null, val lastUpdate: String? = null,
+    val notice: String? = null, val lastUpdate: String? = null,
     val clock: Long = System.currentTimeMillis(),
     val locationLoading: Boolean = false, val locationError: String? = null,
     val deviceLatitude: Double? = null, val deviceLongitude: Double? = null,
+    val startingAddress: String? = null, val startingLatitude: Double? = null, val startingLongitude: Double? = null,
     val hasSearched: Boolean = false, val originLatitude: Double? = null, val originLongitude: Double? = null,
     val providers: List<JSONObject> = emptyList(), val providerOffline: Boolean = false,
     val providerLoading: Boolean = false, val providerError: String? = null, val selectedProvider: JSONObject? = null,
@@ -76,11 +76,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             update { it.copy(services = services, offline = offline, saved = saved, diets = diets, lastUpdate = repo.lastUpdate) }
         } catch (e: Exception) { error("Could not load services. Start the API or try again. ${e.message}") }
     } }
-    fun tab(name: String) { routeJob?.cancel(); update { it.copy(tab = name, page = if (name == "Find" && it.results.isNotEmpty()) "results" else "home", selected = null, error = null, routeDestination = null, route = null, routeLoading = false) }; if (name == "Saved") refresh() }
+    fun tab(name: String) {
+        update { it.copy(tab = name, page = if (name == "Find" && it.results.isNotEmpty()) "results" else "home", selected = null, error = null) }
+        if (name == "Saved") refresh()
+    }
     fun back() {
         if (state.value.tab == "Map" && state.value.page == "home" && state.value.routeDestination != null) { closeRoute(); return }
         if (state.value.page in listOf("report", "confirmation")) { returnToInformation(); return }
-        update { it.copy(page = if (it.page in listOf("detail", "providerDetail") && it.informationReturnPage in listOf("allSupport", "nameResults", "providers")) it.informationReturnPage else if (it.page == "providerDetail") "providers" else if (it.staff) "staff" else if (it.results.isNotEmpty() && it.tab == "Find") "results" else "home", selected = null, selectedProvider = null, reference = null, route = null, staffSelected = null, error = null) }
+        update { it.copy(page = if (it.page in listOf("detail", "providerDetail") && it.informationReturnPage in listOf("allSupport", "nameResults", "providers")) it.informationReturnPage else if (it.page == "providerDetail") "providers" else if (it.results.isNotEmpty() && it.tab == "Find") "results" else "home", selected = null, selectedProvider = null, reference = null, route = if (it.tab == "Map" && it.routeDestination != null) it.route else null, error = null) }
     }
     fun openReport() { update { it.copy(page = "report", reference = null, error = null) } }
     fun returnToInformation() { update { it.copy(page = if (it.selectedProvider != null) "providerDetail" else "detail", reference = null, error = null) } }
@@ -118,7 +121,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             catch (_: Exception) { error("Could not refresh all support listings. Any saved listings remain below. Try again when connected.") }
         }
     }
-    fun locationStarted() { update { it.copy(locationLoading = true, locationError = null, error = null) } }
+    fun locationStarted() {
+        searchJob?.cancel(); routeJob?.cancel(); etaJob?.cancel(); coordinates = null
+        update { it.copy(origin = "", originLatitude = null, originLongitude = null, deviceLatitude = null,
+            deviceLongitude = null, startingAddress = null, startingLatitude = null, startingLongitude = null, locationLoading = true, locationError = null, error = null, loading = false, route = null, routeLoading = false) }
+    }
     fun locationFailed(message: String) { update { it.copy(locationLoading = false, locationError = message) } }
     fun location(lat: Double, lon: Double) {
         if (lat !in 1.13..1.48 || lon !in 103.59..104.1) { locationFailed("Your device is outside Singapore. Enter a Singapore starting address."); return }
@@ -139,7 +146,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         etaJob?.cancel()
         searchJob?.cancel()
         routeJob?.cancel()
-        update { it.copy(origin = "", originLatitude = null, originLongitude = null, deviceLatitude = null, deviceLongitude = null, locationLoading = false, locationError = null, hasSearched = false, results = emptyList(), totalMatches = 0, route = null, routeDestination = null, routeLoading = false, candidates = emptyList(), eta = emptyMap(), loading = false) }
+        update { it.copy(origin = "", originLatitude = null, originLongitude = null, deviceLatitude = null, deviceLongitude = null, startingAddress = null, startingLatitude = null, startingLongitude = null, locationLoading = false, locationError = null, hasSearched = false, results = emptyList(), totalMatches = 0, route = null, routeDestination = null, routeLoading = false, candidates = emptyList(), eta = emptyMap(), loading = false) }
     }
     fun toggleDiet(diet: String) {
         val diets = state.value.diets.let { if (diet in it) it - diet else it + diet }
@@ -188,7 +195,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     } }
     fun chooseOrigin(candidate: JSONObject, submit: Boolean = true) {
         coordinates = candidate.getDouble("latitude") to candidate.getDouble("longitude")
-        update { it.copy(origin = candidate.getString("address"), originLatitude = coordinates?.first, originLongitude = coordinates?.second, candidates = emptyList(), error = null) }
+        update { it.copy(origin = candidate.getString("address"), originLatitude = coordinates?.first, originLongitude = coordinates?.second, startingAddress = candidate.getString("address"), startingLatitude = coordinates?.first, startingLongitude = coordinates?.second, locationLoading = false, candidates = emptyList(), error = null) }
         if (submit) { if (state.value.routeDestination != null && state.value.tab == "Map") route(state.value.routeMode) else searchAddress() }
     }
     private fun estimate(services: List<Service>) {
@@ -205,8 +212,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun detail(service: Service) {
-        routeJob?.cancel()
-        update { it.copy(informationReturnPage = it.page, selected = service, selectedProvider = null, page = "detail", route = null, routeDestination = null, routeLoading = false, error = null) }
+        val keepRoute = state.value.routeDestination?.id == service.id
+        if (!keepRoute) routeJob?.cancel()
+        update { it.copy(informationReturnPage = it.page, selected = service, selectedProvider = null, page = "detail", route = if (keepRoute) it.route else null, routeDestination = if (keepRoute) it.routeDestination else null, routeLoading = keepRoute && it.routeLoading, error = null) }
         viewModelScope.launch {
             runCatching { Service(JSONObject(repo.request("/api/services/${service.id}"))) }.onSuccess { fresh ->
                 if (!service.distance.isNaN()) fresh.json.put("distance_km", service.distance)
@@ -248,8 +256,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         routeJob?.cancel(); searchJob?.cancel(); etaJob?.cancel()
         if (state.value.routeDestination?.id != service.id) {
             val snapshot = state.value
-            coordinates = snapshot.deviceLatitude?.let { lat -> snapshot.deviceLongitude?.let { lat to it } }
-            update { it.copy(origin = if (coordinates != null) "Your location" else "", originLatitude = coordinates?.first,
+            coordinates = snapshot.startingLatitude?.let { lat -> snapshot.startingLongitude?.let { lat to it } }
+                ?: snapshot.deviceLatitude?.let { lat -> snapshot.deviceLongitude?.let { lat to it } }
+            update { it.copy(origin = snapshot.startingAddress ?: if (coordinates != null) "Your location" else "", originLatitude = coordinates?.first,
                 originLongitude = coordinates?.second, locationError = null) }
         }
         update { it.copy(tab = "Map", page = "home", origin = if (coordinates == null && it.routeDestination == null) "" else it.origin, routeDestination = service, routeMode = mode,
@@ -274,29 +283,5 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val response = JSONObject(repo.request("/api/reports", "POST", body))
             update { it.copy(reference = response.getString("reference"), page = "confirmation", loading = false) }
         } catch (e: Exception) { error(e.message ?: "Report could not be submitted. Your input has been kept.") }
-    } }
-    fun login(email: String, password: String) { viewModelScope.launch {
-        update { it.copy(loading = true, error = null) }
-        try {
-            val result = JSONObject(repo.request("/api/admin/login", "POST", JSONObject().put("email", email).put("password", password)))
-            repo.token = result.getString("token")
-            update { it.copy(staff = true, page = "staff", loading = false) }
-            staffLoad("reports")
-        } catch (e: Exception) { error(e.message ?: "Sign-in failed") }
-    } }
-    fun logout() { viewModelScope.launch { runCatching { repo.request("/api/admin/logout", "POST") }; repo.token = null; update { it.copy(staff = false, page = "home", staffItems = emptyList(), staffSelected = null) } } }
-    fun staffLoad(section: String) { viewModelScope.launch {
-        update { it.copy(staffSection = section, loading = true, error = null, page = "staff", staffSelected = null) }
-        try { val items = JSONArray(repo.request("/api/admin/$section")).objects(); update { it.copy(staffItems = items, loading = false) } }
-        catch (e: Exception) { error(e.message ?: "Could not load staff data") }
-    } }
-    fun staffAction(path: String, method: String = "POST", body: JSONObject) { viewModelScope.launch {
-        update { it.copy(loading = true, error = null) }
-        try {
-            val result = JSONObject(repo.request(path, method, body))
-            val notice = if (path == "/api/admin/organisations") "Organisation created · ID: ${result.optString("id")}" else if (path == "/api/admin/import") "${result.optInt("accepted_pending")} records pending review · ${result.optInt("quarantined")} quarantined" else "Saved successfully"
-            update { it.copy(notice = notice, loading = false) }; staffLoad(state.value.staffSection); refresh()
-        }
-        catch (e: Exception) { error(e.message ?: "Could not save this decision") }
     } }
 }

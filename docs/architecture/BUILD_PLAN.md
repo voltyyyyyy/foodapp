@@ -72,7 +72,7 @@ Result cards show organisation, support type, metric distance, eligibility summa
 
 Details prioritise the location, availability, eligibility, next service window, route and approved contact methods. Always include Contact the organisation before travelling. Evidence lists source, observation, expiry and confidence. Missing data says Not confirmed. Route failure retains details. Saved items fetch latest approved data; offline snapshots are clearly marked and expired evidence is recalculated locally.
 
-Administrator screens include sign-in, reports/change queue, current-versus-proposed comparison, editable proposal, approve-and-publish, rejection reason, service editor, duplicate review, quarantined imports, source health and audit history. Staff screens use the same Android application, with server-side permissions.
+Administrator screens include User ID sign-in, reports/change queue, current-versus-proposed comparison, editable proposal, approve-and-publish, rejection reason, service editor, duplicate review, quarantined imports, source health and audit history. These live in the separate `staff-portal/` browser application served at `/staff/`, with server-side administrator authorisation. Android contains only public user workflows. See [staff portal operations](../operations/STAFF_PORTAL.md).
 
 ## Architecture and responsibility boundaries
 
@@ -132,7 +132,7 @@ Errors use actionable messages and structured details. Validate Singapore bounds
 5. Return local results independently from OneMap. Enrich travel times asynchronously for each returned page, with at most three simultaneous requests and a 4-second client deadline.
 6. Route with a total bounded deadline, safe server-side token refresh, and decoded geometry. Preserve service details on all failures.
 
-The app offers Walk, Public transport and Drive through [Google Routes](https://developers.google.com/maps/documentation/routes/transit-route), displayed on Google Maps. Backend credentials stay server-side; Android map key uses package/certificate restrictions. Never cache seeker origins or route results durably. Setup: GOOGLE_MAPS_SETUP.md.
+The app offers Walk, Public transport and Drive through [Google Routes](https://developers.google.com/maps/documentation/routes/transit-route), displayed on Google Maps. Backend credentials stay server-side; Android map key uses package/certificate restrictions. Never cache seeker origins or route results durably. Setup: [Google Maps configuration](../setup/GOOGLE_MAPS_SETUP.md).
 
 ## Requirement coverage and acceptance evidence
 

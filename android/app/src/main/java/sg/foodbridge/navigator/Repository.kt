@@ -22,6 +22,35 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 val Context.store by preferencesDataStore("foodbridge_local")
+
+fun accessMethodLabel(value: String) = when (value) {
+    "referral_required" -> "Referral required"
+    "application_required" -> "Application required"
+    "provider_assessment" -> "Provider assessment required"
+    "unverified" -> "Current access requirements unverified"
+    else -> "Contact provider to confirm access"
+}
+
+fun accessMethodDetail(value: String) = when (value) {
+    "referral_required" -> "Referral required. A social worker, caseworker, or partner agency must refer or apply on your behalf. Contact the provider to confirm the current process."
+    "application_required" -> "An application is required. Use the provider's application process and confirm current eligibility directly."
+    "provider_assessment" -> "The provider assesses eligibility. Contact them to ask about current intake and assessment steps."
+    "unverified" -> "This food-support listing or its access requirements have not been independently confirmed as current. Contact the provider before relying on it."
+    else -> "Referral or application requirements are not confirmed. Contact the provider before travelling or relying on this listing."
+}
+
+fun collectionLocationLabel(value: String) = when (value) {
+    "collection_site", "confirmed_collection_site" -> "Confirmed collection/service location"
+    "coordination_site" -> "Coordination site — not a confirmed walk-in collection point"
+    else -> "No confirmed collection-site address"
+}
+
+fun directionsButtonLabel(value: String) = when (value) {
+    "collection_site" -> "Get directions to collection site"
+    "coordination_site" -> "Get directions to coordination site"
+    else -> "Get directions"
+}
+
 data class Service(val json: JSONObject) {
     val id get() = json.getString("id")
     val name get() = json.getString("name")
@@ -58,7 +87,6 @@ fun JSONArray.objects() = (0 until length()).map { getJSONObject(it) }
 
 class Repository(private val context: Context) {
     private val client = OkHttpClient.Builder().callTimeout(4500, TimeUnit.MILLISECONDS).build()
-    var token: String? = null // Staff sessions are deliberately memory-only.
     var lastUpdate: String? = null
     private val bookmarksKey = stringSetPreferencesKey("bookmarks")
     private val dietsKey = stringSetPreferencesKey("diets")
@@ -76,7 +104,6 @@ class Repository(private val context: Context) {
     }
     suspend fun request(path: String, method: String = "GET", body: JSONObject? = null): String = withContext(Dispatchers.IO) {
         val builder = Request.Builder().url(BuildConfig.API_URL.trimEnd('/') + path)
-        token?.let { builder.header("Authorization", "Bearer $it") }
         if (method != "GET") builder.method(method, (body ?: JSONObject()).toString().toRequestBody("application/json".toMediaType()))
         client.newCall(builder.build()).execute().use { response ->
             val content = response.body?.string() ?: "{}"

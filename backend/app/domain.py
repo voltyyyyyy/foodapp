@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 SG = ZoneInfo('Asia/Singapore')
 
+AccessMethod = Literal['referral_required', 'application_required', 'provider_assessment', 'contact_to_confirm', 'unverified']
+ProviderLocationType = Literal['confirmed_collection_site', 'coordination_site', 'no_confirmed_collection_site']
+ServiceLocationRole = Literal['collection_site', 'coordination_site']
+
 class Origin(BaseModel):
     latitude: float = Field(ge=1.13, le=1.48, allow_inf_nan=False)
     longitude: float = Field(ge=103.59, le=104.1, allow_inf_nan=False)
@@ -80,6 +84,7 @@ class Service(Origin):
     postal: str = Field(pattern=r'^\d{6}$')
     description: str = Field(max_length=2000)
     eligibility: str = Field(max_length=1000)
+    delivery_information: str = Field(default='', max_length=2000)
     diets: list[str] = []
     wheelchair: bool | None = None
     phone: str | None = None
@@ -92,6 +97,8 @@ class Service(Origin):
     verified_at: datetime
     demo: bool = False
     active: bool = True
+    access_method: AccessMethod = 'contact_to_confirm'
+    location_role: ServiceLocationRole | None = None
 
     @field_validator('website')
     @classmethod
@@ -135,6 +142,8 @@ class Provider(BaseModel):
     directory_facts: dict = Field(default_factory=dict)
     verification_status: Literal['provider_reviewed', 'directory_only'] = 'directory_only'
     location_notes: str | None = Field(default=None, max_length=1000)
+    location_type: ProviderLocationType = 'no_confirmed_collection_site'
+    access_method: AccessMethod = 'contact_to_confirm'
     verified_at: datetime
     imported_at: datetime
     verification_notes: str = Field(max_length=3000)
