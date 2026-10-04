@@ -1,0 +1,42 @@
+{
+  "source": "https://www.krsnasfreemeals.org/contact",
+  "permission": "Public provider listing staged for internal review; this is not a partner export or live availability feed. Confirm access with the provider before travelling.",
+  "geocode_source": "https://www.onemap.gov.sg/api/common/elastic/search?searchVal=207327%20Singapore&returnGeom=Y&getAddrDetails=Y&pageNum=1",
+  "reviewed_at": "2026-10-03T03:44:22+00:00",
+  "records": [
+    {
+      "kind": "organisation",
+      "id": "org-krsnas-free-meals",
+      "name": "Krsna's Free Meals"
+    },
+    {
+      "id": "krsnas-free-meals-public-meal-site",
+      "organisation_id": "org-krsnas-free-meals",
+      "name": "Krsna's Free Meals",
+      "support_type": "Hot meals",
+      "address": "20 Veerasamy Road, Singapore",
+      "postal": "207327",
+      "latitude": 1.307412667002052,
+      "longitude": 103.8535128363121,
+      "description": "The provider publishes this address as its meal-service location. Its contact page lists conflicting opening hours between the main section and footer. Call before visiting; no current service or stock availability is asserted.",
+      "eligibility": "The provider's public page does not specify eligibility or an application process. Contact Krsna's Free Meals to confirm current access arrangements.",
+      "diets": [],
+      "wheelchair": null,
+      "phone": "+65 9105 6343",
+      "website": "https://www.krsnasfreemeals.org/contact",
+      "schedules": [],
+      "exceptions": {},
+      "observations": [],
+      "source": "https://www.krsnasfreemeals.org/contact",
+      "verified_at": "2026-10-03T03:44:22+00:00",
+      "demo": false,
+      "active": true,
+      "provider_id": "foodconnect-krsnas-free-meals"
+    }
+  ],
+  "source_notes": [
+    "Provider page gives 20 Veerasamy Road, Singapore 207327, phone +65 9105 6343, and admin@krsnasfreemeals.org. The upper page lists 6:30am–9am and 11am–2:30pm; its footer also lists 7pm–9pm, so no schedule was encoded.",
+    "OneMap's public postal-code search response archived at backend/data/foodconnect-sources/onemap-207327.json returned postal 207327, address 20 VEERASAMY ROAD, and coordinates 1.307412667002052, 103.8535128363121 / 103.8535128363121. The response also included an authentication-warning field, despite returning one result; retain for human review before any production publication.",
+    "This is a separate service point for Krsna's Free Meals. It does not duplicate the existing Willing Hearts listing. No diet, schedule, wheelchair access, eligibility outcome, or current availability is inferred."
+  ]
+}

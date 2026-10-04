@@ -1,0 +1,56 @@
+# FoodConnect provider intake
+
+Reviewed 3 October 2026. The current provider seed is `backend/seeds/foodconnect-providers.json`; a separately mapped meal location is staged in `backend/seeds/foodconnect-map-services.json`.
+
+## Coverage and source extraction
+
+The FoodConnect directory page is [foodconnect.gov.sg/directory](https://foodconnect.gov.sg/directory/). Its public Next.js page data identifies the JSON endpoint as [`https://foodconnect.gov.sg/api/prod/foodProviders`](https://foodconnect.gov.sg/api/prod/foodProviders). The endpoint returned one JSON array containing 22 provider records. The response, response headers, page HTML and relevant JavaScript assets are retained under ignored `backend/data/foodconnect-sources/`; the raw data response is `foodProviders.json`. This count comes from the complete endpoint response, not search indexing or a sample of rendered cards.
+
+The directory page footer says “Last updated 22 Mar 2023.” The raw row-level `timeStamp` values vary and are preserved verbatim under each record's `directory_facts.source_record_timestamp_raw`; one uses an Excel-serial-like value. Do not treat the footer as the update date for every row.
+
+For all 22 providers, `directory_facts` preserves the public provider/card fields and the category fields for Cooked Meals, Food Rations, Food Vouchers and Fresh Produce. For each category it retains the API `*Info` object (frequency, recipients, dietary preferences, delivery methods and service regions), the parallel raw frequency/recipient/type/delivery/estate-group/distribution-day/distribution-date values, and the source support flag. The source aggregate frequencies, recipients, dietary preferences, delivery methods and regions are also retained. Code values are accompanied by readable labels. Parallel API representations and the difference between a null and an empty string are retained; conflicts are not silently reconciled. Internal PK/SK/agreement/download status, person-specific request contacts, logos and internal references are excluded from the public facts.
+
+The API row for Krsna's Free Meals contains a replacement character in its provider-name field. The app display name is reconciled from the provider's branded primary site; the API string remains in `directory_facts`.
+
+## Provider review status
+
+The imported directory has 22 records: **18 `provider_reviewed`** and **4 `directory_only`**. Provider-reviewed means a current or recent organization-controlled source confirmed relevant programme or contact facts. It does not validate every FoodConnect card field. Directory-only entries have not been independently corroborated as current food assistance; their source-card facts and uncertainty remain visible.
+
+The four directory-only programme listings are Blessed Grace Social Services, Hopes in Meals, Mummy Yummy, and Loving Heart Multi-Service Centre. BGSS's current site confirms a contact helpline and its current social-service areas but does not mention the FoodConnect food programmes. For Hopes in Meals, no current organization-controlled programme/contact page was located. Mummy Yummy has an older third-party-hosted programme reference but no current provider-controlled food-support source. Loving Heart MSC's current contact page confirms general contact details but not its listed food-ration programme. Contact details that came only from FoodConnect are clearly labelled as directory values rather than freshly verified contacts.
+
+Examples of provider sources reviewed:
+
+- Apex Club of Bukit Timah: [Redhill food distribution](https://apexbt.org/) and [help/volunteer information](https://apexbt.org/help-us/) describe weekly food distribution and deliveries to assigned beneficiaries; the [contact page](https://apexbt.org/contact/) supplies the current email. Its home-page footer lists a different email, so the contact-page address is used and the discrepancy is documented.
+- Ascending Hope: [programmes](https://www.ascendinghope.org/programmes) and [contact](https://www.ascendinghope.org/contact).
+- Club Rainbow: [2022 annual report](https://www.clubrainbow.org/s/CRS-Annual-Report-2022-Final-compressed.pdf); it describes food assistance for supported families but is not current intake guidance.
+- En Community Services Society: [FY2024/25 annual report](https://ecss.org.sg/wp-content/uploads/2026/03/Annual-Report-ECSS-FY-ending-30-06-2025.pdf) mentions food-voucher support; its [current contact page](https://ecss.org.sg/contact-us/) provides the general line and Social and Community Care inbox. The directory frequency/collection details and current intake route were not independently confirmed.
+- Filos: [services and assistance](https://www.filos.sg/services-assistance) describes monthly door-to-door ration/essential-item distribution in Chai Chee; it does not confirm every FoodConnect support category.
+- Food from the Heart: [Community Food Pack](https://www.foodfromtheheart.sg/work/programmes/community-food-pack) describes monthly food packs and partner-based support; no single public pickup point was inferred.
+- Free Food For All: [Get Help](https://www.freefood.org.sg/get-help) provides current food-aid application and role-based contact details.
+- Hao Ren Hao Shi: [official home page](https://www.haorenhaoshi.org.sg/) lists Happy Mart days/locations and Mobile Groceries. These differ from the FoodConnect row's “weekly” Saturday ration wording, so the app tells users to confirm the particular programme and location.
+- Krsna's Free Meals: [provider contact page](https://www.krsnasfreemeals.org/contact) confirms the public meal-service location, phone and role email.
+- Loving Heart (Jurong): [Food Gift+](https://www.lovingheartjurong.org.sg/services/food-gift-2-0/) describes monthly ration support and programme criteria; the office is not asserted as the pickup point.
+- Metropolitan YMCA: [M.Y Manna outreach](https://www.mymca.org.sg/outreach/) describes monthly groceries and delivery/collection options; no unconfirmed location or current intake detail is inferred.
+- Realm of Tranquility: [food-ration programme description](https://realmoftranquility.com/the-4-pillars/), [2023 annual report](https://realmoftranquility.com/wp-content/uploads/2025/07/Annual-Report-2023_compressed.pdf), and [current contact page](https://realmoftranquility.com/contact-us/). The organization page gives a general email while the [NCSS member list](https://isomer-user-content.by.gov.sg/24/75e28489-c4be-46a0-9e57-eb0fde6fbb48/list-of-ncss-members.pdf) supplies a role address; the role address is used in the app.
+- Singapore Association of the Visually Handicapped: [2024 annual report](https://savh.org.sg/wp-content/uploads/2024/09/SAVH-Annual-Report-2024.pdf) describes monthly home rations for visually impaired clients; [current Social Work contacts](https://savh.org.sg/contact/) replace the older named-staff listing.
+- Singapore Buddhist Welfare Services: [Public Assistance Programme](https://sbws.org.sg/en/services-affiliates/social-welfare-and-community-services/public-assistance-programme/) confirms monthly rations and referral/assessment routes; [corporate information](https://sbws.org.sg/en/about-us/corporate-information/) confirms current organization contacts.
+- Singapore Red Cross: [Family Crisis Aid](https://www.redcross.sg/our-causes/families-youth-children/family-crisis-aid/) confirms grocery-voucher assistance and caseworker/partner-agency applications, not every FoodConnect support category.
+- United Indian Muslim Association: [Need Help](https://www.uima.org.sg/need-help/) links its beneficiary registration form and public email. Its main content contains malformed phone numbers and the footer contains different numbers; no call number is presented.
+- Willing Hearts: [contact](https://willinghearts.org.sg/contact) confirms meal-assistance application through a social worker/social-service agency, phone and kitchen address. The kitchen is not claimed as a public pickup point.
+- Yong-en Care Centre: [care and assistance](https://www.yong-en.org.sg/care-assistance/) confirms monthly dry rations, served localities and SSO/FSC referral criteria; its Smith Street address is administrative, not a confirmed collection site.
+
+The [FoodConnect FAQ](https://foodconnect.gov.sg/directory/FAQ/) says eligibility varies by provider. A directory listing does not confirm current stock, capacity, eligibility approval, walk-in access or operating hours. Users should confirm details with providers.
+
+## Locations and map service
+
+Provider records keep address/postal/coordinates null unless a primary source confirms a public service location. Registered, administrative, office and kitchen addresses are not treated as collection points. Krsna's Free Meals is the sole map point staged from this directory: its provider page publishes 20 Veerasamy Road, Singapore 207327 as the meal-service location. The archived OneMap postal-code search response returned that address and coordinates 1.307412667002052, 103.8535128363121. The OneMap response also includes an authentication-warning field despite returning one result; its raw response is retained for review.
+
+Krsna's page lists 6:30–9:00am and 11:00am–2:30pm near the top, while the footer additionally lists 7:00–9:00pm. No schedule is encoded. The map entry has no asserted diet, wheelchair access, availability observation or eligibility outcome. It is separate from the existing Willing Hearts record.
+
+## Import state and remaining limits
+
+The parent agent used the audited staff importer to import and publish all 22 provider entries. It reported 22 accepted, zero quarantined and zero suspected duplicates; the public provider API returned all 22. A separate organisation/service import published Krsna's map service; the parent confirmed the public API returns the expected address/coordinates, `demo=false`, and unknown operating/availability state. No source asserts current stock.
+
+`backend/seeds/foodconnect-services.json` is an earlier, incomplete staging artifact and is **not** the authoritative 22-record provider seed. Use `backend/seeds/foodconnect-providers.json` for provider-directory review. The seed can be re-imported using `tools/import-foodconnect.ps1` only as an audited staff operation; that importer skips provider IDs already present, so updates to already-published rows require an audited admin edit. `tools/refresh_foodconnect_seed.py` documents how the staged source facts were mapped from the archived endpoint response. No external account or public site was changed.
+
+Directory programme facts are inherently time-sensitive because the page footer date is March 2023 and the row timestamps vary. Ask providers to confirm current contacts, eligibility, locations, and service status before relying on the listing.

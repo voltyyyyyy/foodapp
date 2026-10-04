@@ -1,0 +1,23 @@
+﻿{
+  "version": 8,
+  "name": "FoodBridge Quiet",
+  "imports": [{
+    "id": "basemap",
+    "url": "mapbox://styles/mapbox/standard",
+    "config": {
+      "theme": "faded",
+      "lightPreset": "day",
+      "showPointOfInterestLabels": false,
+      "showLandmarkIcons": false,
+      "show3dObjects": false,
+      "showRoadLabels": true,
+      "showPlaceLabels": true,
+      "showTransitLabels": true,
+      "colorLand": "#FAFAF8",
+      "colorWater": "#BAD9DE",
+      "colorGreenspace": "#DFEADF"
+    }
+  }],
+  "sources": {},
+  "layers": []
+}

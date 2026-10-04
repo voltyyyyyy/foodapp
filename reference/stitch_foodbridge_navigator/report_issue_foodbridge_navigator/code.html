@@ -1,0 +1,104 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary": "#004e7a", "outline-variant": "#bec8ca", "primary": "#00535b", "tertiary-fixed-dim": "#94ccff", "tertiary-fixed": "#cde5ff", "secondary-container": "#aeeecb", "on-secondary-fixed-variant": "#0e5138", "on-secondary-fixed": "#002114", "on-secondary": "#ffffff", "surface-bright": "#f7f9ff", "surface-dim": "#d7dadf", "error": "#ba1a1a", "on-error-container": "#93000a", "on-primary-container": "#9becf7", "error-container": "#ffdad6", "surface-variant": "#e0e3e8", "on-error": "#ffffff", "surface-container-lowest": "#ffffff", "secondary-fixed-dim": "#95d4b3", "surface-container-high": "#e5e8ee", "tertiary-container": "#00679f", "on-surface": "#181c20", "primary-fixed-dim": "#82d3de", "on-background": "#181c20", "surface-container-low": "#f1f4f9", "secondary": "#2c694e", "secondary-fixed": "#b1f0ce", "primary-fixed": "#9ff0fb", "inverse-on-surface": "#eef1f6", "surface-container": "#ebeef3", "on-primary": "#ffffff", "on-surface-variant": "#3e494a", "inverse-primary": "#82d3de", "on-tertiary": "#ffffff", "surface": "#f7f9ff", "on-primary-fixed": "#001f23", "on-tertiary-fixed-variant": "#004b74", "background": "#f7f9ff", "primary-container": "#006d77", "inverse-surface": "#2d3135", "outline": "#6f797a", "on-primary-fixed-variant": "#004f56", "on-tertiary-container": "#c5e2ff", "surface-container-highest": "#e0e3e8", "on-tertiary-fixed": "#001d32", "surface-tint": "#006972", "on-secondary-container": "#316e52" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "xs": "4px", "sm": "8px", "xxl": "48px", "margin-desktop": "32px", "md": "16px", "gutter": "16px", "margin-mobile": "16px", "xl": "32px", "max-width": "1280px", "lg": "24px", "unit": "8px" }, "fontFamily": { "headline-lg": ["Inter"], "display-lg": ["Inter"], "body-lg": ["Inter"], "headline-lg-mobile": ["Inter"], "headline-md": ["Inter"], "title-md": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "label-md": ["Inter"] } } } }</script><style>@layer base { body { overscroll-behavior: none; } .pb-safe { padding-bottom: env(safe-area-inset-bottom); } .pt-safe { padding-top: env(safe-area-inset-top); } }</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface text-on-surface font-body-lg"><main class="min-h-screen flex flex-col bg-surface pt-safe"><div class="flex flex-col w-full p-margin-mobile gap-lg">
+<!-- Back Link -->
+<a class="flex items-center gap-xs text-primary font-label-md hover:opacity-80 transition-opacity w-fit" data-path="services/harmony-community-kitchen" href="#">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        Back to Service
+    </a>
+<!-- Header Section -->
+<div class="flex flex-col gap-sm">
+<h1 class="text-headline-lg-mobile text-on-surface">Report incorrect information</h1>
+<p class="text-body-lg text-on-surface-variant">For <span class="font-semibold text-primary">Harmony Community Kitchen</span></p>
+</div>
+<!-- Form -->
+<form class="flex flex-col gap-lg bg-surface-container-lowest p-md rounded-xl shadow-sm">
+<!-- Field 1: What is incorrect? -->
+<fieldset class="flex flex-col gap-sm">
+<legend class="text-title-md text-on-surface mb-xs">What is incorrect?</legend>
+<div class="flex flex-col gap-xs">
+<label class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group">
+<input class="w-5 h-5 accent-primary border-outline-variant focus:ring-primary focus:ring-offset-surface" name="incorrect_type" type="radio" value="address"/>
+<span class="text-body-lg text-on-surface group-hover:text-primary transition-colors">Address or location</span>
+</label>
+<label class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group">
+<input class="w-5 h-5 accent-primary border-outline-variant focus:ring-primary focus:ring-offset-surface" name="incorrect_type" type="radio" value="contact"/>
+<span class="text-body-lg text-on-surface group-hover:text-primary transition-colors">Phone number or website</span>
+</label>
+<label class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group">
+<input class="w-5 h-5 accent-primary border-outline-variant focus:ring-primary focus:ring-offset-surface" name="incorrect_type" type="radio" value="hours"/>
+<span class="text-body-lg text-on-surface group-hover:text-primary transition-colors">Opening hours</span>
+</label>
+<label class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group">
+<input class="w-5 h-5 accent-primary border-outline-variant focus:ring-primary focus:ring-offset-surface" name="incorrect_type" type="radio" value="details"/>
+<span class="text-body-lg text-on-surface group-hover:text-primary transition-colors">Service details or requirements</span>
+</label>
+<label class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group bg-error-container/30">
+<input class="w-5 h-5 accent-error border-error focus:ring-error focus:ring-offset-surface" name="incorrect_type" type="radio" value="closed"/>
+<span class="text-body-lg text-on-error-container font-medium group-hover:text-error transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined text-[20px] text-error">cancel</span>
+                        Organisation is permanently closed
+                    </span>
+</label>
+<label class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group bg-error-container/10">
+<input class="w-5 h-5 accent-primary border-outline-variant focus:ring-primary focus:ring-offset-surface" name="incorrect_type" type="radio" value="unavailable"/>
+<span class="text-body-lg text-on-surface group-hover:text-primary transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">inventory_2</span>
+                        Food is currently unavailable
+                    </span>
+</label>
+<label class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer group">
+<input class="w-5 h-5 accent-primary border-outline-variant focus:ring-primary focus:ring-offset-surface" name="incorrect_type" type="radio" value="other"/>
+<span class="text-body-lg text-on-surface group-hover:text-primary transition-colors">Other</span>
+</label>
+</div>
+</fieldset>
+<!-- Field 2: Describe the issue -->
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-end mb-xs">
+<label class="text-title-md text-on-surface" for="issue_description">Describe the issue</label>
+<span class="text-label-sm text-on-surface-variant" id="char_count">0 / 1000 characters</span>
+</div>
+<textarea class="w-full min-h-[120px] p-md bg-surface rounded-lg outline-none ring-1 ring-outline-variant focus:ring-2 focus:ring-primary text-body-lg text-on-surface placeholder:text-outline-variant resize-y transition-shadow" id="issue_description" maxlength="1000" name="issue_description" placeholder="Please provide details about what needs to be updated..." rows="4"></textarea>
+</div>
+<!-- Field 3: Evidence or source -->
+<div class="flex flex-col gap-xs">
+<label class="text-title-md text-on-surface mb-xs" for="evidence">Evidence or source <span class="text-body-sm font-normal text-on-surface-variant">(Optional)</span></label>
+<p class="text-body-sm text-on-surface-variant mb-xs">A link to their official website, social media, or a photo helps us verify quickly.</p>
+<input class="w-full h-11 px-md bg-surface rounded-lg outline-none ring-1 ring-outline-variant focus:ring-2 focus:ring-primary text-body-lg text-on-surface placeholder:text-outline-variant transition-shadow" id="evidence" name="evidence" placeholder="e.g. https://facebook.com/harmonykitchen" type="text"/>
+</div>
+<!-- Submit Button -->
+<button class="w-full h-12 mt-sm bg-primary text-on-primary font-label-md rounded-full flex items-center justify-center gap-xs hover:bg-on-primary-fixed-variant transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-primary" type="submit">
+<span class="material-symbols-outlined text-[20px]">send</span>
+            Submit Report
+        </button>
+<p class="text-label-sm text-center text-on-surface-variant mt-xs">
+            Your report helps keep this directory accurate for everyone.<br/>No personal information is collected.
+        </p>
+</form>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const textarea = document.getElementById('issue_description');
+        const charCount = document.getElementById('char_count');
+
+        if (textarea && charCount) {
+            textarea.addEventListener('input', (e) => {
+                const currentLength = e.target.value.length;
+                charCount.textContent = `${currentLength} / 1000 characters`;
+                
+                if (currentLength > 900) {
+                    charCount.classList.add('text-error');
+                    charCount.classList.remove('text-on-surface-variant');
+                } else {
+                    charCount.classList.remove('text-error');
+                    charCount.classList.add('text-on-surface-variant');
+                }
+            });
+        }
+    });
+</script><footer class="mt-auto p-margin-mobile bg-surface-container-low border-t border-outline-variant/20"><p class="text-body-sm font-body-sm text-on-surface-variant mb-md">Listings and availability reports may change. Contact the organisation before travelling.</p><div class="flex flex-wrap gap-md"><a class="text-label-md font-label-md text-primary" data-path="about" href="#">About</a><a class="text-label-md font-label-md text-primary" data-path="help" href="#">Help</a><a class="text-label-md font-label-md text-primary" data-path="staff-sign-in" href="#">Staff Sign In</a></div></footer></main><nav class="fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-bold"><div class="flex items-center justify-around h-16"><a class="flex flex-col items-center justify-center w-12 h-12 rounded-full text-on-surface-variant hover:text-primary transition-colors" data-path="map" href="#"><span class="material-symbols-outlined text-[24px]">map</span></a><a class="flex flex-col items-center justify-center w-12 h-12 rounded-full text-on-surface-variant hover:text-primary transition-colors" data-path="bookmarks" href="#"><span class="material-symbols-outlined text-[24px]">bookmark</span></a><a class="flex flex-col items-center justify-center w-12 h-12 rounded-full text-on-surface-variant hover:text-primary transition-colors" data-path="home" href="#"><span class="material-symbols-outlined text-[24px]">home</span></a><a class="flex flex-col items-center justify-center w-12 h-12 rounded-full text-on-surface-variant hover:text-primary transition-colors" data-path="profile" href="#"><span class="material-symbols-outlined text-[24px]">person</span></a></div></nav></body></html>

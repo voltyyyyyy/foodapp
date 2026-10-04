@@ -1,0 +1,105 @@
+<!DOCTYPE html><html lang="en" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary": "#004e7a", "outline-variant": "#bec8ca", "primary": "#00535b", "tertiary-fixed-dim": "#94ccff", "tertiary-fixed": "#cde5ff", "secondary-container": "#aeeecb", "on-secondary-fixed-variant": "#0e5138", "on-secondary-fixed": "#002114", "on-secondary": "#ffffff", "surface-bright": "#f7f9ff", "surface-dim": "#d7dadf", "error": "#ba1a1a", "on-error-container": "#93000a", "on-primary-container": "#9becf7", "error-container": "#ffdad6", "surface-variant": "#e0e3e8", "on-error": "#ffffff", "surface-container-lowest": "#ffffff", "secondary-fixed-dim": "#95d4b3", "surface-container-high": "#e5e8ee", "tertiary-container": "#00679f", "on-surface": "#181c20", "primary-fixed-dim": "#82d3de", "on-background": "#181c20", "surface-container-low": "#f1f4f9", "secondary": "#2c694e", "secondary-fixed": "#b1f0ce", "primary-fixed": "#9ff0fb", "inverse-on-surface": "#eef1f6", "surface-container": "#ebeef3", "on-primary": "#ffffff", "on-surface-variant": "#3e494a", "inverse-primary": "#82d3de", "on-tertiary": "#ffffff", "surface": "#f7f9ff", "on-primary-fixed": "#001f23", "on-tertiary-fixed-variant": "#004b74", "background": "#f7f9ff", "primary-container": "#006d77", "inverse-surface": "#2d3135", "outline": "#6f797a", "on-primary-fixed-variant": "#004f56", "on-tertiary-container": "#c5e2ff", "surface-container-highest": "#e0e3e8", "on-tertiary-fixed": "#001d32", "surface-tint": "#006972", "on-secondary-container": "#316e52" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "xs": "4px", "sm": "8px", "xxl": "48px", "margin-desktop": "32px", "md": "16px", "gutter": "16px", "margin-mobile": "16px", "xl": "32px", "max-width": "1280px", "lg": "24px", "unit": "8px" }, "fontFamily": { "headline-lg": ["Inter"], "display-lg": ["Inter"], "body-lg": ["Inter"], "headline-lg-mobile": ["Inter"], "headline-md": ["Inter"], "title-md": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "label-md": ["Inter"] } } } }</script><style>@layer base { body { overscroll-behavior: none; } .pb-safe { padding-bottom: env(safe-area-inset-bottom); } }</style></head><body class="bg-surface text-on-surface font-body-lg"><main class="min-h-screen flex flex-col bg-surface"><div class="flex flex-col w-full pb-32">
+<div class="px-margin-mobile flex flex-col gap-sm pt-md pb-md">
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface">eFind food support that fits your needs</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant">Search for local food banks, community pantries, and meal services.</p>
+</div>
+<div class="px-margin-mobile flex flex-col gap-md">
+<form class="flex flex-col bg-surface-container-lowest rounded-xl shadow-sm relative overflow-hidden p-md gap-md" id="searchForm" onsubmit="event.preventDefault(); window.location.href='#?path=search-results';">
+<div class="absolute inset-0 bg-primary/5 pointer-events-none rounded-xl" style="mix-blend-mode: multiply;"></div>
+<div class="flex flex-col gap-md relative z-10">
+<div class="flex flex-col gap-xs">
+<label class="text-label-md font-label-md text-on-surface-variant px-sm" for="postal-code">Postcode or Town</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-outline">location_on</span>
+<input class="w-full h-[44px] pl-10 pr-sm bg-surface rounded-lg text-body-lg font-body-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors shadow-sm outline outline-1 outline-outline-variant/30" id="postal-code" placeholder="Auto-detecting location..." type="text">
+</div><button class="mt-xs flex items-center gap-xs text-label-md font-label-md text-primary px-sm hover:underline" type="button"><span class="material-symbols-outlined text-[18px]">my_location</span> Use my current location</button>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="text-label-md font-label-md text-on-surface-variant px-sm" for="distance">Distance</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-outline">explore</span>
+<select class="w-full h-[44px] pl-10 pr-lg bg-surface rounded-lg text-body-lg font-body-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest appearance-none transition-colors shadow-sm outline outline-1 outline-outline-variant/30" id="distance">
+<option value="1">Within 1 mile</option>
+<option selected="" value="5">Within 5 miles</option>
+<option value="10">Within 10 miles</option>
+<option value="20">Within 20 miles</option>
+<option value="custom" class="">Custom</option></select>
+<span class="material-symbols-outlined absolute right-sm text-outline pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="text-label-md font-label-md text-on-surface-variant px-sm" for="support-type">Type of Support</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-sm text-primary">volunteer_activism</span>
+<select class="w-full h-[44px] pl-10 pr-lg bg-surface-container-low rounded-lg text-body-lg font-body-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest appearance-none transition-colors shadow-sm outline outline-1 outline-outline-variant/30" id="support-type">
+<option value="all">All Types</option>
+<option value="food-bank">Food Bank</option>
+<option value="community-meal">Community Meal</option>
+<option value="pantry">Community Pantry</option>
+<option value="delivery">Food Delivery</option>
+</select>
+<span class="material-symbols-outlined absolute right-sm text-outline pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-sm pt-xs">
+<span class="text-label-md font-label-md text-on-surface-variant px-sm">Dietary Requirements (Optional)</span>
+<div class="flex flex-wrap gap-sm">
+<button class="diet-btn h-[44px] px-md rounded-full bg-surface text-on-surface border border-outline-variant/50 text-label-md font-label-md hover:bg-surface-container transition-colors shadow-sm flex items-center gap-xs" data-active="false" type="button">
+<span class="material-symbols-outlined text-[18px]">grass</span> Vegetarian
+                </button>
+<button class="diet-btn h-[44px] px-md rounded-full bg-surface text-on-surface border border-outline-variant/50 text-label-md font-label-md hover:bg-surface-container transition-colors shadow-sm flex items-center gap-xs" data-active="false" type="button">
+<span class="material-symbols-outlined text-[18px]">psychiatry</span> Vegan
+                </button>
+<button class="diet-btn h-[44px] px-md rounded-full bg-surface text-on-surface border border-outline-variant/50 text-label-md font-label-md hover:bg-surface-container transition-colors shadow-sm flex items-center gap-xs" data-active="false" type="button">
+<span class="material-symbols-outlined text-[18px]">restaurant</span> Halal
+                </button>
+<button class="diet-btn h-[44px] px-md rounded-full bg-surface text-on-surface border border-outline-variant/50 text-label-md font-label-md hover:bg-surface-container transition-colors shadow-sm flex items-center gap-xs" data-active="false" type="button">
+<span class="material-symbols-outlined text-[18px]">bakery_dining</span> Gluten-Free
+                </button>
+</div>
+</div>
+</div>
+<button class="w-full h-[56px] mt-sm bg-primary text-on-primary rounded-xl text-title-md font-title-md hover:bg-primary-container transition-colors flex items-center justify-center gap-sm relative z-10 shadow-md" type="submit"><span class="material-symbols-outlined">search</span> Search</button>
+</form><a class="flex items-center justify-between p-md bg-surface-container-low rounded-xl border border-outline-variant/20 hover:bg-surface-container transition-colors" href="#">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-error">emergency_home</span>
+<div class="flex flex-col">
+<span class="text-body-lg font-semibold text-on-surface">Need immediate help?</span>
+<span class="text-body-sm text-on-surface-variant">View emergency support and guidance</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</a>
+</div>
+</div>
+<script>
+    document.querySelectorAll('.diet-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const isActive = this.getAttribute('data-active') === 'true';
+            
+            if (isActive) {
+                this.setAttribute('data-active', 'false');
+                this.classList.remove('bg-primary-container', 'text-on-primary-container', 'border-primary');
+                this.classList.add('bg-surface', 'text-on-surface', 'border-outline-variant/50');
+                
+                const icon = this.querySelector('.material-symbols-outlined');
+                icon.style.fontVariationSettings = "'FILL' 0";
+            } else {
+                this.setAttribute('data-active', 'true');
+                this.classList.remove('bg-surface', 'text-on-surface', 'border-outline-variant/50');
+                this.classList.add('bg-primary-container', 'text-on-primary-container', 'border-primary');
+                
+                const icon = this.querySelector('.material-symbols-outlined');
+                icon.style.fontVariationSettings = "'FILL' 1";
+            }
+        });
+    });
+</script></main><nav class="fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-bold"><div class="flex items-center justify-around h-16"><a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant" data-path="map-view" href="#"><span class="material-symbols-outlined">map</span></a><a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant" data-path="bookmarks" href="#"><span class="material-symbols-outlined">bookmark</span></a><a aria-current="page" class="flex flex-col items-center justify-center w-full h-full text-primary font-bold" data-path="home" href="#"><span class="material-symbols-outlined">home</span></a><a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant" data-path="profile" href="#"><span class="material-symbols-outlined">person</span></a></div></nav>
+
+
+
+
+
+
+</body></html>

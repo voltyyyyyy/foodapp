@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-container-highest": "#e0e3e8", "on-secondary-fixed": "#002114", "secondary-container": "#aeeecb", "tertiary-fixed-dim": "#94ccff", "on-primary-container": "#9becf7", "on-primary-fixed": "#001f23", "surface-tint": "#006972", "on-error-container": "#93000a", "surface": "#f7f9ff", "error": "#ba1a1a", "on-error": "#ffffff", "outline": "#6f797a", "primary-fixed": "#9ff0fb", "surface-variant": "#e0e3e8", "inverse-primary": "#82d3de", "secondary-fixed-dim": "#95d4b3", "background": "#f7f9ff", "inverse-on-surface": "#eef1f6", "surface-bright": "#f7f9ff", "tertiary-container": "#00679f", "on-tertiary-fixed": "#001d32", "tertiary": "#004e7a", "surface-dim": "#d7dadf", "on-surface": "#181c20", "on-tertiary-container": "#c5e2ff", "on-secondary-container": "#316e52", "surface-container": "#ebeef3", "primary": "#00535b", "secondary-fixed": "#b1f0ce", "on-surface-variant": "#3e494a", "surface-container-low": "#f1f4f9", "error-container": "#ffdad6", "on-secondary": "#ffffff", "tertiary-fixed": "#cde5ff", "inverse-surface": "#2d3135", "outline-variant": "#bec8ca", "on-background": "#181c20", "surface-container-high": "#e5e8ee", "on-primary-fixed-variant": "#004f56", "on-tertiary-fixed-variant": "#004b74", "on-tertiary": "#ffffff", "secondary": "#2c694e", "surface-container-lowest": "#ffffff", "on-primary": "#ffffff", "primary-fixed-dim": "#82d3de", "on-secondary-fixed-variant": "#0e5138", "primary-container": "#006d77" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "gutter": "16px", "sm": "8px", "xs": "4px", "xl": "32px", "xxl": "48px", "lg": "24px", "md": "16px", "margin-mobile": "16px", "max-width": "1280px", "unit": "8px", "margin-desktop": "32px" }, fontFamily: { "body-lg": ["Inter"], "label-md": ["Inter"], "headline-md": ["Inter"], "label-sm": ["Inter"], "headline-lg": ["Inter"], "display-lg": ["Inter"], "headline-lg-mobile": ["Inter"], "body-sm": ["Inter"], "title-md": ["Inter"] }, fontSize: { "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "label-md": ["14px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "500" }], "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600" }], "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "600" }], "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "600" }], "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }], "headline-lg-mobile": ["28px", { lineHeight: "34px", fontWeight: "600" }], "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }], "title-md": ["20px", { lineHeight: "28px", fontWeight: "600" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-lg text-body-lg text-on-surface flex flex-col min-h-screen antialiased selection:bg-secondary-container selection:text-on-secondary-container"><header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-margin-mobile flex items-center justify-between"><div class="flex items-center gap-xs"><button aria-label="Go back" class="w-11 h-11 flex items-center justify-center -ml-2 rounded-full text-on-surface hover:bg-surface-container transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><img alt="A professional, minimalist logo for 'FoodBridge Navigator'. The mark should symbolize connection or a bridge using a stylized teal geometric shape, representing civic service and food support. Flat design, clean lines.. Design context: - Primary color: #006d77
+- Font: inter
+- Mode: light
+- Roundness: rounded-md
+. The logo should be visually consistent with these brand tokens." class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1WtdU1rDCBtMmNohbnpe3xNjx1r5Z60C_KtKWx_cLgD2nARW21CP7YkaGfRRNZhgot_MgJEf3SWy0KQLv4vKas8H49VxOY2DRbPM5Fb2n1dRoqLnYmWyMfrq652pizC40FQmXT5RH2tSIDNcbFvw8EjaubBo4ZxUSVuOEUbjudEb3zxdSXoeX6wyyDpl4XW0LfdZFcDN-fx5Oep5OiC2p69cJ-EQ2lAA_yiEyUd4wfYImEzmnr9krUWlA2m"/><h1 class="font-title-md text-title-md text-on-surface tracking-tight truncate pl-1">Resource Detail</h1></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="flex flex-col relative w-full pt-16 bg-surface min-h-screen pb-safe"><div class="flex flex-col w-full px-margin-mobile pb-8 space-y-lg">
+<div class="flex flex-col pt-2">
+<div class="flex items-center justify-between mb-2">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">bolt</span>
+        Flash Community Drop
+      </span>
+<button class="text-primary font-label-md text-label-md hover:underline active:opacity-70 transition-opacity" type="button">
+        Save Draft
+      </button>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight">
+      Share Community Food Drop
+    </h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+      Prevent waste by sharing fresh surplus from events, workshops, or catering with nearby neighbors in need.
+    </p>
+</div>
+<div class="rounded-xl p-4 bg-surface-container-low shadow-sm flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-on-primary-fixed text-[20px]">verified_user</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-label-md text-label-md text-on-surface">Freshness & Dignity Standard</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+        Community drops must be pre-portioned, packaged, or prepared within 2 hours. Listings auto-expire rapidly to ensure peak quality.
+      </p>
+</div>
+</div>
+<div class="rounded-xl p-4 bg-surface-container-lowest shadow-sm flex flex-col space-y-md">
+<div class="flex items-center justify-between">
+<label class="font-label-md text-label-md text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]">timer</span>
+        Listing Expiry (Auto-removes from map)
+      </label>
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">Required</span>
+</div>
+<div aria-label="Select listing expiry duration" class="grid grid-cols-3 gap-2" id="expiry-selector" role="radiogroup">
+<button aria-checked="false" class="expiry-btn min-h-[52px] rounded-lg p-2.5 flex flex-col items-center justify-center text-center transition-all bg-surface-container-low text-on-surface-variant hover:bg-surface-container" data-duration="1" role="radio" type="button">
+<span class="font-label-md text-label-md font-semibold">1 Hour</span>
+<span class="font-label-sm text-label-sm opacity-80 text-[11px] leading-tight">Hot / Buffet</span>
+</button>
+<button aria-checked="true" class="expiry-btn min-h-[52px] rounded-lg p-2.5 flex flex-col items-center justify-center text-center transition-all bg-primary text-on-primary shadow-sm ring-0" data-duration="2" role="radio" type="button">
+<span class="font-label-md text-label-md font-semibold">2 Hours</span>
+<span class="font-label-sm text-label-sm opacity-90 text-[11px] leading-tight">Recommended</span>
+</button>
+<button aria-checked="false" class="expiry-btn min-h-[52px] rounded-lg p-2.5 flex flex-col items-center justify-center text-center transition-all bg-surface-container-low text-on-surface-variant hover:bg-surface-container" data-duration="3" role="radio" type="button">
+<span class="font-label-md text-label-md font-semibold">3 Hours Max</span>
+<span class="font-label-sm text-label-sm opacity-80 text-[11px] leading-tight">Bakery / Fruit</span>
+</button>
+</div>
+<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-primary">schedule</span>
+<span class="font-body-sm text-body-sm" id="expiry-calculated-notice">
+        Listing will automatically expire at <strong class="text-on-surface font-semibold" id="expiry-time-text">3:45 PM</strong>.
+      </span>
+</div>
+</div>
+<div class="rounded-xl p-4 bg-surface-container-lowest shadow-sm flex flex-col space-y-md">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[20px]">distance</span>
+      Drop Point & Pickup Coordinates
+    </h3>
+<div class="flex flex-col space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface" for="loc-name">Location or Building Name</label>
+<div class="flex gap-2 items-center">
+<div class="flex-1 relative">
+<input class="w-full h-11 px-3.5 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm outline-none focus:bg-surface-container transition-colors placeholder:text-on-surface-variant/60" id="loc-name" placeholder="e.g. Suntec Convention Centre" type="text" value="Suntec City Tower 2, Level 3"/>
+</div>
+<button aria-label="Auto-detect current GPS location" class="h-11 px-3.5 rounded-lg bg-surface-container text-primary hover:bg-surface-container-high active:scale-95 transition-all flex items-center gap-1.5 shrink-0" id="gps-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">my_location</span>
+<span class="font-label-sm text-label-sm">GPS</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface" for="pickup-instructions">Exact Station / Pickup Notes</label>
+<textarea class="w-full p-3 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm outline-none focus:bg-surface-container transition-colors placeholder:text-on-surface-variant/60 resize-none" id="pickup-instructions" placeholder="e.g. Outside Room 304, food is arranged on the designated teal community tray. Clean hands station beside." rows="2">Outside Meeting Suite 308, placed on the marble service credenza. Labeled FoodBridge drop.</textarea>
+</div>
+<div class="w-full h-32 rounded-lg relative overflow-hidden bg-cover bg-center shadow-inner" data-alt="A modern architectural civic building lobby interior in soft neutral and teal tones with clean navigation signage and clear community collection points in daytime ambient lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD68KI5rnylhWnIV_b9_tTU9HrL0jR0YGn9iFbWioGFvh_WeZRQ-4q0l29V9D1w72WqtrNzLLxk_YY_3OwdtVJ-GqF8Hos646lPC3bHvKGS0hDfzv-cYy24WE7xlijAH3fFk8N_SQkjdR-TtbiZDR5AZJhXS4e45pJSjWsIVRQ6yfzF0sMwdqMzkOwegew177FgrQF9oeHcrdFnajNeMgfDv4ctxkDlMSyQld1ewhN9qXkORvX_IN6W3A')">
+<div class="absolute inset-0 bg-primary/20 backdrop-blur-[1px] flex items-center justify-center p-3">
+<div class="bg-surface/95 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span>
+<span class="font-label-sm text-label-sm text-on-surface">Pickup beacon set to Level 3 South Foyer</span>
+</div>
+</div>
+</div>
+</div>
+<div class="rounded-xl p-4 bg-surface-container-lowest shadow-sm flex flex-col space-y-md">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[20px]">restaurant</span>
+      Food Details & Servings
+    </h3>
+<div class="flex flex-col space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface" for="food-summary">What's in this drop?</label>
+<input class="w-full h-11 px-3.5 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm outline-none focus:bg-surface-container transition-colors placeholder:text-on-surface-variant/60" id="food-summary" placeholder="e.g. 15 Bento meals, pasta salad & wrapped muffins" type="text" value="18 Bento sets (grilled chicken / braised tofu) & 8 steamed buns"/>
+</div>
+<div class="flex flex-col space-y-2">
+<label class="font-label-md text-label-md text-on-surface">Dietary & Safety Tags</label>
+<div class="flex flex-wrap gap-2" id="tag-container">
+<button class="tag-pill h-8 px-3 rounded-full font-label-sm text-label-sm flex items-center gap-1.5 bg-primary text-on-primary transition-all" data-selected="true" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+          Halal Certified
+        </button>
+<button class="tag-pill h-8 px-3 rounded-full font-label-sm text-label-sm flex items-center gap-1.5 bg-primary text-on-primary transition-all" data-selected="true" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+          Individually Boxed
+        </button>
+<button class="tag-pill h-8 px-3 rounded-full font-label-sm text-label-sm flex items-center gap-1.5 bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all" data-selected="false" type="button">
+<span class="material-symbols-outlined text-[16px]">add</span>
+          Vegetarian
+        </button>
+<button class="tag-pill h-8 px-3 rounded-full font-label-sm text-label-sm flex items-center gap-1.5 bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all" data-selected="false" type="button">
+<span class="material-symbols-outlined text-[16px]">add</span>
+          Vegan
+        </button>
+<button class="tag-pill h-8 px-3 rounded-full font-label-sm text-label-sm flex items-center gap-1.5 bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all" data-selected="false" type="button">
+<span class="material-symbols-outlined text-[16px]">add</span>
+          Nut-Free
+        </button>
+</div>
+</div>
+<div class="flex flex-col space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface">Estimated Portions Available</label>
+<div class="grid grid-cols-4 gap-2" id="portions-selector">
+<button class="portion-btn h-10 rounded-lg bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">1-5 pax</button>
+<button class="portion-btn h-10 rounded-lg bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">6-12 pax</button>
+<button class="portion-btn h-10 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm transition-colors" type="button">15-25 pax</button>
+<button class="portion-btn h-10 rounded-lg bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors" type="button">30+ pax</button>
+</div>
+</div>
+<div class="flex flex-col space-y-2">
+<label class="font-label-md text-label-md text-on-surface">Drop Verification Photo</label>
+<div class="grid grid-cols-3 gap-2">
+<div class="h-20 rounded-lg relative overflow-hidden bg-cover bg-center shadow-sm" data-alt="Neatly arranged eco-friendly meal bento boxes with fresh ingredients clearly labeled and stacked on a clean community staging table in crisp lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCJEpHEO-Uf3Nm-51io_t9c15CUf9xZgN4qI4Jtzvvs9BhWpAGjOQVdSjzDuoAkbRY_rIk7TYn7X8_MPRoJ-c83rmZb_SoETL8G6gtEvZhYlNUJUbk7idsmg0mcb2BhGfYgfC96HMwbiLrZjVjkZbKk7IMEwebTneJ6xzzdJ-X8mXJryQ6s8l9rAxtkhVh88Cg6CLSFzqVYrOLZRaigjI1YEWUltFQ50halE9LJted9u0F4lHVvEScK9g')">
+<div class="absolute top-1 right-1 w-5 h-5 rounded-full bg-surface/90 text-error flex items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined text-[14px]">close</span>
+</div>
+</div>
+<button class="h-20 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors flex flex-col items-center justify-center text-primary group active:scale-95" type="button">
+<span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">add_a_photo</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Add Photo</span>
+</button>
+<div class="h-20 rounded-lg bg-surface-container-low/60 flex items-center justify-center p-2 text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-75">Photo speeds up community claim by 4x</span>
+</div>
+</div>
+</div>
+</div>
+<div class="rounded-xl p-4 bg-surface-container-lowest shadow-sm flex flex-col space-y-md">
+<div class="flex flex-col space-y-1.5">
+<label class="font-label-md text-label-md text-on-surface flex items-center justify-between" for="contact-input">
+<span>Organizer Contact (Optional)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Private to responders</span>
+</label>
+<div class="relative">
+<input class="w-full h-11 px-3.5 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm outline-none focus:bg-surface-container transition-colors placeholder:text-on-surface-variant/60" id="contact-input" placeholder="+65 9123 4567 or Telegram handle" type="tel"/>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-[12px] leading-tight">
+        Only revealed to verified community couriers if they cannot locate the drop area.
+      </p>
+</div>
+</div>
+<div class="sticky bottom-2 z-20 flex flex-col space-y-2 pt-2">
+<button class="w-full min-h-[50px] px-4 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-semibold tracking-wide shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:bg-primary-container active:scale-[0.99] transition-all" id="publish-btn" type="button">
+<span class="material-symbols-outlined text-[20px]">bolt</span>
+<span id="publish-btn-text">Publish Food Drop Now (⚡ Active for 2 hrs)</span>
+</button>
+<div class="text-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">
+        Protected under the Good Samaritan Food Donation Policy
+      </span>
+</div>
+</div>
+</div>
+<script>
+  (function initCommunityDrop() {
+    let currentHours = 2;
+    const expiryButtons = document.querySelectorAll('.expiry-btn');
+    const expiryTimeNotice = document.getElementById('expiry-time-text');
+    const publishBtnText = document.getElementById('publish-btn-text');
+
+    function updateExpiryCalculations(hours) {
+      currentHours = hours;
+      const now = new Date();
+      now.setHours(now.getHours() + hours);
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (expiryTimeNotice) expiryTimeNotice.textContent = timeStr;
+      if (publishBtnText) {
+        publishBtnText.textContent = `Publish Food Drop Now (⚡ Active for ${hours} hr${hours > 1 ? 's' : ''})`;
+      }
+    }
+
+    expiryButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const hours = parseInt(btn.dataset.duration || '2', 10);
+        expiryButtons.forEach(b => {
+          b.setAttribute('aria-checked', 'false');
+          b.className = 'expiry-btn min-h-[52px] rounded-lg p-2.5 flex flex-col items-center justify-center text-center transition-all bg-surface-container-low text-on-surface-variant hover:bg-surface-container';
+        });
+        btn.setAttribute('aria-checked', 'true');
+        btn.className = 'expiry-btn min-h-[52px] rounded-lg p-2.5 flex flex-col items-center justify-center text-center transition-all bg-primary text-on-primary shadow-sm';
+        updateExpiryCalculations(hours);
+      });
+    });
+
+    const tagButtons = document.querySelectorAll('.tag-pill');
+    tagButtons.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const isSelected = pill.getAttribute('data-selected') === 'true';
+        const iconSpan = pill.querySelector('.material-symbols-outlined');
+        if (isSelected) {
+          pill.setAttribute('data-selected', 'false');
+          pill.className = 'tag-pill h-8 px-3 rounded-full font-label-sm text-label-sm flex items-center gap-1.5 bg-surface-container-low text-on-surface-variant hover:bg-surface-container transition-all';
+          if (iconSpan) iconSpan.textContent = 'add';
+        } else {
+          pill.setAttribute('data-selected', 'true');
+          pill.className = 'tag-pill h-8 px-3 rounded-full font-label-sm text-label-sm flex items-center gap-1.5 bg-primary text-on-primary transition-all';
+          if (iconSpan) iconSpan.textContent = 'check';
+        }
+      });
+    });
+
+    const portionButtons = document.querySelectorAll('.portion-btn');
+    portionButtons.forEach(pBtn => {
+      pBtn.addEventListener('click', () => {
+        portionButtons.forEach(b => {
+          b.className = 'portion-btn h-10 rounded-lg bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors';
+        });
+        pBtn.className = 'portion-btn h-10 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm transition-colors';
+      });
+    });
+
+    const gpsBtn = document.getElementById('gps-btn');
+    const locInput = document.getElementById('loc-name');
+    if (gpsBtn && locInput) {
+      gpsBtn.addEventListener('click', () => {
+        gpsBtn.classList.add('animate-pulse');
+        setTimeout(() => {
+          gpsBtn.classList.remove('animate-pulse');
+          locInput.value = 'Marina Bay Sands Expo, Hall C Foyer';
+        }, 600);
+      });
+    }
+
+    const publishBtn = document.getElementById('publish-btn');
+    if (publishBtn) {
+      publishBtn.addEventListener('click', () => {
+        publishBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span><span>Broadcasting to nearby volunteers...</span>';
+        setTimeout(() => {
+          publishBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check_circle</span><span>Drop Live on Map!</span>';
+          publishBtn.classList.remove('bg-primary');
+          publishBtn.classList.add('bg-secondary');
+        }, 1200);
+      });
+    }
+
+    updateExpiryCalculations(2);
+  })();
+</script></main></body></html>

@@ -1,0 +1,130 @@
+{
+  "checks": [
+    {
+      "check": "approved local search",
+      "passed": true
+    },
+    {
+      "check": "invalid Singapore origin",
+      "passed": true
+    },
+    {
+      "check": "all selected diets must match",
+      "passed": true
+    },
+    {
+      "check": "no silent filter relaxation",
+      "passed": true
+    },
+    {
+      "check": "anonymous admin denied",
+      "passed": true
+    },
+    {
+      "check": "blank correction rejected",
+      "passed": true
+    },
+    {
+      "check": "unique pending correction reference",
+      "passed": true
+    },
+    {
+      "check": "pending moderation and current comparison",
+      "passed": true
+    },
+    {
+      "check": "rejection reason required",
+      "passed": true
+    },
+    {
+      "check": "approval publishes values",
+      "passed": true
+    },
+    {
+      "check": "second decision blocked",
+      "passed": true
+    },
+    {
+      "check": "stale edit blocked",
+      "passed": true
+    },
+    {
+      "check": "atomic audit recorded",
+      "passed": true
+    },
+    {
+      "check": "unconfigured routing gives honest failure",
+      "passed": true
+    },
+    {
+      "check": "read-time expiry hides available stock",
+      "passed": true
+    },
+    {
+      "check": "maintenance persists EXPIRED",
+      "passed": true
+    },
+    {
+      "check": "original availability retained",
+      "passed": true
+    },
+    {
+      "check": "invalid import quarantined",
+      "passed": true
+    },
+    {
+      "check": "quarantine stores reasons",
+      "passed": true
+    },
+    {
+      "check": "source health available",
+      "passed": true
+    },
+    {
+      "check": "organisation and service imports retain provenance",
+      "passed": true
+    },
+    {
+      "check": "pending imports remain private",
+      "passed": true
+    },
+    {
+      "check": "organisation publication",
+      "passed": true
+    },
+    {
+      "check": "service publication",
+      "passed": true
+    },
+    {
+      "check": "imported organisation displayed",
+      "passed": true
+    },
+    {
+      "check": "suspected duplicates flagged",
+      "passed": true
+    },
+    {
+      "check": "duplicate prevents publication",
+      "passed": true
+    },
+    {
+      "check": "duplicate review decision",
+      "passed": true
+    },
+    {
+      "check": "backup completes",
+      "passed": true
+    },
+    {
+      "check": "local 2000-service concurrent p95 <=500ms",
+      "passed": true
+    }
+  ],
+  "search_local_p95_ms": 418.15,
+  "requests": 100,
+  "concurrency": 20,
+  "dataset_services": 2000,
+  "database": "isolated SQLite",
+  "production_evidence": false
+}

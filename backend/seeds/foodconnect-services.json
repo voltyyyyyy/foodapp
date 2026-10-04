@@ -1,0 +1,546 @@
+{
+  "source": "https://foodconnect.gov.sg/directory/",
+  "permission": "Legacy public-directory staging artifact retained for comparison only. Its records were assembled from an earlier rendered/indexed review. Use foodconnect-providers.json, refreshed from the complete public API response, as the authoritative provider seed.",
+  "reviewed_at": "2026-10-03T03:21:35+00:00",
+  "coverage": {
+    "listed_organisation_count": 22,
+    "authoritative_endpoint": "https://foodconnect.gov.sg/api/prod/foodProviders",
+    "listing_scope": "The complete official endpoint response contains 22 provider rows. This older artifact's supplemental directory_entries are reference-only and should not be treated as current exact API facts.",
+    "source_page_last_updated": "2023-03-22",
+    "not_exposed_by_endpoint": [
+      "confirmed service collection point except where separately verified",
+      "current eligibility decisions",
+      "current availability or stock",
+      "reliable schedules where provider facts conflict",
+      "accessibility unless independently published"
+    ]
+  },
+  "records": [
+    {
+      "kind": "organisation",
+      "id": "foodconnect-apex-club-of-bukit-timah",
+      "name": "Apex Club of Bukit Timah"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-ascending-hope-community-services",
+      "name": "Ascending Hope Community Services"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-blessed-grace-social-services-limited",
+      "name": "Blessed Grace Social Services Limited"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-club-rainbow-singapore",
+      "name": "Club Rainbow (Singapore)"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-en-community-services-society",
+      "name": "En Community Services Society"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-filos-community-services",
+      "name": "Filos Community Services"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-food-from-the-heart",
+      "name": "Food From The Heart"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-free-food-for-all",
+      "name": "Free Food For All"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-hao-ren-hao-shi-limited",
+      "name": "Hao Ren Hao Shi Limited"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-hopes-in-meals",
+      "name": "Hopes in Meals"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-krsnas-free-meals",
+      "name": "KRSNA’S FREE MEALS"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-loving-heart-multi-service-centre",
+      "name": "Loving Heart Multi-Service Centre"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-loving-heart-multi-service-centre-jurong",
+      "name": "Loving Heart Multi-Service Centre (Jurong)"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-metropolitan-ymca-singapore",
+      "name": "Metropolitan YMCA Singapore"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-mummy-yummy",
+      "name": "Mummy Yummy"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-realm-of-tranquility",
+      "name": "Realm of Tranquility"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-singapore-association-of-the-visually-handicapped",
+      "name": "Singapore Association of the Visually Handicapped"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-singapore-buddhist-welfare-services",
+      "name": "Singapore Buddhist Welfare Services"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-singapore-red-cross-society",
+      "name": "Singapore Red Cross Society"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-united-indian-muslim-association",
+      "name": "United Indian Muslim Association"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-willing-hearts",
+      "name": "Willing Hearts"
+    },
+    {
+      "kind": "organisation",
+      "id": "foodconnect-yong-en-care-centre",
+      "name": "Yong-en Care Centre"
+    }
+  ],
+  "directory_entries": [
+    {
+      "organisation_id": "foodconnect-apex-club-of-bukit-timah",
+      "support_types": [
+        "Food Rations",
+        "Fresh Produce"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Weekly",
+        "Fresh Produce": "Weekly"
+      },
+      "website": "https://apexbt.org",
+      "email": "apexbt@gmail.com",
+      "phone": null
+    },
+    {
+      "organisation_id": "foodconnect-ascending-hope-community-services",
+      "support_types": [
+        "Cooked Meals",
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Cooked Meals": "Weekly (1-3 times a week)",
+        "Food Rations": "Bi-monthly"
+      },
+      "website": "https://ascendinghope.org",
+      "email": "admin@ascendinghope.org",
+      "phone": "8218 3225"
+    },
+    {
+      "organisation_id": "foodconnect-blessed-grace-social-services-limited",
+      "support_types": [
+        "Cooked Meals",
+        "Food Rations",
+        "Food Vouchers"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Cooked Meals": "Daily",
+        "Food Rations": "Monthly",
+        "Food Vouchers": "Yearly"
+      },
+      "website": "https://bgss.org.sg",
+      "email": "info@blessedgrace.org",
+      "phone": null
+    },
+    {
+      "organisation_id": "foodconnect-club-rainbow-singapore",
+      "support_types": [
+        "Food Rations",
+        "Food Vouchers",
+        "Fresh Produce"
+      ],
+      "dietary_preferences": [
+        "Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Monthly (1-2 times a month)",
+        "Food Vouchers": "Monthly (1-2 times a month)",
+        "Fresh Produce": "Monthly (1-2 times a month)"
+      },
+      "website": "https://clubrainbow.org",
+      "email": "contact@clubrainbow.org",
+      "phone": null
+    },
+    {
+      "organisation_id": "foodconnect-en-community-services-society",
+      "support_types": [
+        "Food Vouchers"
+      ],
+      "dietary_preferences": [],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": false,
+      "frequency": {
+        "Food Vouchers": "Bi-Monthly"
+      },
+      "website": "https://ecss.org.sg",
+      "email": "foodcollection@ecss.org.sg",
+      "phone": "6788 6625"
+    },
+    {
+      "organisation_id": "foodconnect-filos-community-services",
+      "support_types": [
+        "Food Vouchers"
+      ],
+      "dietary_preferences": [],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": false,
+      "frequency": {
+        "Food Vouchers": "Monthly"
+      },
+      "website": "https://filos.sg",
+      "email": "info@filos.sg",
+      "phone": null
+    },
+    {
+      "organisation_id": "foodconnect-food-from-the-heart",
+      "support_types": [
+        "Food Rations",
+        "Fresh Produce"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": false,
+      "frequency": {
+        "Food Rations": "Monthly",
+        "Fresh Produce": "Monthly"
+      },
+      "website": "https://foodfromtheheart.sg",
+      "email": "info@foodheart.org",
+      "phone": "6280 4483"
+    },
+    {
+      "organisation_id": "foodconnect-free-food-for-all",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal"
+      ],
+      "collection_from_distribution_point": false,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Monthly"
+      },
+      "website": "https://freefood.org.sg",
+      "email": "sasha@freefood.org.sg",
+      "phone": "6530 3661"
+    },
+    {
+      "organisation_id": "foodconnect-hao-ren-hao-shi-limited",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal",
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Weekly"
+      },
+      "website": "https://haorenhaoshi.org.sg",
+      "email": "enquiry@hrhs.org.sg",
+      "phone": "9058 5898"
+    },
+    {
+      "organisation_id": "foodconnect-hopes-in-meals",
+      "support_types": [
+        "Cooked Meals",
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal",
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": false,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Cooked Meals": "Daily",
+        "Food Rations": "Weekly"
+      },
+      "website": null,
+      "email": "hopesinmeals@gmail.com",
+      "phone": null
+    },
+    {
+      "organisation_id": "foodconnect-krsnas-free-meals",
+      "support_types": [
+        "Cooked Meals",
+        "Fresh Produce"
+      ],
+      "dietary_preferences": [
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": false,
+      "frequency": {
+        "Cooked Meals": "Daily (4-7 times a week)",
+        "Fresh Produce": "Weekly (1-3 times a week)"
+      },
+      "website": "https://facebook.com/krsnasfreemeals",
+      "email": "admin@krsnasfreemeals.org",
+      "phone": "9628 2045"
+    },
+    {
+      "organisation_id": "foodconnect-loving-heart-multi-service-centre",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal",
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": false,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Monthly"
+      },
+      "website": "https://lovingheart.org.sg",
+      "email": "lhmsc@lovingheart.org.sg",
+      "phone": "6897 4766"
+    },
+    {
+      "organisation_id": "foodconnect-loving-heart-multi-service-centre-jurong",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal",
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": false,
+      "frequency": {
+        "Food Rations": "Monthly"
+      },
+      "website": "https://lovingheartjurong.org.sg",
+      "email": "contact@lovingheartjurong.org.sg",
+      "phone": "6567 4166"
+    },
+    {
+      "organisation_id": "foodconnect-metropolitan-ymca-singapore",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Monthly"
+      },
+      "website": "https://mymca.org.sg",
+      "email": "mymanna@mymca.org.sg",
+      "phone": "6746 3742"
+    },
+    {
+      "organisation_id": "foodconnect-mummy-yummy",
+      "support_types": [
+        "Cooked Meals"
+      ],
+      "dietary_preferences": [
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": false,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Cooked Meals": "Daily"
+      },
+      "website": "https://m.facebook.com/pages/category/vegetarian-vegan-restaurant/mummy-yummy-singapore-679826295399303",
+      "email": "mummyyummy21@gmail.com",
+      "phone": "6246 3558"
+    },
+    {
+      "organisation_id": "foodconnect-realm-of-tranquility",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal"
+      ],
+      "collection_from_distribution_point": false,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Monthly"
+      },
+      "website": "https://realmoftranquility.com",
+      "email": "caringunit@realmoftranquility.com",
+      "phone": "6469 3843"
+    },
+    {
+      "organisation_id": "foodconnect-singapore-association-of-the-visually-handicapped",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal",
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": false,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Monthly"
+      },
+      "website": "https://savh.org.sg",
+      "email": "steven@savh.org.sg",
+      "phone": "9645 7302"
+    },
+    {
+      "organisation_id": "foodconnect-singapore-buddhist-welfare-services",
+      "support_types": [
+        "Cooked Meals",
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": false,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Cooked Meals": "Daily",
+        "Food Rations": "Monthly"
+      },
+      "website": "https://sbws.org.sg/en/home",
+      "email": "lee.jun.jie@sbws.org.sg",
+      "phone": "8023 1328"
+    },
+    {
+      "organisation_id": "foodconnect-singapore-red-cross-society",
+      "support_types": [
+        "Food Rations",
+        "Food Vouchers"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Yearly",
+        "Food Vouchers": "Monthly"
+      },
+      "website": "https://redcross.sg",
+      "email": "casework@redcross.sg",
+      "phone": "9639 8415"
+    },
+    {
+      "organisation_id": "foodconnect-united-indian-muslim-association",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": false,
+      "frequency": {
+        "Food Rations": "Monthly (1-2 times a month)"
+      },
+      "website": null,
+      "email": "md.habib@uima.org.sg",
+      "phone": "6748 6187"
+    },
+    {
+      "organisation_id": "foodconnect-willing-hearts",
+      "support_types": [
+        "Cooked Meals"
+      ],
+      "dietary_preferences": [
+        "Halal",
+        "Non-Halal",
+        "Vegetarian"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Cooked Meals": "Daily"
+      },
+      "website": "https://willinghearts.org.sg",
+      "email": "willingheartsingapore@gmail.com",
+      "phone": "6476 0607"
+    },
+    {
+      "organisation_id": "foodconnect-yong-en-care-centre",
+      "support_types": [
+        "Food Rations"
+      ],
+      "dietary_preferences": [
+        "Halal"
+      ],
+      "collection_from_distribution_point": true,
+      "doorstep_delivery": true,
+      "frequency": {
+        "Food Rations": "Monthly"
+      },
+      "website": "https://yong-en.org",
+      "email": "naomi-yong@yong-en.org",
+      "phone": "6309 0581"
+    }
+  ],
+  "source_notes": [
+    "Legacy comparison/reference only; exact public API fields and current provider review status are in foodconnect-providers.json.",
+    "The original directory card values can be stale and are not a live availability feed."
+  ],
+  "legacy_status": "Reference-only artifact; not an authoritative current directory extraction and not the app import seed."
+}

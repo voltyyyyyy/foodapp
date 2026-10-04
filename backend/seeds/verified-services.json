@@ -1,0 +1,34 @@
+{
+  "source": "https://willinghearts.org.sg/contact",
+  "permission": "Manually reviewed public provider contact and application facts for the project seed; not a partner export or live availability feed. Review provider terms before broader redistribution.",
+  "records": [
+    {
+      "kind": "organisation",
+      "id": "org-willing-hearts",
+      "name": "Willing Hearts CLG Ltd"
+    },
+    {
+      "id": "willing-hearts-meal-assistance",
+      "organisation_id": "org-willing-hearts",
+      "name": "Willing Hearts meal-delivery assistance",
+      "support_type": "Delivery",
+      "address": "1 Lorong J Telok Kurau (entrance via Joo Chiat Place), Singapore",
+      "postal": "425792",
+      "latitude": 1.313575576006213,
+      "longitude": 103.9073228027738,
+      "description": "Meal assistance through a social worker or social agency. The map pin identifies the soup kitchen and coordination site; walk-in food collection is not confirmed. Contact the provider before travelling.",
+      "eligibility": "A social worker or social agency must apply on the applicant's behalf. Contact the provider or a social service agency to discuss assistance.",
+      "diets": [],
+      "wheelchair": null,
+      "phone": "+65 6476 5822",
+      "website": "https://willinghearts.org.sg/contact",
+      "schedules": [],
+      "exceptions": {},
+      "observations": [],
+      "verified_at": "2026-10-01T16:02:49+00:00",
+      "demo": false,
+      "active": true,
+      "provider_id": "foodconnect-willing-hearts"
+    }
+  ]
+}
