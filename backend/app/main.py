@@ -19,6 +19,7 @@ from sqlalchemy import func, select, text, update
 from .db import Admin, Audit, Base, Record, Session, Token, engine, iso, now
 from .domain import Origin, Provider, Report, Search, Service, distance, public_service
 from .onemap import adapter
+from .google_routes import adapter as routes_adapter
 
 hasher = PasswordHasher()
 security = HTTPBearer(auto_error=False)
@@ -207,7 +208,7 @@ async def route(body: Route):
     with Session() as db:
         destination = dict(item(db, body.service_id, 'service', True).data)
     try:
-        return await asyncio.wait_for(adapter.route(body.model_dump(), destination, body.mode), timeout=4)
+        return await asyncio.wait_for(routes_adapter.route(body.model_dump(), destination, body.mode), timeout=4)
     except Exception:
         return {'available': False, 'message': 'Route unavailable. Service details are still available. Try again or contact the provider.'}
 

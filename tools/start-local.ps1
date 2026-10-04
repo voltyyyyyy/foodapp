@@ -7,6 +7,9 @@ function Get-LocalSecret([string]$Name) {
     if (!(Test-Path $secretPath)) { [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N') | Set-Content $secretPath }
     return (Get-Content $secretPath -Raw).Trim()
 }
+# Optional routing key stays in ignored local data; never include it in console output.
+$routesKeyPath = Join-Path $localData 'google-routes-api-key.txt'
+if (Test-Path $routesKeyPath) { $env:GOOGLE_ROUTES_API_KEY = (Get-Content -LiteralPath $routesKeyPath -Raw).Trim() }
 $dbPassword = Get-LocalSecret 'local-postgres-password.txt'
 $staffPassword = Get-LocalSecret 'local-admin-password.txt'
 docker info --format '{{.ServerVersion}}' | Out-Null
@@ -26,7 +29,7 @@ $databaseUrl = "postgresql+psycopg://foodbridge:$dbPassword@foodbridge-postgres:
 foreach ($name in @('foodbridge-api', 'foodbridge-maintenance')) {
     if (docker ps -a --filter "name=^/$name`$" --format '{{.ID}}') { docker rm -f $name | Out-Null }
 }
-docker run -d --name foodbridge-api --network foodbridge-development --restart unless-stopped -p 127.0.0.1:8000:8000 -e "DATABASE_URL=$databaseUrl" -e ADMIN_EMAIL=admin@foodbridge.local -e "ADMIN_PASSWORD=$staffPassword" -e DEMO_DATA=false -e ONEMAP_EMAIL -e ONEMAP_PASSWORD -e ENVIRONMENT=production foodbridge-api:local | Out-Null
+docker run -d --name foodbridge-api --network foodbridge-development --restart unless-stopped -p 127.0.0.1:8000:8000 -e "DATABASE_URL=$databaseUrl" -e ADMIN_EMAIL=admin@foodbridge.local -e "ADMIN_PASSWORD=$staffPassword" -e DEMO_DATA=false -e GOOGLE_ROUTES_API_KEY -e ENVIRONMENT=production foodbridge-api:local | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'API startup failed' }
 docker run -d --name foodbridge-maintenance --network foodbridge-development --restart unless-stopped -e "DATABASE_URL=$databaseUrl" -e API_READY_URL=http://foodbridge-api:8000/health/ready -e BACKUP_DIR=/backups -v foodbridge-local-backups:/backups foodbridge-api:local python -m app.scheduler | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Maintenance startup failed' }

@@ -15,7 +15,7 @@ Precedence: the user's explicit Android and complete-requirements instruction; n
 | Android client | Kotlin, Jetpack Compose, Material 3, minSdk 31 | Native Android 12+ delivery, accessible controls, reliable permissions and lifecycle |
 | Client architecture | ViewModel, StateFlow, repositories, coroutines | Keep views independent from network and business rules |
 | Device storage | DataStore for bookmark IDs and optional diet preferences; approved detail cache | Anonymous saving across sessions; never persist device coordinates |
-| Maps | Native Mapbox Android SDK with bundled custom Standard style | User requested Mapbox on 3 October; map opens immediately with native floating search and filters. Mapbox supplies walking/driving routes; OneMap supplies address geocoding and public transport. Public Mapbox token is supplied through ignored local configuration. |
+| Maps | Native Google Maps SDK with bundled custom style | User requested migration on4 October. Google Routes supplies all three travel modes through the backend. OneMap continues address lookup. Separate Android and server keys use API/application restrictions. |
 | API | Python FastAPI, Pydantic, SQLAlchemy | Clear validation, OpenAPI contract, straightforward course-team implementation |
 | Database | PostgreSQL in production; SQLite for an immediately runnable local prototype | Production concurrent moderation and durable storage; local setup works without a database daemon |
 | Operations | Containerised API, managed PostgreSQL, one scheduled maintenance command | One service and one database; no message broker needed |
@@ -84,10 +84,11 @@ flowchart LR
   Repo --> API[FastAPI REST service]
   API --> Rules[Search freshness moderation and import rules]
   Rules --> DB[(PostgreSQL)]
-  API --> OM[OneMap adapter]
+  API --> OM[OneMap geocoding adapter]
+  API --> Routes[Google Routes adapter]
   Jobs[Scheduled maintenance] --> Rules
-  UI --> Map[Native Mapbox map]
-  Map --> Tiles[Mapbox custom style and attribution]
+  UI --> Map[Native Google map]
+  Map --> Tiles[Google custom style and attribution]
 ```
 
 The client owns presentation, permissions and local saves. The API owns approval visibility, validation, distance, ranking, freshness, authentication and transactions. External providers are accessed through adapters with finite timeouts. Import failure preserves the last successful approved dataset. The native map never receives administrator credentials.
@@ -109,7 +110,7 @@ ImportRun records source, permission/export metadata, counts, started/finished t
 | POST /api/search | Resolved lat/lon, radius, diets, type, preferred instant and optional open-only criterion; default limit10; approved results with explanations |
 | POST /api/geocode | Six-digit postal or Singapore address; validation, candidate selection, finite timeout and local seed-address fallback |
 | GET /api/services and /api/services/{id} | Approved canonical details, evidence, provenance and latest update |
-| POST /api/routes | Origin, service ID and travel mode; OneMap geometry, distance and duration or explicit unavailable response |
+| POST /api/routes | Origin, service ID and travel mode; Google route geometry, distance and duration or explicit unavailable response |
 | POST /api/reports | Anonymous service/provider target validation, category/description/evidence and reference; published records unchanged |
 | POST /api/admin/login and /logout | Provisioned accounts and expiring sessions |
 | GET /api/admin/reports, /changes, /audit, /sources, /quarantine, /duplicates | Protected operational data |
@@ -131,7 +132,7 @@ Errors use actionable messages and structured details. Validate Singapore bounds
 5. Return local results independently from OneMap. Enrich travel times asynchronously for each returned page, with at most three simultaneous requests and a 4-second client deadline.
 6. Route with a total bounded deadline, safe server-side token refresh, and decoded geometry. Preserve service details on all failures.
 
-The app offers Walk, Public transport and Drive. Walking/driving use Mapbox Directions with the configured public token. Public transport uses OneMap ([routing](https://www.onemap.gov.sg/apidocs/routing)); production credentials stay server-side ([authentication](https://www.onemap.gov.sg/apidocs/authentication)). Preserve required OneMap/SLA attribution ([map example](https://www.onemap.gov.sg/docs/maps/)). Never cache seeker route origins durably.
+The app offers Walk, Public transport and Drive through [Google Routes](https://developers.google.com/maps/documentation/routes/transit-route), displayed on Google Maps. Backend credentials stay server-side; Android map key uses package/certificate restrictions. Never cache seeker origins or route results durably. Setup: GOOGLE_MAPS_SETUP.md.
 
 ## Requirement coverage and acceptance evidence
 
@@ -150,7 +151,7 @@ The app offers Walk, Public transport and Drive. Walking/driving use Mapbox Dire
 | 4.5.3â€“4 | Atomic audit entries, history, duplicate queue and source health |
 | UC-05, 06, 07 | Persistent local saves with latest data, administrator edit and current/past report status |
 | 5.1.1 | Measure p95 local-dataset search API response <=500 ms with production-size fixtures; distinguish geocoding and asynchronous ETA from search latency |
-| 5.1.2 | Measure end-to-end tap-to-route-or-unavailable <=5 s p95 under normal OneMap service; client deadline provides bounded failure |
+| 5.1.2 | Measure end-to-end tap-to-route-or-unavailable <=5 s p95 under normal routing provider service; client deadline provides bounded failure |
 | 5.2.1 | Production monitoring and maintenance records demonstrate >=99% monthly availability; cannot prove this from a local build |
 | 5.2.2 | Simulated import/provider outage keeps last successful local approved dataset and visible freshness |
 | 5.3.1 | Device location only in active-session memory, POST bodies and ephemeral network buffers; excluded from logs, local files, saved state and backups |
@@ -164,7 +165,7 @@ Performance targets are acceptance criteria, not guarantees from framework selec
 
 1. Foundation: buildable APK and API, shared visual tokens, schema, validated fictional fixtures, provenance, configuration and README.
 2. Core vertical slice: search origin, criteria, results, details and permission handling; public data visibility and no-results states.
-3. Maps and travel: OneMap geocode and route adapters, tokens, real markers, contact actions, ETA enrichment and failure handling.
+3. Maps and travel: OneMap geocode and Google route adapters, keys, real markers, contact actions, ETA enrichment and failure handling.
 4. Local use: bookmarks, preferences, cached approved detail snapshots, offline warnings and session-location cleanup.
 5. Quality operations: anonymous report, administrator auth, queue/diff, version checks, approve/reject, direct updates and audit.
 6. Data pipeline: authorised exports, quarantine, duplicate review, source health and read-time/scheduled expiry.
@@ -174,7 +175,7 @@ Suggested course-team schedule is six weeks: foundation/core week1â€“2, tra
 
 ## Release boundaries
 
-Local fixtures are clearly fictional demonstration data. A deployment needs verified records or permissioned partner exports, server OneMap credentials, provisioned administrator secrets, a reachable HTTPS API and a signing key. Do not fabricate source permissions, hotline hours, certifications, stock levels or performance evidence. Monthly uptime and user success remain unverified until measured.
+Local fixtures are clearly fictional demonstration data. A deployment needs verified records or permissioned partner exports, restricted Google Maps/Routes credentials, provisioned administrator secrets, a reachable HTTPS API and a signing key. Do not fabricate source permissions, hotline hours, certifications, stock levels or performance evidence. Monthly uptime and user success remain unverified until measured.
 
 The full Android release includes all numbered Lab requirements. Community drops, courier claims, photo upload, public accounts, cloud bookmark sync, push notifications, multilingual UI and Singpass are later scope and must not delay that release. The PRD success metrics for claimed surplus do not apply to the Lab directory release.
 

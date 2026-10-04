@@ -19,8 +19,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
-        buildConfigField("String", "MAPBOX_ACCESS_TOKEN", quotedConfig(providers.environmentVariable("MAPBOX_ACCESS_TOKEN").orNull ?: localConfig.getProperty("mapboxAccessToken", localConfig.getProperty("mapbox.accessToken", ""))))
-        buildConfigField("String", "MAPBOX_STYLE_URI", quotedConfig(localConfig.getProperty("mapboxStyleUri", "")))
+        val mapsKey = providers.environmentVariable("GOOGLE_MAPS_ANDROID_KEY").orNull ?: localConfig.getProperty("googleMaps.apiKey", "")
+        buildConfigField("String", "GOOGLE_MAPS_API_KEY", quotedConfig(mapsKey))
+        manifestPlaceholders["googleMapsApiKey"] = mapsKey
         buildConfigField("String", "API_URL", "\"${providers.gradleProperty("apiUrl").getOrElse("http://10.0.2.2:8000")}\"")
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -33,7 +34,7 @@ android {
     } }
 }
 dependencies {
-    implementation("com.mapbox.maps:android-ndk27:11.32.0")
+    implementation("com.google.android.gms:play-services-maps:20.0.0")
     implementation(platform("androidx.compose:compose-bom:2025.04.01"))
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.material3:material3")

@@ -64,33 +64,6 @@ class Repository(private val context: Context) {
     private val dietsKey = stringSetPreferencesKey("diets")
     private val cacheKey = stringPreferencesKey("approved_cache")
     private val providerCacheKey = stringPreferencesKey("provider_cache")
-    suspend fun mapboxRoute(origin: Pair<Double, Double>, service: Service, mode: String): JSONObject = withContext(Dispatchers.IO) {
-        val profile = if (mode == "drive") "driving" else "walking"
-        val url = okhttp3.HttpUrl.Builder().scheme("https").host("api.mapbox.com")
-            .addPathSegments("directions/v5/mapbox/$profile")
-            .addPathSegment("${origin.second},${origin.first};${service.longitude},${service.latitude}")
-            .addQueryParameter("access_token", BuildConfig.MAPBOX_ACCESS_TOKEN)
-            .addQueryParameter("geometries", "geojson").addQueryParameter("overview", "full")
-            .addQueryParameter("steps", "true").build()
-        client.newCall(Request.Builder().url(url).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Route unavailable. Check your connection and try again.")
-            val data = JSONObject(response.body?.string() ?: "{}")
-            if (data.optString("code") != "Ok") throw IOException("No route found for this travel option.")
-            val route = data.getJSONArray("routes").getJSONObject(0)
-            val geometry = JSONArray()
-            route.getJSONObject("geometry").getJSONArray("coordinates").let { points ->
-                for (i in 0 until points.length()) points.getJSONArray(i).let { point -> geometry.put(JSONArray().put(point.getDouble(1)).put(point.getDouble(0))) }
-            }
-            if (geometry.length() < 2) throw IOException("Route geometry unavailable.")
-            val instructions = JSONArray()
-            route.optJSONArray("legs")?.objects()?.forEach { leg -> leg.optJSONArray("steps")?.objects()?.forEach { step ->
-                step.optJSONObject("maneuver")?.optString("instruction")?.takeIf { it.isNotBlank() }?.let(instructions::put)
-            } }
-            JSONObject().put("available", true).put("mode", mode).put("distance_km", route.getDouble("distance") / 1000)
-                .put("duration_minutes", route.getDouble("duration") / 60).put("geometry", geometry)
-                .put("instructions", instructions).put("attribution", "Mapbox Directions")
-        }
-    }
     suspend fun providers(): Pair<List<JSONObject>, Boolean> {
         return try {
             val response = request("/api/providers")

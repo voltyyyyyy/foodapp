@@ -1,6 +1,6 @@
 ﻿# FoodBridge development handoff
 
-Last updated: 3 October 2026, Singapore time. This file is authoritative for resuming work. Earlier chronological notes are in HANDOFF_HISTORY.md; their process IDs and pending actions are obsolete.
+Last updated: 4 October 2026, Singapore time. This file is authoritative for resuming work. Earlier chronological notes are in HANDOFF_HISTORY.md; their process IDs and pending actions are obsolete.
 
 ## User instructions
 
@@ -8,7 +8,17 @@ Review reference/ and SC2006 Labs.docx, resolve contradictions, choose the stack
 
 ## Current delivery
 
-### Directions checkpoint
+### Google Maps crash fix - 4 October 2026
+
+User reported crash every time Map opens. Crash buffer showed NoClassDefFoundError: org/apache/http/ProtocolVersion in GMS MapsDynamite22.50.14. Google Maps SDK20.0.0 removed org.apache.http.legacy manifest declaration; official release notes document this exact regression on older Play services. Added optional uses-library org.apache.http.legacy within application in AndroidManifest.xml. Build67087 succeeded12s and installed/launched on emulator-5554. Opening Map renders actual Google custom-style tiles; app process remains alive and the fresh crash buffer is empty. Screenshot tools/.local/screens/google-map-crash-fixed.png. No automated tests added or run. Reference: https://developers.google.com/maps/documentation/android-sdk/release-notes . Keys never exposed or changed.
+
+### Google Maps migration ? 4 October 2026
+
+User authorised replacing Mapbox with Google Maps and requested setup instructions. Android now uses Google Maps SDK20.0.0 MapView with Compose lifecycle forwarding, retained minimalist overlays and bundled foodbridge-google-map.json style. All route modes use backend Google Routes computeRoutes; OneMap still handles Singapore geocoding. Removed Android Mapbox SDK/token and direct Directions call. Backend app/google_routes.py translates Google geometry/instructions/transit line/stop/headsign/agency links/warnings into existing route schema. Routes remain memory-only. Google native branding is kept clear using SDK padding. Both Google keys are now saved in the expected ignored files, confirmed by presence checks without exposing values. Do not reuse the Mapbox token.
+
+Setup: docs/GOOGLE_MAPS_SETUP.md. Android key: googleMaps.apiKey in ignored android/local.properties (or GOOGLE_MAPS_ANDROID_KEY env). Backend key: ignored backend/data/google-routes-api-key.txt (or GOOGLE_ROUTES_API_KEY env). tools/start-local.ps1 loads file and forwards env without printing value. Enable Maps SDK for Android and Routes API in a billing-enabled Cloud project. Android key restricted to package sg.foodbridge.navigator and debug SHA1 FC:29:73:DB:AA:FE:89:CC:6B:5A:CE:64:EE:EA:B4:0B:6C:FF:87:4E; only Maps SDK for Android. Backend key only Routes API, production fixed-egress IP restriction. Android final build90712 with configured Google Maps key succeeded29s and installed/launched on emulator-5554 (supersedes build79190/30s and build79496/1m19s). Docker Desktop started from AppData/Local/Programs/DockerDesktop; backend image3398d7290a9d rebuilt and stack restarted with GOOGLE_ROUTES_API_KEY loaded from the ignored file; volumes intact. Live Google maps/routes and key restrictions have not yet been verified. Removed obsolete Mapbox style asset and SDK from final APK. No automated tests added or run.
+
+### Earlier directions checkpoint (superseded by Google migration)
 
 Latest user request: Get directions opens Map with the route; modes Walk/Public transport/Drive. Implemented routeDestination/routeMode/routeLoading in memory, Map route line/origin/destination/summary/steps, on-map start-address resolution, retry/close and mode changes. Directions opens Map immediately even without an origin, prompting starting address/device location. Cancels stale requests on edit/navigation; route/origin clear on background. Removed inline detail-map route result and Cycle option.
 

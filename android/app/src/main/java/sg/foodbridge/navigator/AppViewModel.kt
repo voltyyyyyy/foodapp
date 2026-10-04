@@ -30,6 +30,8 @@ data class UiState(
     val staff: Boolean = false, val staffSection: String = "reports", val staffItems: List<JSONObject> = emptyList(),
     val staffSelected: JSONObject? = null, val notice: String? = null, val lastUpdate: String? = null,
     val clock: Long = System.currentTimeMillis(),
+    val locationLoading: Boolean = false, val locationError: String? = null,
+    val deviceLatitude: Double? = null, val deviceLongitude: Double? = null,
     val hasSearched: Boolean = false, val originLatitude: Double? = null, val originLongitude: Double? = null,
     val providers: List<JSONObject> = emptyList(), val providerOffline: Boolean = false,
     val providerLoading: Boolean = false, val providerError: String? = null, val selectedProvider: JSONObject? = null,
@@ -82,7 +84,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun openReport() { update { it.copy(page = "report", reference = null, error = null) } }
     fun returnToInformation() { update { it.copy(page = if (it.selectedProvider != null) "providerDetail" else "detail", reference = null, error = null) } }
-    fun origin(text: String) { searchJob?.cancel(); routeJob?.cancel(); coordinates = null; update { it.copy(origin = text, originLatitude = null, originLongitude = null, candidates = emptyList(), loading = false, error = null, route = null, routeLoading = false) } }
+    fun origin(text: String) { searchJob?.cancel(); routeJob?.cancel(); coordinates = null; update { it.copy(origin = text, originLatitude = null, originLongitude = null, candidates = emptyList(), loading = false, error = null, locationLoading = false, locationError = null, route = null, routeLoading = false) } }
     fun openOrganisation(match: OrganisationMatch) {
         searchJob?.cancel()
         update { it.copy(loading = false, candidates = emptyList(), error = null) }
@@ -116,10 +118,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             catch (_: Exception) { error("Could not refresh all support listings. Any saved listings remain below. Try again when connected.") }
         }
     }
+    fun locationStarted() { update { it.copy(locationLoading = true, locationError = null, error = null) } }
+    fun locationFailed(message: String) { update { it.copy(locationLoading = false, locationError = message) } }
     fun location(lat: Double, lon: Double) {
-        if (lat !in 1.13..1.48 || lon !in 103.59..104.1) { error("FoodBridge currently supports Singapore locations only."); return }
+        if (lat !in 1.13..1.48 || lon !in 103.59..104.1) { locationFailed("Your device is outside Singapore. Enter a Singapore starting address."); return }
+        searchJob?.cancel(); routeJob?.cancel()
         coordinates = lat to lon
-        update { it.copy(origin = "Current location", originLatitude = lat, originLongitude = lon, error = null) }
+        update { it.copy(origin = "Your location", originLatitude = lat, originLongitude = lon,
+            deviceLatitude = lat, deviceLongitude = lon, locationLoading = false, locationError = null, error = null) }
         if (state.value.tab == "Map") search()
     }
     fun searchMapArea(lat: Double, lon: Double) {
@@ -133,7 +139,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         etaJob?.cancel()
         searchJob?.cancel()
         routeJob?.cancel()
-        update { it.copy(origin = "", originLatitude = null, originLongitude = null, hasSearched = false, results = emptyList(), totalMatches = 0, route = null, routeDestination = null, routeLoading = false, candidates = emptyList(), eta = emptyMap(), loading = false) }
+        update { it.copy(origin = "", originLatitude = null, originLongitude = null, deviceLatitude = null, deviceLongitude = null, locationLoading = false, locationError = null, hasSearched = false, results = emptyList(), totalMatches = 0, route = null, routeDestination = null, routeLoading = false, candidates = emptyList(), eta = emptyMap(), loading = false) }
     }
     fun toggleDiet(diet: String) {
         val diets = state.value.diets.let { if (diet in it) it - diet else it + diet }
@@ -211,7 +217,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     private suspend fun getRoute(service: Service, mode: String): JSONObject {
         val origin = coordinates ?: throw IllegalArgumentException("Search an address on Find or Map before requesting directions.")
-        if (mode in listOf("walk", "drive") && BuildConfig.MAPBOX_ACCESS_TOKEN.startsWith("pk.")) return repo.mapboxRoute(origin, service, mode)
         return JSONObject(repo.request("/api/routes", "POST", JSONObject().put("latitude", origin.first)
             .put("longitude", origin.second).put("service_id", service.id).put("mode", mode)))
     }
@@ -241,6 +246,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val service = state.value.routeDestination ?: state.value.selected ?: return
         if (mode !in listOf("walk", "pt", "drive")) return
         routeJob?.cancel(); searchJob?.cancel(); etaJob?.cancel()
+        if (state.value.routeDestination?.id != service.id) {
+            val snapshot = state.value
+            coordinates = snapshot.deviceLatitude?.let { lat -> snapshot.deviceLongitude?.let { lat to it } }
+            update { it.copy(origin = if (coordinates != null) "Your location" else "", originLatitude = coordinates?.first,
+                originLongitude = coordinates?.second, locationError = null) }
+        }
         update { it.copy(tab = "Map", page = "home", origin = if (coordinates == null && it.routeDestination == null) "" else it.origin, routeDestination = service, routeMode = mode,
             route = null, routeLoading = coordinates != null, loading = false, error = null, candidates = emptyList()) }
         if (coordinates == null) return

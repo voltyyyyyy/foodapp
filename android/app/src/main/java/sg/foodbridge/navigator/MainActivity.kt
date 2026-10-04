@@ -81,26 +81,29 @@ class MainActivity : ComponentActivity() {
         try {
             val manager = getSystemService(LocationManager::class.java)
             val providers = manager.getProviders(true)
-            val provider = if (LocationManager.NETWORK_PROVIDER in providers) LocationManager.NETWORK_PROVIDER else LocationManager.GPS_PROVIDER
+            val provider = when {
+                LocationManager.FUSED_PROVIDER in providers -> LocationManager.FUSED_PROVIDER
+                LocationManager.GPS_PROVIDER in providers && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED -> LocationManager.GPS_PROVIDER
+                else -> LocationManager.NETWORK_PROVIDER
+            }
             manager.getCurrentLocation(provider, signal, mainExecutor) { location ->
                 if (!signal.isCanceled) {
                     locationRequest = null
-                    model.update { it.copy(notice = null) }
-                    if (location == null) model.error("Location is unavailable. Enter a postal code instead.")
-                    else model.location(location.latitude, location.longitude)
+                    if (model.state.value.locationLoading) {
+                        if (location == null) model.locationFailed("Could not find your device location. Enter a starting address or try again.")
+                        else model.location(location.latitude, location.longitude)
+                    }
                 }
             }
             Handler(Looper.getMainLooper()).postDelayed({
                 if (locationRequest === signal) {
                     signal.cancel(); locationRequest = null
-                    model.update { it.copy(notice = null) }
-                    model.error("Location is taking too long. Enter an address or postal code instead.")
+                    if (model.state.value.locationLoading) model.locationFailed("Location is taking too long. Enter a starting address or try again.")
                 }
             }, 10_000)
         } catch (_: Exception) {
             signal.cancel(); locationRequest = null
-            model.update { it.copy(notice = null) }
-            model.error("Turn on location and allow permission, or enter a postal code.")
+            model.locationFailed("Turn on device location and allow access, or enter a starting address.")
         }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -257,6 +260,8 @@ fun SearchSummary(s: UiState): String = buildList {
         if (permissions.values.any { it }) locate() else model.error("Location permission was declined. Enter a postal code instead.")
     }
     Page {
+        if (s.locationLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        s.locationError?.let { Text(it, color = Muted) }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Find food support\nnear you.", style = MaterialTheme.typography.headlineLarge)
         }
@@ -491,7 +496,7 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
 } }
 @Composable fun PrivacyScreen() { Page {
     Text("Privacy & data use", style = MaterialTheme.typography.headlineMedium)
-    Panel { Text("You can browse, save and report without an account."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground. It is not saved in bookmarks or app backups."); Text("OneMap receives coordinates when searching addresses and calculating routes. Mapbox receives map requests and coordinates when calculating walking/driving routes; its attribution menu includes telemetry controls."); Text("Saved IDs, dietary preferences and approved service snapshots are kept locally. Clear them from Settings."); Text("Submitted correction text and evidence links are stored for staff review. Avoid sending personal details."); Text("Staff sessions expire. Short-lived request metadata supports abuse prevention. A production operator must publish its contact and retention policy before release.", color = Muted) }
+    Panel { Text("You can browse, save and report without an account."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground. It is not saved in bookmarks or app backups."); Text("OneMap receives address searches. Google Maps receives map requests and the start/destination coordinates for walking, public transport and driving routes. Route origins and results are held only for the current session."); Text("Saved IDs, dietary preferences and approved service snapshots are kept locally. Clear them from Settings."); Text("Submitted correction text and evidence links are stored for staff review. Avoid sending personal details."); Text("Staff sessions expire. Short-lived request metadata supports abuse prevention. A production operator must publish its contact and retention policy before release.", color = Muted) }
 } }
 
 @Composable fun LoginScreen(s: UiState, model: AppViewModel) {
