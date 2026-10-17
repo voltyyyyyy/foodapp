@@ -1,0 +1,68 @@
+%% Selected implemented classes, not a complete SRS domain model.
+%% Associations marked logical are JSON identifiers, not SQL foreign keys.
+classDiagram
+    MainActivity --> AppViewModel : obtains and observes
+    AppViewModel --> UiState : exposes StateFlow
+    AppViewModel --> Repository : requests data
+    AppViewModel --> ReminderStore : manages reminders
+    Repository --> SessionStore : encrypted session
+    Repository --> AndroidService : returns
+    ReminderStore --> SessionStore : checks owner/session
+    ReminderStore --> Repository : checks session
+    ReminderReceiver --> ReminderStore : dispatches
+    class AndroidService {
+        JSONObject json
+        id
+        operating
+        availability
+    }
+    class UiState {
+        account
+        results
+        originLatitude
+        reminders
+    }
+    Origin <|-- Search
+    Origin <|-- BackendService
+    BackendService "1" *-- "0..*" Schedule : hours/distribution
+    BackendService "1" *-- "0..*" Observation : evidence
+    BackendService --> Provider : optional logical provider_id
+    Report --> BackendService : service target, logical service_id
+    Report --> Provider : alternative provider target
+    Record ..> BackendService : kind service / JSON
+    Record ..> Provider : kind provider / JSON
+    Record ..> Report : kind report / JSON
+    Account "1" <-- "0..*" AccountSession : account_id FK
+    Account "1" <-- "0..*" AccountLink : account_id FK
+    Audit ..> Record : logical target
+    class Record {
+        id
+        kind
+        state
+        version
+        JSON data
+    }
+    class Account {
+        id
+        email
+        role
+        state
+    }
+    class AccountSession {
+        digest
+        account_id
+        last_activity
+        expires_at
+    }
+    class AccountLink {
+        digest
+        account_id
+        purpose
+        expires_at
+    }
+    class Audit {
+        actor
+        action
+        target
+        detail
+    }

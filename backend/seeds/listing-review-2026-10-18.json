@@ -1,0 +1,2226 @@
+{
+  "reviewed_at": "2026-10-17T16:25:21+00:00",
+  "method": "Three Luna research agents; primary-source review and conservative parent curation. Website review only, not provider contact or live stock verification.",
+  "updates": [
+    {
+      "collection": "providers",
+      "id": "foodconnect-apex-club-of-bukit-timah",
+      "version": 4,
+      "proposed": {
+        "email": "apexbt.sg@gmail.com",
+        "eligibility": "Apex interviews prospective beneficiaries and reviews its assigned list. Ask about eligibility and current intake.",
+        "description": "Weekly food bags for assigned beneficiaries in Redhill, with a newer Telok Blangah Rise programme. Contact Apex about intake.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://apexbt.org/help-us/",
+        "contact_source": "https://apexbt.org/contact/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. FoodConnect card lists Saturday 1-3pm and apexbt@gmail.com, while provider's Oct 2025 blog says Redhill starts 10:30am and contact page gives apexbt.sg@gmail.com. Keep the schedule without end time and prefer contact-page email; note footer conflict. No diet claims from FoodConnect are promoted as independently confirmed. Unconfirmed: No current public beneficiary intake/application instructions or eligibility criteria beyond interviews and assigned beneficiary list.; No confirmed public collection address; do not use mailing address as pickup location.; No end time for Redhill distribution.; Current site describes grocery distributions but does not confirm listed Halal/non-Halal separation or fresh-produce details."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://apexbt.org/help-us/",
+              "fields": [
+                "current programme existence",
+                "frequency",
+                "delivery",
+                "beneficiary assessment"
+              ]
+            },
+            {
+              "url": "https://apexbt.org/blog/",
+              "fields": [
+                "Redhill schedule change",
+                "new service locality"
+              ]
+            },
+            {
+              "url": "https://apexbt.org/contact/",
+              "fields": [
+                "email",
+                "contact form",
+                "mailing address"
+              ]
+            },
+            {
+              "url": "https://apexbt.org/",
+              "fields": [
+                "current programme scale",
+                "alternate email"
+              ]
+            }
+          ],
+          "unknowns": [
+            "No current public beneficiary intake/application instructions or eligibility criteria beyond interviews and assigned beneficiary list.",
+            "No confirmed public collection address; do not use mailing address as pickup location.",
+            "No end time for Redhill distribution.",
+            "Current site describes grocery distributions but does not confirm listed Halal/non-Halal separation or fresh-produce details."
+          ]
+        },
+        "reviewed_programmes": {
+          "Weekly food distribution": {
+            "listed": true,
+            "source": "https://apexbt.org/help-us/",
+            "frequency": "Weekly",
+            "recipients": "Interviewed, assigned beneficiaries",
+            "delivery_methods": "Delivered to assigned beneficiaries",
+            "distribution_days_raw": "Saturday",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": [
+              "Redhill",
+              "Telok Blangah Rise"
+            ],
+            "notes": "An October 2025 blog update gives a 10:30am Redhill start; no end time or public pickup address is published."
+          }
+        }
+      },
+      "reason": "Contact-page email is preferred over the conflicting homepage footer. Link the public contact source to https://apexbt.org/contact/; keep the documented footer discrepancy."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-ascending-hope-community-services",
+      "version": 3,
+      "proposed": {
+        "email": "admin@ascendinghope.org",
+        "eligibility": "Use the enquiry form or admin@ascendinghope.org to ask about food support. Food-specific eligibility and intake steps are not published.",
+        "description": "Food-ration and bread distribution under Senior Care. Ask about eligibility, frequency and locations; its office is by appointment only.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.ascendinghope.org/programmes",
+        "contact_source": "https://www.ascendinghope.org/contact",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. FoodConnect has older weekly/bi-monthly and distribution-point claims, which the current primary sources reviewed do not confirm. Do not treat the provider's appointment-only office as a food service site. Unconfirmed: FoodConnect phone 8218 3225 was not independently confirmed on current organization pages.; Current food distribution frequency, service/delivery locations, eligibility, diets and collection details are unpublished."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.ascendinghope.org/programmes",
+              "fields": [
+                "current food-ration programme",
+                "senior-care programme"
+              ]
+            },
+            {
+              "url": "https://www.ascendinghope.org/contact",
+              "fields": [
+                "current email",
+                "support enquiries",
+                "contact process",
+                "office address"
+              ]
+            }
+          ],
+          "unknowns": [
+            "FoodConnect phone 8218 3225 was not independently confirmed on current organization pages.",
+            "Current food distribution frequency, service/delivery locations, eligibility, diets and collection details are unpublished."
+          ]
+        },
+        "reviewed_programmes": {
+          "Senior Care food support": {
+            "listed": true,
+            "source": "https://www.ascendinghope.org/programmes",
+            "frequency": "Not confirmed",
+            "recipients": "Ask about Senior Care eligibility",
+            "delivery_methods": "Not confirmed",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": [
+              "Whampoa"
+            ],
+            "notes": "The page lists food-ration and bread distribution; it does not publish serving times or a pickup point."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-blessed-grace-social-services-limited",
+      "version": 3,
+      "proposed": {
+        "phone": "8428 6377",
+        "email": "info@blessedgrace.org",
+        "eligibility": "Ask BGSS whether food aid is currently offered. Its caseworker enquiry process covers social services; food-aid criteria remain unconfirmed.",
+        "description": "FoodConnect lists food aid, but BGSS has not confirmed those programmes on its current site. Call before relying on this listing.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://bgss.org.sg/contact-us",
+        "contact_source": "https://bgss.org.sg/contact-us",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Retain directory-only status unless a current BGSS source confirms food aid. BGSS address is its appointment-only center and must not be shown as a collection point. Unconfirmed: Whether any of the three FoodConnect food programmes are currently offered by BGSS.; Current food-aid eligibility, application steps, frequency, diet and delivery/pickup details.; Whether FoodConnect's directory email remains valid; current BGSS email is info@blessedgrace.org."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://bgss.org.sg/contact-us",
+              "fields": [
+                "current phone",
+                "email",
+                "office address",
+                "intake process for BGSS services"
+              ]
+            },
+            {
+              "url": "https://bgss.org.sg/",
+              "fields": [
+                "current service areas"
+              ]
+            },
+            {
+              "url": "https://www.foodfromtheheart.sg/about/partners",
+              "fields": [
+                "current partner relationship only"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Whether any of the three FoodConnect food programmes are currently offered by BGSS.",
+            "Current food-aid eligibility, application steps, frequency, diet and delivery/pickup details.",
+            "Whether FoodConnect's directory email remains valid; current BGSS email is info@blessedgrace.org."
+          ]
+        },
+        "reviewed_programmes": {}
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-club-rainbow-singapore",
+      "version": 3,
+      "proposed": {
+        "phone": "6377 1789",
+        "eligibility": "Club Rainbow supports Singapore citizens/PRs aged 0-20 with chronic illness, referred by doctors. Ask whether food assistance applies to your family.",
+        "description": "Food-ration support is described in a 2025 beneficiary story. Availability depends on family assessment; this is not a public walk-in programme.",
+        "access_method": "referral_required",
+        "support_types": [
+          "Food Rations"
+        ],
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.clubrainbow.org/faq",
+        "contact_source": "https://www.clubrainbow.org/contact-us",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Current general beneficiary criteria and referral route are available, while food-specific evidence is a 2025 case story. Avoid presenting monthly ration distribution as a universal schedule. Club Rainbow office addresses should not be mapped as pickup sites. Unconfirmed: Whether current food ration, grocery voucher and fresh produce programmes match the FoodConnect card categories/frequencies/diets.; No public service/collection location or open food-aid application route is published."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.clubrainbow.org/faq",
+              "fields": [
+                "current eligibility",
+                "referral route",
+                "current contact"
+              ]
+            },
+            {
+              "url": "https://www.clubrainbow.org/rainbowstories-1?offset=1749972420354",
+              "fields": [
+                "food ration provision in a recent beneficiary story"
+              ]
+            },
+            {
+              "url": "https://www.clubrainbow.org/contact-us",
+              "fields": [
+                "current contact channels and office locations"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Whether current food ration, grocery voucher and fresh produce programmes match the FoodConnect card categories/frequencies/diets.",
+            "No public service/collection location or open food-aid application route is published."
+          ]
+        },
+        "reviewed_programmes": {
+          "Family food support": {
+            "listed": true,
+            "source": "https://www.clubrainbow.org/faq",
+            "frequency": "Not confirmed",
+            "recipients": "Eligible children aged 0-20 with chronic illness and their families",
+            "delivery_methods": "Not confirmed",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "A 2025 family story describes monthly rations for one family. It is not a universal ration schedule."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-en-community-services-society",
+      "version": 3,
+      "proposed": {
+        "phone": "+65 6788 6625",
+        "email": "encares@ecss.org.sg",
+        "eligibility": "Contact encares@ecss.org.sg. Current voucher eligibility, frequency and application steps are not published.",
+        "description": "The FY2024/25 report describes food-voucher support. Ask Social and Community Care about current intake and arrangements.",
+        "support_types": [
+          "Food Vouchers"
+        ],
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://ecss.org.sg/contact-us/",
+        "contact_source": "https://ecss.org.sg/contact-us/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Keep FoodConnect's bi-monthly/collection-point claims as unconfirmed directory facts; the office address is administrative only. Unconfirmed: Current availability, frequency, voucher conditions, eligibility and application procedure.; No food-voucher distribution location confirmed."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://ecss.org.sg/contact-us/",
+              "fields": [
+                "current main line",
+                "Social and Community Care contact",
+                "administrative address"
+              ]
+            },
+            {
+              "url": "https://ecss.org.sg/wp-content/uploads/2026/03/Annual-Report-ECSS-FY-ending-30-06-2025.pdf",
+              "fields": [
+                "food voucher programme evidence",
+                "programme recency"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Current availability, frequency, voucher conditions, eligibility and application procedure.",
+            "No food-voucher distribution location confirmed."
+          ]
+        },
+        "reviewed_programmes": {
+          "Food-voucher support": {
+            "listed": true,
+            "source": "https://ecss.org.sg/wp-content/uploads/2026/03/Annual-Report-ECSS-FY-ending-30-06-2025.pdf",
+            "frequency": "Not confirmed",
+            "recipients": "Ask the provider about eligibility",
+            "delivery_methods": "Not confirmed",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "Reported in FY2024/25. Current intake and voucher arrangements need confirmation."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-filos-community-services",
+      "version": 3,
+      "proposed": {
+        "phone": "+65 6242 5978",
+        "email": "info@filos.sg",
+        "eligibility": "Contact Filos about assessment and current intake for Chai Chee residents. No public walk-in application or collection point is published.",
+        "description": "Waves of Blessing delivers food rations and essentials monthly to people in need in Chai Chee.",
+        "support_types": [
+          "Food Rations"
+        ],
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.filos.sg/services-assistance",
+        "contact_source": "https://www.filos.sg/contact",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Programme frequency and delivery are confirmed; do not repurpose the organization office addresses as pickup locations. Unconfirmed: Current food voucher assistance in the directory is not independently confirmed by this page.; No diet-specific information or public collection site is published.; No individual applicant self-referral instructions are published."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.filos.sg/services-assistance",
+              "fields": [
+                "current ration programme",
+                "frequency",
+                "delivery",
+                "served locality"
+              ]
+            },
+            {
+              "url": "https://www.filos.sg/contact",
+              "fields": [
+                "current phone",
+                "email",
+                "office addresses"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Current food voucher assistance in the directory is not independently confirmed by this page.",
+            "No diet-specific information or public collection site is published.",
+            "No individual applicant self-referral instructions are published."
+          ]
+        },
+        "reviewed_programmes": {
+          "Waves of Blessing": {
+            "listed": true,
+            "source": "https://www.filos.sg/services-assistance",
+            "frequency": "Monthly",
+            "recipients": "People in need in Chai Chee",
+            "delivery_methods": "Door-to-door delivery",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": [
+              "Chai Chee"
+            ],
+            "notes": ""
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-food-from-the-heart",
+      "version": 3,
+      "proposed": {
+        "phone": "+65 6280 4483",
+        "email": "info@foodheart.org",
+        "eligibility": "For families with limited means, seniors living alone and people with special needs. Many recipients have per-capita income below $800; this is not a universal eligibility threshold. Ask about a community-partner referral.",
+        "description": "Community Food Packs provide monthly groceries and fresh produce through community partners.",
+        "access_method": "referral_required",
+        "support_types": [
+          "Food Rations",
+          "Fresh Produce"
+        ],
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.foodfromtheheart.sg/work/programmes/community-food-pack",
+        "contact_source": "https://foodfromtheheart.sg/about/faq",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Do not reuse addresses of Community Shops or FFTH's office as Community Food Pack collection sites; they are distinct channels/programmes. Unconfirmed: Whether the individual can apply directly and what current documents/assessment are required.; The source supports packs/produce generally but does not confirm the FoodConnect diet labels or a public collection point.; No named collection point for this provider entry."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.foodfromtheheart.sg/work/programmes/community-food-pack",
+              "fields": [
+                "current Community Food Pack programme",
+                "monthly frequency",
+                "recipient groups",
+                "pack contents"
+              ]
+            },
+            {
+              "url": "https://foodfromtheheart.sg/about/faq",
+              "fields": [
+                "recipient relationship",
+                "current programme contact"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Whether the individual can apply directly and what current documents/assessment are required.",
+            "The source supports packs/produce generally but does not confirm the FoodConnect diet labels or a public collection point.",
+            "No named collection point for this provider entry."
+          ]
+        },
+        "reviewed_programmes": {
+          "Community Food Pack": {
+            "listed": true,
+            "source": "https://www.foodfromtheheart.sg/work/programmes/community-food-pack",
+            "frequency": "Monthly",
+            "recipients": "Families with limited means, seniors living alone, people with special needs",
+            "delivery_methods": "Through community partners",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "Many recipients have income per person below $800; the page does not establish a universal threshold or public self-referral route."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-free-food-for-all",
+      "version": 3,
+      "proposed": {
+        "phone": "+65 6883 5837",
+        "email": "welfare@freefood.org.sg",
+        "eligibility": "Apply through the provider food-aid form. Ask a Welfare Officer about initial eligibility. Beneficiaries or social workers may request an extension with supporting documents.",
+        "description": "Halal-certified ready-to-eat food aid by delivery. Apply online; renewals require supporting documents.",
+        "support_types": [
+          "Cooked Meals"
+        ],
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.freefood.org.sg/get-help",
+        "contact_source": "https://www.freefood.org.sg/get-help",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The provider page's office address is not a public aid collection point. Do not assert live stock or current approval. Unconfirmed: Full eligibility criteria for initial application are not stated on the reviewed public page.; FoodConnect's monthly food-ration category may not align exactly with the current ready-to-eat meal programmes.; No collection site is confirmed; provider page describes delivery."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.freefood.org.sg/get-help",
+              "fields": [
+                "current food aid",
+                "application route",
+                "service cadence",
+                "renewals",
+                "current contacts"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Full eligibility criteria for initial application are not stated on the reviewed public page.",
+            "FoodConnect's monthly food-ration category may not align exactly with the current ready-to-eat meal programmes.",
+            "No collection site is confirmed; provider page describes delivery."
+          ]
+        },
+        "reviewed_programmes": {
+          "Ready-to-eat meal delivery": {
+            "listed": true,
+            "source": "https://www.freefood.org.sg/get-help",
+            "frequency": "Automated: monthly, last day of the month. App orders: within 7 working days.",
+            "recipients": "Approved applicants",
+            "delivery_methods": "Delivery",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": [
+              "Halal-certified"
+            ],
+            "regions": "Ask the provider",
+            "notes": "Renewals/extensions require supporting documents. An additional welfare number published by the provider is 8025 2335."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-hao-ren-hao-shi-limited",
+      "version": 3,
+      "proposed": {
+        "phone": "+65 9058 5898",
+        "email": "enquiry@hrhs.org.sg",
+        "description": "Happy Mart and Mobile Groceries support families in need. Contact HRHS to register and confirm the exact service location.",
+        "eligibility": "Ask HRHS about beneficiary registration, eligibility and which location serves you. Volunteer event registration is not a food-aid application.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.haorenhaoshi.org.sg/events",
+        "contact_source": "https://www.haorenhaoshi.org.sg/events",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Schedule and service model materially differ from the older directory card. Distinguish Happy Mart from Mobile Groceries; do not map its office or list service areas as exact addresses. Happy Mart 10am-1pm is the provider's event detail; Mobile Groceries has two event session windows, but exact sites vary. Unconfirmed: No precise beneficiary pickup addresses or direct application form found in the reviewed public sources.; No dietary preference evidence in current primary sources reviewed.; FoodConnect's general weekly ration and delivery modes are not confirmed as the same as current Happy Mart/Mobile Groceries."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.haorenhaoshi.org.sg/events",
+              "fields": [
+                "current programme schedules",
+                "programme areas",
+                "public contact"
+              ]
+            },
+            {
+              "url": "https://www.haorenhaoshi.org.sg/events-1/happy-mart-1",
+              "fields": [
+                "Happy Mart time window",
+                "service description"
+              ]
+            },
+            {
+              "url": "https://www.haorenhaoshi.org.sg/_files/ugd/e67cb8_c5d0deb4a4224c89842bd5fbe378952f.pdf",
+              "fields": [
+                "recent programme evidence"
+              ]
+            }
+          ],
+          "unknowns": [
+            "No precise beneficiary pickup addresses or direct application form found in the reviewed public sources.",
+            "No dietary preference evidence in current primary sources reviewed.",
+            "FoodConnect's general weekly ration and delivery modes are not confirmed as the same as current Happy Mart/Mobile Groceries."
+          ]
+        },
+        "reviewed_programmes": {
+          "Happy Mart": {
+            "listed": true,
+            "source": "https://www.haorenhaoshi.org.sg/events-1/happy-mart-1",
+            "frequency": "Provider lists Wednesday and Sunday, 10am-1pm",
+            "recipients": "Registered families in need; ask about intake",
+            "delivery_methods": "Choose essential items at an arranged mart",
+            "distribution_days_raw": "Wednesday / Sunday; confirm location-specific day",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": [
+              "Stirling",
+              "Fernvale"
+            ],
+            "notes": ""
+          },
+          "Mobile Groceries": {
+            "listed": true,
+            "source": "https://www.haorenhaoshi.org.sg/events",
+            "frequency": "Saturday, 8:30-11:30am or 1-4pm; location varies",
+            "recipients": "Ask about registration",
+            "delivery_methods": "Confirm location with HRHS",
+            "distribution_days_raw": "Saturday",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": ""
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-hopes-in-meals",
+      "version": 3,
+      "proposed": {
+        "eligibility": "Current eligibility, application and availability are unconfirmed. The email is an older directory contact, not a newly verified channel.",
+        "description": "Older FoodConnect listing; current food aid and contact details could not be independently confirmed. Check before relying on it.",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Do not publish the secondary company-status report as a fact without primary registry confirmation. Directory-only facts are stale source-card data and should not be presented as current service information. Unconfirmed: Whether the organization remains active and whether listed meal/ration support still operates.; Whether hopesinmeals@gmail.com is still monitored.; All current programme, diet, eligibility, delivery and contact details."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [],
+          "unknowns": [
+            "Whether the organization remains active and whether listed meal/ration support still operates.",
+            "Whether hopesinmeals@gmail.com is still monitored.",
+            "All current programme, diet, eligibility, delivery and contact details."
+          ]
+        },
+        "reviewed_programmes": {}
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-krsnas-free-meals",
+      "version": 4,
+      "proposed": {
+        "phone": "+65 9105 6343",
+        "email": "admin@krsnasfreemeals.org",
+        "address": "20 Veerasamy Road",
+        "postal": "207327",
+        "description": "Free meals at 20 Veerasamy Road. Published pages differ on dinner hours; call to confirm your visit.",
+        "eligibility": "The provider describes free meals for people in need. Detailed eligibility and application rules are not published; ask about current access.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.krsnasfreemeals.org/contact",
+        "contact_source": "https://www.krsnasfreemeals.org/contact",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Address is explicitly published with meal service and can be retained as a confirmed service site. FoodConnect phone 9628 2045 conflicts with provider's current 9105 6343; use provider contact. Session-time discrepancy is section-level: top lists breakfast/lunch while footer/About adds dinner; preserve the caveat and do not assume service when arriving. Unconfirmed: Current diet is not stated in the provider pages reviewed; do not carry forward vegetarian label solely from the older directory.; No intake rules or service-session end time conflict beyond published listed times is explained."
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.krsnasfreemeals.org/contact",
+              "fields": [
+                "confirmed meal service address",
+                "current service hours",
+                "phone",
+                "email"
+              ]
+            },
+            {
+              "url": "https://www.krsnasfreemeals.org/about",
+              "fields": [
+                "meal programme",
+                "service model"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Current diet is not stated in the provider pages reviewed; do not carry forward vegetarian label solely from the older directory.",
+            "No intake rules or service-session end time conflict beyond published listed times is explained."
+          ]
+        },
+        "reviewed_programmes": {
+          "Free meals": {
+            "listed": true,
+            "source": "https://www.krsnasfreemeals.org/contact",
+            "frequency": "Provider describes daily meals",
+            "recipients": "People in need; detailed access rules not published",
+            "delivery_methods": "At the meal-service location",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "Contact-page main section lists 6:30-9am and 11am-2:30pm. Footer/About also list 7-9pm dinner. No calendar schedule encoded while the sections conflict."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-loving-heart-multi-service-centre",
+      "version": 3,
+      "proposed": {
+        "phone": "+65 6897 4766",
+        "email": "hello@lovingheart.org.sg",
+        "eligibility": "Ask Loving Heart whether food-ration assistance is currently offered in your area and how to apply. Its contact page alone does not confirm the ration programme.",
+        "description": "FoodConnect lists ration support, but the current site does not confirm it. General services currently cover Jurong; contact the provider first.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.lovingheart.org.sg/contact-us",
+        "contact_source": "https://www.lovingheart.org.sg/contact-us",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Keep distinct from Loving Heart Multi-Service Centre (Jurong): the two records have separate websites, contact details, and service descriptions. Similar branding alone does not establish whether they are separate legal entities or duplicate records; do not merge without evidence. The Meals on Us contact is for a separately named meal programme and is not evidence that the FoodConnect ration programme remains active. Unconfirmed: Whether the FoodConnect food-ration programme is still active; Current ration eligibility, application process, frequency, delivery, and diet; A public food collection location"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.lovingheart.org.sg/contact-us",
+              "fields": [
+                "phone",
+                "email",
+                "service area",
+                "programme contact"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Whether the FoodConnect food-ration programme is still active",
+            "Current ration eligibility, application process, frequency, delivery, and diet",
+            "A public food collection location"
+          ]
+        },
+        "reviewed_programmes": {}
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-loving-heart-multi-service-centre-jurong",
+      "version": 3,
+      "proposed": {
+        "description": "Food Gift+ 2.0 provides monthly grocery support, with recipients choosing items. Confirm collection arrangements with the provider.",
+        "eligibility": "For Singapore citizen/PR households with at least one citizen, in Jurong Central or nearby estates. Published income bands: household $3,000-$4,200 or per person $800-$1,000 monthly. Apply using the case-management form; assessed case by case.",
+        "phone": "+65 6567 4166",
+        "email": "contact@lovingheartjurong.org.sg",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.lovingheartjurong.org.sg/services/food-gift-2-0/",
+        "contact_source": "https://www.lovingheartjurong.org.sg/services/food-gift-2-0/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The main office address is not confirmed as the food collection point. Keep separate from Loving Heart Multi-Service Centre; no source found establishing that these similarly named listings should be merged. Unconfirmed: Exact current click-and-collect venue and appointment/session times; Whether the separate legacy FoodConnect dietary flags remain applicable to today's selectable groceries"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.lovingheartjurong.org.sg/services/food-gift-2-0/",
+              "fields": [
+                "programme",
+                "frequency",
+                "eligibility",
+                "application",
+                "collection model",
+                "phone",
+                "email"
+              ]
+            },
+            {
+              "url": "https://www.lovingheartjurong.org.sg/community/",
+              "fields": [
+                "collection model",
+                "home delivery"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Exact current click-and-collect venue and appointment/session times",
+            "Whether the separate legacy FoodConnect dietary flags remain applicable to today's selectable groceries"
+          ]
+        },
+        "reviewed_programmes": {
+          "Food Gift+ 2.0": {
+            "listed": true,
+            "source": "https://www.lovingheartjurong.org.sg/services/food-gift-2-0/",
+            "frequency": "Monthly",
+            "recipients": "Eligible Singapore citizen/PR households; provider assessment",
+            "delivery_methods": "Select items; confirm collection arrangements",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": [
+              "Jurong Central and nearby estates"
+            ],
+            "notes": "",
+            "application_url": "https://lovingheartjurong.socialservicesconnect.com/case-management-form/"
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-metropolitan-ymca-singapore",
+      "version": 3,
+      "proposed": {
+        "description": "M.Y Manna provides monthly groceries and toiletries. Delivery is listed for the first Saturday; centre collection for the second and fourth Saturdays.",
+        "phone": "+65 6839 8333",
+        "eligibility": "Ask M.Y Manna about eligibility and intake. Home delivery is for non-ambulant beneficiaries. Confirm the collection centre and time before going.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.mymca.org.sg/outreach/",
+        "contact_source": "https://www.mymca.org.sg/contact/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Exact days are supported, but no hours are published on the current outreach page. Do not use the main office address as a confirmed collection point without checking. The old FoodConnect telephone 6746 3742 differs from the current organisation mainline 6839 8333; retain the programme email only as an unconfirmed directory contact until its current target is checked. Public rendered contact page is accessible, but the current department email target is Cloudflare-obfuscated and its ordinary HTTP source retrieval served a Cloudflare challenge. Do not treat the pre-existing mymanna@mymca.org.sg directory value as newly verified. Unconfirmed: Eligibility and intake/application route; Collection start/end times; Whether the office address is the programme collection centre; Current halal suitability; FoodConnect's halal flag is not confirmed on the programme page; The current MYMCA page presents a department email link protected by Cloudflare email obfuscation; the existing seed email is not re-confirmed from readable current page text"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.mymca.org.sg/outreach/",
+              "fields": [
+                "programme",
+                "frequency",
+                "delivery",
+                "collection schedule"
+              ]
+            },
+            {
+              "url": "https://www.mymca.org.sg/contact/",
+              "fields": [
+                "phone",
+                "programme email",
+                "office address"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Eligibility and intake/application route",
+            "Collection start/end times",
+            "Whether the office address is the programme collection centre",
+            "Current halal suitability; FoodConnect's halal flag is not confirmed on the programme page",
+            "The current MYMCA page presents a department email link protected by Cloudflare email obfuscation; the existing seed email is not re-confirmed from readable current page text"
+          ]
+        },
+        "reviewed_programmes": {
+          "M.Y Manna": {
+            "listed": true,
+            "source": "https://www.mymca.org.sg/outreach/",
+            "frequency": "Monthly",
+            "recipients": "Assessed beneficiaries; delivery for non-ambulant recipients",
+            "delivery_methods": "Delivery: first Saturday. Collection: second and fourth Saturdays.",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "Collection start/end times and exact current centre address are not confirmed."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-mummy-yummy",
+      "version": 3,
+      "proposed": {
+        "description": "Older FoodConnect meal-support listing; no current provider-controlled source was found to confirm the programme or contact details.",
+        "eligibility": "Current eligibility, food suitability, delivery and intake are unconfirmed. Contact the listed directory channel before relying on it.",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The old MSF food-support sheet is from 2022 and is not an organisation-controlled source; it is insufficient to claim a current daily vegan-meal programme. Facebook access was throttled, and no current provider-controlled programme facts could be verified. Do not treat the restaurant address or third-party map hours as a beneficiary pickup site or service schedule. Unconfirmed: Whether meal assistance is currently active; Current contact details, eligibility/referral route, delivery coverage, schedule and food suitability; Any public meal collection location"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [],
+          "unknowns": [
+            "Whether meal assistance is currently active",
+            "Current contact details, eligibility/referral route, delivery coverage, schedule and food suitability",
+            "Any public meal collection location"
+          ]
+        },
+        "reviewed_programmes": {}
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-realm-of-tranquility",
+      "version": 4,
+      "proposed": {
+        "description": "Food rations and essentials for needy families islandwide. Ask about current intake and distribution arrangements.",
+        "phone": "+65 6469 3843",
+        "email": "realmoftranquility@gmail.com",
+        "eligibility": "Contact the organisation for eligibility and application steps. Older annual-report distribution sites are not confirmed current pickup points.",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://realmoftranquility.com/the-4-pillars/",
+        "contact_source": "https://realmoftranquility.com/contact-us/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The current organisation contact page's Gmail address conflicts with email@realmoftranquility.com, which the existing seed sourced from an NCSS member list. Prefer the current organisation-controlled contact page, while recording this discrepancy for review. The 2023 annual report is historical evidence and must not be presented as current schedule or intake information. Neither the office nor Activity Centre is established as a public pickup point. Unconfirmed: Current eligibility and application route; Current frequency, delivery/collection arrangement, and exact sessions; Whether any listed historical neighbourhood sites still operate; Halal suitability is only on the older FoodConnect card and is not confirmed by the current programme page"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://realmoftranquility.com/the-4-pillars/",
+              "fields": [
+                "food-ration programme",
+                "service coverage"
+              ]
+            },
+            {
+              "url": "https://realmoftranquility.com/contact-us/",
+              "fields": [
+                "phone",
+                "email",
+                "administrative address"
+              ]
+            },
+            {
+              "url": "https://realmoftranquility.com/wp-content/uploads/2025/07/Annual-Report-2023_compressed.pdf",
+              "fields": [
+                "historical programme scale",
+                "historical distribution locations"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Current eligibility and application route",
+            "Current frequency, delivery/collection arrangement, and exact sessions",
+            "Whether any listed historical neighbourhood sites still operate",
+            "Halal suitability is only on the older FoodConnect card and is not confirmed by the current programme page"
+          ]
+        },
+        "reviewed_programmes": {
+          "Food rations": {
+            "listed": true,
+            "source": "https://realmoftranquility.com/the-4-pillars/",
+            "frequency": "Not confirmed",
+            "recipients": "Needy families",
+            "delivery_methods": "Not confirmed",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": [
+              "Islandwide"
+            ],
+            "notes": "Current distribution frequency and sites are not confirmed; the annual-report locations are historical."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-singapore-association-of-the-visually-handicapped",
+      "version": 3,
+      "proposed": {
+        "description": "Social Work may provide food rations after assessment. An older annual report describes monthly home delivery; confirm current arrangements.",
+        "eligibility": "Ask SAVH Social Work at 6251 4331, extension 502, for an assessment. Detailed current ration eligibility is not published.",
+        "phone": "+65 6251 4331",
+        "email": "enquiries@savh.org.sg",
+        "access_method": "provider_assessment",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://savh.org.sg/vision-rehabilitation-programme/",
+        "contact_source": "https://savh.org.sg/contact/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The 2024 annual report reports FY2023 activity, so label monthly home delivery as historical reporting rather than newly confirmed 2026 frequency. Do not infer diet from the old FoodConnect flags. Use the mainline in the phone field because the provider contact is a switchboard number with a department extension; retain ext 502 in the contact instructions, not as part of the number. Unconfirmed: Whether monthly ration delivery and the same beneficiary group remain current in 2026; Current detailed eligibility and intake route; Dietary options; No public collection point confirmed"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://savh.org.sg/vision-rehabilitation-programme/",
+              "fields": [
+                "food-ration assistance existence",
+                "case assessment",
+                "client services contact"
+              ]
+            },
+            {
+              "url": "https://savh.org.sg/wp-content/uploads/2024/09/SAVH-Annual-Report-2024.pdf",
+              "fields": [
+                "ration frequency",
+                "delivery",
+                "historical beneficiary group"
+              ]
+            },
+            {
+              "url": "https://savh.org.sg/contact/",
+              "fields": [
+                "current Social Work contact"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Whether monthly ration delivery and the same beneficiary group remain current in 2026",
+            "Current detailed eligibility and intake route",
+            "Dietary options",
+            "No public collection point confirmed"
+          ]
+        },
+        "reviewed_programmes": {
+          "Social Work food support": {
+            "listed": true,
+            "source": "https://savh.org.sg/vision-rehabilitation-programme/",
+            "frequency": "Not confirmed",
+            "recipients": "Assessed SAVH clients",
+            "delivery_methods": "Not confirmed",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "FY2023 reporting describes monthly home-delivered rations. Current frequency and delivery eligibility need confirmation."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-singapore-buddhist-welfare-services",
+      "version": 3,
+      "proposed": {
+        "description": "Monthly rations and a separate free vegetarian meal-delivery programme. Contact SBWS about referral, eligibility and coverage.",
+        "eligibility": "Ration referrals come through hospitals, FSCs, grassroots or public agencies. Meal delivery targets needy seniors and people with financial, illness or mobility barriers. Both depend on assessment and service coverage.",
+        "phone": "+65 6489 8161",
+        "email": "sbws@sbws.org.sg",
+        "support_types": [
+          "Cooked Meals",
+          "Food Rations"
+        ],
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://sbws.org.sg/en/services-affiliates/social-welfare-and-community-services/public-assistance-programme/",
+        "contact_source": "https://sbws.org.sg/en/about-us/corporate-information/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Do not conflate the daily cooked-meal programme with monthly ration support. The current meal page explicitly calls meals free and vegetarian; the current ration page does not specify a diet. 105 Punggol Road is the organisation address, not a confirmed public ration pickup point. Unconfirmed: Meal delivery hours and current capacity; Current exact area boundaries beyond the named broad zones; Current ration delivery cadence is monthly but collection/hand-off appointment detail is unpublished; FoodConnect vegetarian flag should apply to cooked meal support; the ration page does not specify the contents/diet"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://sbws.org.sg/en/services-affiliates/social-welfare-and-community-services/public-assistance-programme/",
+              "fields": [
+                "ration frequency",
+                "ration delivery",
+                "eligibility groups",
+                "referral route",
+                "diet-independent details"
+              ]
+            },
+            {
+              "url": "https://sbws.org.sg/en/services-affiliates/social-welfare-and-community-services/daily-free-meal-delivery-programme/",
+              "fields": [
+                "cooked meals",
+                "diet",
+                "meal frequency",
+                "meal delivery",
+                "meal target group"
+              ]
+            },
+            {
+              "url": "https://sbws.org.sg/en/about-us/corporate-information/",
+              "fields": [
+                "phone",
+                "email"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Meal delivery hours and current capacity",
+            "Current exact area boundaries beyond the named broad zones",
+            "Current ration delivery cadence is monthly but collection/hand-off appointment detail is unpublished",
+            "FoodConnect vegetarian flag should apply to cooked meal support; the ration page does not specify the contents/diet"
+          ]
+        },
+        "reviewed_programmes": {
+          "Free vegetarian meal delivery": {
+            "listed": true,
+            "source": "https://sbws.org.sg/en/services-affiliates/social-welfare-and-community-services/daily-free-meal-delivery-programme/",
+            "frequency": "Two meals daily, Monday-Saturday, except public holidays",
+            "recipients": "Needy seniors and people with financial, illness or mobility barriers",
+            "delivery_methods": "Home delivery",
+            "distribution_days_raw": "Monday-Saturday; no Sundays or public holidays",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": [
+              "Vegetarian"
+            ],
+            "regions": [
+              "Hougang",
+              "Sengkang",
+              "Punggol",
+              "Ask about North / East Central coverage"
+            ],
+            "notes": ""
+          },
+          "Monthly rations": {
+            "listed": true,
+            "source": "https://sbws.org.sg/en/services-affiliates/social-welfare-and-community-services/public-assistance-programme/",
+            "frequency": "Monthly",
+            "recipients": "Referred, needs-assessed individuals and families",
+            "delivery_methods": "Delivered to beneficiaries",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": ""
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-singapore-red-cross-society",
+      "version": 3,
+      "proposed": {
+        "support_types": [
+          "Food Vouchers"
+        ],
+        "description": "Time-limited grocery vouchers through Family Crisis Aid. Meals with Love is a separate voucher programme; ask which support fits.",
+        "eligibility": "Family Crisis Aid requires a recognised social worker, caseworker or partner-agency application. Published criteria include a recent crisis, per-capita income below $1,000 and limited alternative support. Assistance is assessed case by case.",
+        "email": "casework@redcross.sg",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.redcross.sg/our-causes/families-youth-children/family-crisis-aid/",
+        "contact_source": "https://www.redcross.sg/meals-with-love.html",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. Remove or flag Food Rations and old diet/frequency/delivery claims pending confirmation. Current primary pages substantiate voucher support only. Do not describe vouchers as cooked meals or as a public collection location. Unconfirmed: Current casework phone number; existing seed number is not confirmed by these current programme pages; Whether Food Rations remain available: no current primary source found confirming that FoodConnect category; Current voucher amount/frequency for Meals with Love (its page says six months but not a monthly amount); Diet suitability is not applicable to grocery vouchers and old directory diet flags are not evidenced by these programme pages"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.redcross.sg/our-causes/families-youth-children/family-crisis-aid/",
+              "fields": [
+                "current food assistance",
+                "eligibility",
+                "application/referral route",
+                "voucher frequency and amount"
+              ]
+            },
+            {
+              "url": "https://www.redcross.sg/meals-with-love.html",
+              "fields": [
+                "separate grocery-voucher programme",
+                "application window",
+                "eligibility priorities",
+                "contact email"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Current casework phone number; existing seed number is not confirmed by these current programme pages",
+            "Whether Food Rations remain available: no current primary source found confirming that FoodConnect category",
+            "Current voucher amount/frequency for Meals with Love (its page says six months but not a monthly amount)",
+            "Diet suitability is not applicable to grocery vouchers and old directory diet flags are not evidenced by these programme pages"
+          ]
+        },
+        "reviewed_programmes": {
+          "Family Crisis Aid": {
+            "listed": true,
+            "source": "https://www.redcross.sg/our-causes/families-youth-children/family-crisis-aid/",
+            "frequency": "Time-limited; assessed case by case",
+            "recipients": "Households in recent crisis, referred by a recognised agency",
+            "delivery_methods": "Grocery vouchers",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "The reviewed current sources substantiate vouchers, not the older directory ration category."
+          },
+          "Meals with Love": {
+            "listed": true,
+            "source": "https://www.redcross.sg/meals-with-love.html",
+            "frequency": "Applications in April and October; confirm current intake",
+            "recipients": "Assessed households",
+            "delivery_methods": "Grocery vouchers",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": ""
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-united-indian-muslim-association",
+      "version": 3,
+      "proposed": {
+        "email": "md.habib@uima.org.sg",
+        "eligibility": "Use the beneficiary registration form and ask UIMA whether food assistance is available. Food-specific eligibility and distribution details are unconfirmed.",
+        "description": "Beneficiary registration is available, but current food-specific support and requirements are not confirmed on the reviewed page.",
+        "verification_status": "directory_only",
+        "access_method": "unverified",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.uima.org.sg/need-help/",
+        "contact_source": "https://www.uima.org.sg/need-help/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The current page's phone field appears malformed or ambiguous; do not replace the number in the seed until a legible organization-controlled confirmation is found. Its Clementi address is not a confirmed food collection point. The beneficiary form is verified, but it does not by itself establish that food assistance is offered currently. Unconfirmed: Whether the FoodConnect food programme and listed categories are currently active; Specific food-assistance eligibility, application steps after beneficiary registration, support cadence and collection/delivery; Whether the phone strings as rendered are valid contact numbers"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.uima.org.sg/need-help/",
+              "fields": [
+                "beneficiary registration",
+                "contact email",
+                "published phone text",
+                "office location"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Whether the FoodConnect food programme and listed categories are currently active",
+            "Specific food-assistance eligibility, application steps after beneficiary registration, support cadence and collection/delivery",
+            "Whether the phone strings as rendered are valid contact numbers"
+          ]
+        },
+        "reviewed_programmes": {}
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-willing-hearts",
+      "version": 3,
+      "proposed": {
+        "description": "Free meal assistance by social-service referral. The kitchen coordinates delivery; it is not a confirmed public collection point.",
+        "eligibility": "Ask a social worker or social service agency to apply. For help finding care support, AIC lists 1800 650 6060. Current beneficiary criteria and delivery times need confirmation.",
+        "phone": "+65 6476 5822",
+        "email": "willingheartsingapore@gmail.com",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://willinghearts.org.sg/contact",
+        "contact_source": "https://willinghearts.org.sg/s/annual-report-20232024-final-booklet.pdf",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The soup-kitchen address is operational/coordination information, not evidence of public meal pickup. Do not map as a collection point. The source says kitchen operations year-round, but it does not give meal dispatch times or beneficiary schedule. The current Willing Hearts page prints the AIC contact as 1800 6560 5050; AIC?s official contact page instead lists 1800-650-6060. Do not repeat the Willing Hearts-rendered number as an AIC hotline. AIC?s number is independently verified as its general public hotline, not specifically as a food-aid intake line. Unconfirmed: Current beneficiary eligibility and meal suitability/diet; Exact beneficiary delivery locations and timings; Whether public pickup is available (no public collection point confirmed); Current page has obfuscated addresses for general and meal enquiries, so the exact programme-specific email was not machine-readable in the rendered public source; the provider-controlled 2023/24 annual report lists willingheartsingapore@gmail.com, which is a historical confirmation only"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://willinghearts.org.sg/contact",
+              "fields": [
+                "assistance application route",
+                "phone",
+                "kitchen address",
+                "meal enquiry email"
+              ]
+            },
+            {
+              "url": "https://willinghearts.org.sg/services/",
+              "fields": [
+                "meal preparation/distribution scale and schedule"
+              ]
+            },
+            {
+              "url": "https://willinghearts.org.sg/forms",
+              "fields": [
+                "beneficiary form distinction"
+              ]
+            },
+            {
+              "url": "https://www.aic.sg/Contact-Us",
+              "fields": [
+                "official AIC hotline"
+              ]
+            },
+            {
+              "url": "https://willinghearts.org.sg/s/annual-report-20232024-final-booklet.pdf",
+              "fields": [
+                "organisation-controlled contact email (historical report)",
+                "free meals",
+                "eligibility context"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Current beneficiary eligibility and meal suitability/diet",
+            "Exact beneficiary delivery locations and timings",
+            "Whether public pickup is available (no public collection point confirmed)",
+            "Current page has obfuscated addresses for general and meal enquiries, so the exact programme-specific email was not machine-readable in the rendered public source; the provider-controlled 2023/24 annual report lists willingheartsingapore@gmail.com, which is a historical confirmation only"
+          ]
+        },
+        "reviewed_programmes": {
+          "Meal assistance": {
+            "listed": true,
+            "source": "https://willinghearts.org.sg/contact",
+            "frequency": "Provider prepares meals throughout the year; individual delivery times unconfirmed",
+            "recipients": "Social worker / social service agency application",
+            "delivery_methods": "Arranged delivery; not kitchen walk-in collection",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "Use AIC's own published general hotline 1800 650 6060. The number displayed on Willing Hearts' referral text differs from AIC's authoritative page."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "providers",
+      "id": "foodconnect-yong-en-care-centre",
+      "version": 3,
+      "proposed": {
+        "description": "Food-ration support for residents around Chinatown. Older reports describe monthly rations; ask about current delivery or arranged collection.",
+        "eligibility": "Food-ration referrals come through an SSO or FSC for residents in the Chinatown vicinity. Confirm current assessment and service coverage with Yong-en.",
+        "phone": "+65 6225 1002",
+        "email": "mail@yong-en.org.sg",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "provider_source": "https://www.yong-en.org.sg/wp-content/uploads/2025/05/Yong-en-Care-Cente-FY2024-Annual-Report_LowResVer1_250429.pdf",
+        "contact_source": "https://www.yong-en.org.sg/care-assistance/",
+        "verification_notes": "Website-source review only; no provider contact or live stock check. Archived FoodConnect facts are not reverified. The 2025 publication reports FY2024 activities; state its period rather than implying independently reverified live 2026 cadence. Do not use the administrative centre address as a food pickup location. BreadWalk and FreshFood are separate food-security activities, not evidence for the FoodConnect ration card's exact delivery details. Unconfirmed: Exact current collection address and session times; Whether home delivery is available to all eligible beneficiaries or only by individual arrangement; Dietary suitability; current programme sources say dry rations but do not establish halal status"
+      },
+      "directory_facts_patch": {
+        "research_review": {
+          "reviewed_at": "2026-10-17T16:25:21+00:00",
+          "scope": "Only the cited fields were checked; source age and conflicts remain explicit.",
+          "sources": [
+            {
+              "url": "https://www.yong-en.org.sg/wp-content/uploads/2025/05/Yong-en-Care-Cente-FY2024-Annual-Report_LowResVer1_250429.pdf",
+              "fields": [
+                "food-ration programme",
+                "frequency",
+                "recipient areas",
+                "food type"
+              ]
+            },
+            {
+              "url": "https://www.yong-en.org.sg/stories-and-publicat/empowered-by-care-adrian/",
+              "fields": [
+                "ongoing beneficiary experience",
+                "delivery/collection variation"
+              ]
+            },
+            {
+              "url": "https://www.yong-en.org.sg/care-assistance/",
+              "fields": [
+                "eligibility/referral",
+                "contact"
+              ]
+            }
+          ],
+          "unknowns": [
+            "Exact current collection address and session times",
+            "Whether home delivery is available to all eligible beneficiaries or only by individual arrangement",
+            "Dietary suitability; current programme sources say dry rations but do not establish halal status"
+          ]
+        },
+        "reviewed_programmes": {
+          "Food rations": {
+            "listed": true,
+            "source": "https://www.yong-en.org.sg/care-assistance/",
+            "frequency": "Not confirmed",
+            "recipients": "SSO/FSC-referred residents around Chinatown",
+            "delivery_methods": "Not confirmed",
+            "distribution_days_raw": "Not confirmed",
+            "distribution_dates_raw": "Confirm dates with the provider",
+            "dietary_preferences": "Not confirmed",
+            "regions": "Ask the provider",
+            "notes": "FY2024 reporting describes monthly dry rations in Chinatown, Jalan Kukoh and York Hill. Exact current hand-off arrangements are individual and unconfirmed."
+          }
+        }
+      },
+      "reason": "Reviewed public provider sources on 18 Oct 2026; updated concise support, access and contact facts. Preserved the original directory facts and unknown fields. No live availability claimed."
+    },
+    {
+      "collection": "services",
+      "id": "willing-hearts-meal-assistance",
+      "version": 3,
+      "proposed": {
+        "description": "Free meal assistance by social-service referral. The kitchen coordinates delivery; it is not a confirmed public collection point.",
+        "eligibility": "Ask a social worker or social service agency to apply. For help finding care support, AIC lists 1800 650 6060. Current beneficiary criteria and delivery times need confirmation. AIC source: https://www.aic.sg/Contact-Us",
+        "phone": "+65 6476 5822",
+        "verified_at": "2026-10-17T16:25:21+00:00",
+        "source": "https://willinghearts.org.sg/contact"
+      },
+      "reason": "Reviewed provider application/contact information; kept service-location role, unknown diets, schedules and live availability unchanged. AIC referral contact checked against AIC itself."
+    },
+    {
+      "collection": "services",
+      "id": "krsnas-free-meals-public-meal-site",
+      "version": 3,
+      "proposed": {
+        "description": "Free meals at 20 Veerasamy Road. Published pages differ on dinner hours; call to confirm your visit.",
+        "eligibility": "The provider describes free meals for people in need. Detailed eligibility and application rules are not published; ask about current access.",
+        "phone": "+65 9105 6343",
+        "verified_at": "2026-10-17T16:25:21+00:00"
+      },
+      "reason": "Reviewed provider application/contact information; kept service-location role, unknown diets, schedules and live availability unchanged. AIC referral contact checked against AIC itself."
+    }
+  ],
+  "imports": [
+    {
+      "source": "https://foodbank.sg/programmes/",
+      "permission": "Manually reviewed public programme/contact facts for FoodBridge. Not a partner export or live availability feed. Retain sources, limits and review notes; review site terms before wider redistribution.",
+      "records": [
+        {
+          "name": "The Food Bank Singapore",
+          "support_types": [
+            "Food Rations"
+          ],
+          "description": "Mobile Food Pantry offers emergency food aid through beneficiary cards. The separate F&B meal-card programme is marked paused; ask about current access.",
+          "eligibility": "Ask beneficiaries@foodbank.sg about access or a local beneficiary partner. NCSS registration applies to partner organisations, not individual applicants.",
+          "phone": "+65 6280 4498",
+          "email": "beneficiaries@foodbank.sg",
+          "website": "https://foodbank.sg/",
+          "address": null,
+          "postal": null,
+          "source": "https://foodbank.sg/programmes/",
+          "provider_source": "https://foodbank.sg/programmes/",
+          "contact_source": "https://foodbank.sg/contact/",
+          "verification_status": "provider_reviewed",
+          "location_type": "no_confirmed_collection_site",
+          "access_method": "contact_to_confirm",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "verification_notes": "Website-source review only. Current official programme page confirms Mobile Food Pantry 24/7 emergency aid but does not publish active vending-machine addresses or direct individual intake criteria. Separate F&B Bank Card Programme is explicitly marked on pause now and set to relaunch in 2026; do not represent it as active without a fresh provider check. HQ is not a collection site.",
+          "id": "provider-food-bank-singapore",
+          "kind": "provider",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "active": true,
+          "demo": false,
+          "latitude": null,
+          "longitude": null,
+          "location_notes": "No public collection point is confirmed; contact the provider for arrangements.",
+          "directory_facts": {
+            "research_review": {
+              "reviewed_at": "2026-10-17T16:25:21+00:00",
+              "scope": "Primary-source website review; no live availability or on-site check.",
+              "sources": [
+                {
+                  "url": "https://foodbank.sg/programmes/",
+                  "fields": [
+                    "current Mobile Food Pantry status",
+                    "Bank Card programme status",
+                    "beneficiary access",
+                    "food support contact",
+                    "office address"
+                  ]
+                },
+                {
+                  "url": "https://foodbank.sg/about/beneficiary-partners/",
+                  "fields": [
+                    "institutional referral route",
+                    "eligibility gate for partners"
+                  ]
+                },
+                {
+                  "url": "https://foodbank.sg/contact/",
+                  "fields": [
+                    "direct general contact",
+                    "address",
+                    "phone",
+                    "office hours"
+                  ]
+                },
+                {
+                  "url": "https://foodbank.sg/wp-content/uploads/2025/05/FBSG-AnnualReport-2025-R8-double_compressed.pdf",
+                  "fields": [
+                    "historical Bank Card use",
+                    "2024 performance"
+                  ]
+                }
+              ],
+              "unknowns": [
+                "Whether the paused F&B Bank Card programme has relaunched since the current page was updated",
+                "Exact current Mobile Food Pantry machine addresses/postals",
+                "Individual beneficiary intake process and eligibility",
+                "Food selection and availability at each machine"
+              ]
+            },
+            "reviewed_programmes": {
+              "Mobile Food Pantry": {
+                "listed": true,
+                "source": "https://foodbank.sg/programmes/",
+                "frequency": "Provider describes 24/7 access at participating machines",
+                "recipients": "Accepted cardholders; ask about intake",
+                "delivery_methods": "Beneficiary card credits at participating machines",
+                "distribution_days_raw": "Not confirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": "Not confirmed",
+                "regions": "Ask the provider",
+                "notes": "Machine locations and current individual intake are unconfirmed. The separate F&B Bank Card meal programme is paused."
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "source": "https://sbl.org.sg/chn/contact.aspx",
+      "permission": "Manually reviewed public programme/contact facts for FoodBridge. Not a partner export or live availability feed. Retain sources, limits and review notes; review site terms before wider redistribution.",
+      "records": [
+        {
+          "kind": "organisation",
+          "id": "org-singapore-buddhist-lodge",
+          "name": "The Singapore Buddhist Lodge"
+        },
+        {
+          "name": "The Singapore Buddhist Lodge",
+          "support_types": [
+            "Cooked Meals"
+          ],
+          "description": "Free vegetarian breakfast, lunch and dinner at the Lodge dining hall. Check the published serving times before going.",
+          "eligibility": "Meals serve people of different backgrounds and faiths. Ask the Lodge about current visitor access and any schedule changes.",
+          "phone": "+65 6737-2630",
+          "email": "sbl@sbl.org.sg",
+          "website": "https://sbl.org.sg/chn/contact.aspx",
+          "address": "17-19 Kim Yam Road",
+          "postal": "239329",
+          "source": "https://sbl.org.sg/chn/contact.aspx",
+          "provider_source": "https://sbl.org.sg/chn/contact.aspx",
+          "contact_source": "https://sbl.org.sg/chn/contact.aspx",
+          "verification_status": "provider_reviewed",
+          "location_type": "confirmed_collection_site",
+          "access_method": "contact_to_confirm",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "verification_notes": "Website-source review only. Official current page gives meal windows and postal address; government speech in 2024 confirms free vegetarian meals to people of all backgrounds. No current stock claim.",
+          "id": "provider-singapore-buddhist-lodge",
+          "kind": "provider",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "active": true,
+          "demo": false,
+          "location_notes": "Only an explicitly sourced meal site is mapped. Confirm arrangements before travelling.",
+          "directory_facts": {
+            "research_review": {
+              "reviewed_at": "2026-10-17T16:25:21+00:00",
+              "scope": "Primary-source website review; no live availability or on-site check.",
+              "sources": [
+                {
+                  "url": "https://sbl.org.sg/chn/contact.aspx",
+                  "fields": [
+                    "meal session times",
+                    "address",
+                    "postal",
+                    "phone",
+                    "email"
+                  ]
+                },
+                {
+                  "url": "https://www.istana.gov.sg/newsroom/speech-by-president-tharman-shanmugaratnam-at-the-90th-anniversary-of-the-singapore-buddhist-lodge/",
+                  "fields": [
+                    "free meal programme",
+                    "public audience"
+                  ]
+                },
+                {
+                  "url": "https://www.pmo.gov.sg/newsroom/dpm-heng-swee-keat-at-the-opening-of-singapore-buddhist-lodge-new-building/",
+                  "fields": [
+                    "free meals",
+                    "diets",
+                    "three sessions"
+                  ]
+                }
+              ],
+              "unknowns": [
+                "Whether schedules change on public holidays or special days",
+                "Live meal availability/stock",
+                "Any visitor etiquette/access instructions"
+              ]
+            },
+            "reviewed_programmes": {
+              "Free vegetarian meals": {
+                "listed": true,
+                "source": "https://sbl.org.sg/chn/contact.aspx",
+                "frequency": "Daily",
+                "recipients": "Visitors",
+                "delivery_methods": "Meal at the listed site",
+                "distribution_days_raw": "Not confirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": [
+                  "Vegetarian"
+                ],
+                "regions": "Ask the provider",
+                "notes": ""
+              }
+            }
+          },
+          "latitude": 1.294547446048172,
+          "longitude": 103.8390379973563
+        },
+        {
+          "name": "Singapore Buddhist Lodge free vegetarian meals",
+          "address": "17-19 Kim Yam Road",
+          "postal": "239329",
+          "support_type": "Hot meals",
+          "diets": [
+            "Vegetarian"
+          ],
+          "distribution_schedules": [
+            {
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "start": "07:00",
+              "end": "09:00",
+              "label": "Breakfast"
+            },
+            {
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "start": "11:30",
+              "end": "14:00",
+              "label": "Lunch"
+            },
+            {
+              "days": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "start": "17:00",
+              "end": "19:30",
+              "label": "Dinner"
+            }
+          ],
+          "eligibility": "Government source says programme serves people of all backgrounds; check with Lodge for current visitor access.",
+          "phone": "+65 6737-2630",
+          "website": "https://sbl.org.sg/chn/contact.aspx",
+          "access_method": "contact_to_confirm",
+          "location_role": "collection_site",
+          "description": "Free vegetarian meals: breakfast 7-9am, lunch 11:30am-2pm and dinner 5-7:30pm. Check with the Lodge for changes.",
+          "id": "singapore-buddhist-lodge-meals",
+          "kind": "service",
+          "organisation_id": "org-singapore-buddhist-lodge",
+          "provider_id": "provider-singapore-buddhist-lodge",
+          "latitude": 1.294547446048172,
+          "longitude": 103.8390379973563,
+          "source": "https://sbl.org.sg/chn/contact.aspx",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "demo": false,
+          "active": true,
+          "wheelchair": null,
+          "schedules": [],
+          "exceptions": {},
+          "observations": []
+        }
+      ]
+    },
+    {
+      "source": "https://www.iccs.sg/about/visit-singapore/places-of-worship/central-sikh-gurdwara/",
+      "permission": "Manually reviewed public programme/contact facts for FoodBridge. Not a partner export or live availability feed. Retain sources, limits and review notes; review site terms before wider redistribution.",
+      "records": [
+        {
+          "kind": "organisation",
+          "id": "org-central-sikh-gurdwara-board",
+          "name": "Central Sikh Gurdwara Board"
+        },
+        {
+          "name": "Central Sikh Gurdwara Board",
+          "support_types": [
+            "Cooked Meals"
+          ],
+          "description": "Free vegetarian langar for visitors at Central Sikh Temple and Gurdwara Sahib Silat Road. Ask about current serving times.",
+          "eligibility": "Visitors are welcome to the meal programme. Confirm entry instructions and current serving arrangements; exact meal windows are not published.",
+          "phone": null,
+          "email": null,
+          "website": "https://sikhs.org.sg/",
+          "address": "2 Towner Road",
+          "postal": "327804",
+          "source": "https://www.iccs.sg/about/visit-singapore/places-of-worship/central-sikh-gurdwara/",
+          "provider_source": "https://sikhs.org.sg/",
+          "contact_source": null,
+          "verification_status": "provider_reviewed",
+          "location_type": "confirmed_collection_site",
+          "access_method": "contact_to_confirm",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "verification_notes": "Website-source review only. Current CSGB pages confirm both public temples and Silat Road langar served daily throughout the day. Central Sikh Temple free daily visitor meals are corroborated by MCCY (2025). The latest phone publications located on official CSGB monthly programme PDFs are from 2022; email/board contact from 2020 report. Reconfirm phone and email before publication.",
+          "id": "provider-central-sikh-gurdwara-board",
+          "kind": "provider",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "active": true,
+          "demo": false,
+          "location_notes": "Only an explicitly sourced meal site is mapped. Confirm arrangements before travelling.",
+          "directory_facts": {
+            "research_review": {
+              "reviewed_at": "2026-10-17T16:25:21+00:00",
+              "scope": "Primary-source website review; no live availability or on-site check.",
+              "sources": [
+                {
+                  "url": "https://www.iccs.sg/about/visit-singapore/places-of-worship/central-sikh-gurdwara/",
+                  "fields": [
+                    "Central Sikh Temple free daily visitor meals",
+                    "diet",
+                    "daily frequency"
+                  ]
+                },
+                {
+                  "url": "https://sikhs.org.sg/about-srst/",
+                  "fields": [
+                    "Silat Road langgar",
+                    "daily frequency",
+                    "management relationship"
+                  ]
+                },
+                {
+                  "url": "https://sikhs.org.sg/wp-content/uploads/2021/09/CSGB-Annual-Report-20192020.pdf",
+                  "fields": [
+                    "provider contact",
+                    "board service locations"
+                  ]
+                },
+                {
+                  "url": "https://sikhs.org.sg/wp-content/uploads/2022/01/CST-Feb-22-Monthly-program-Eng.pdf",
+                  "fields": [
+                    "Central Sikh Temple address",
+                    "postal",
+                    "phone"
+                  ]
+                },
+                {
+                  "url": "https://sikhs.org.sg/wp-content/uploads/2022/01/SRST-Monthly-Prog-Feb-2022-English.pdf",
+                  "fields": [
+                    "Silat Road address",
+                    "postal",
+                    "phone"
+                  ]
+                }
+              ],
+              "unknowns": [
+                "Whether 2022 published phone numbers remain current",
+                "Current board email confirmation",
+                "Exact meal session windows at both temples",
+                "Whether Silat Road schedule has interruptions",
+                "Dietary details beyond vegetarian"
+              ]
+            },
+            "reviewed_programmes": {
+              "Free vegetarian meals": {
+                "listed": true,
+                "source": "https://www.iccs.sg/about/visit-singapore/places-of-worship/central-sikh-gurdwara/",
+                "frequency": "Daily",
+                "recipients": "Visitors",
+                "delivery_methods": "Meal at the listed site",
+                "distribution_days_raw": "Not confirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": [
+                  "Vegetarian"
+                ],
+                "regions": "Ask the provider",
+                "notes": ""
+              }
+            }
+          },
+          "latitude": 1.318852624959274,
+          "longitude": 103.8604320320462
+        },
+        {
+          "name": "Central Sikh Temple langar",
+          "address": "2 Towner Road",
+          "postal": "327804",
+          "support_type": "Hot meals",
+          "diets": [
+            "Vegetarian"
+          ],
+          "distribution_schedules": [],
+          "eligibility": "Free food to visitors daily; confirm any current entry instructions with provider.",
+          "phone": null,
+          "website": "https://sikhs.org.sg/about-cst/",
+          "access_method": "contact_to_confirm",
+          "location_role": "collection_site",
+          "description": "Government source confirms free daily vegetarian visitor food. Meal times are not published.",
+          "id": "central-sikh-gurdwara-board-meals",
+          "kind": "service",
+          "organisation_id": "org-central-sikh-gurdwara-board",
+          "provider_id": "provider-central-sikh-gurdwara-board",
+          "latitude": 1.318852624959274,
+          "longitude": 103.8604320320462,
+          "source": "https://www.iccs.sg/about/visit-singapore/places-of-worship/central-sikh-gurdwara/",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "demo": false,
+          "active": true,
+          "wheelchair": null,
+          "schedules": [],
+          "exceptions": {},
+          "observations": []
+        },
+        {
+          "name": "Gurdwara Sahib Silat Road langar",
+          "address": "8 Jalan Bukit Merah",
+          "postal": "169541",
+          "support_type": "Hot meals",
+          "diets": [
+            "Vegetarian"
+          ],
+          "distribution_schedules": [],
+          "eligibility": "Visitors; verify entry/access details with provider.",
+          "phone": null,
+          "website": "https://sikhs.org.sg/about-srst/",
+          "access_method": "contact_to_confirm",
+          "location_role": "collection_site",
+          "description": "Board page confirms langar prepared and served every day throughout the day. Official 2022 CSGB programme gives the address and phone. No defined meal windows published.",
+          "id": "central-sikh-gurdwara-board-silat-road",
+          "kind": "service",
+          "organisation_id": "org-central-sikh-gurdwara-board",
+          "provider_id": "provider-central-sikh-gurdwara-board",
+          "latitude": 1.276945314757194,
+          "longitude": 103.8323481689372,
+          "source": "https://sikhs.org.sg/about-srst/",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "demo": false,
+          "active": true,
+          "wheelchair": null,
+          "schedules": [],
+          "exceptions": {},
+          "observations": []
+        }
+      ]
+    },
+    {
+      "source": "https://singhsabha.sg/",
+      "permission": "Manually reviewed public programme/contact facts for FoodBridge. Not a partner export or live availability feed. Retain sources, limits and review notes; review site terms before wider redistribution.",
+      "records": [
+        {
+          "kind": "organisation",
+          "id": "org-sri-guru-singh-sabha",
+          "name": "Sri Guru Singh Sabha Singapore"
+        },
+        {
+          "name": "Sri Guru Singh Sabha Singapore",
+          "support_types": [
+            "Cooked Meals"
+          ],
+          "description": "Free vegetarian langar for all visitors at the Wilkie Road gurdwara. Ask about serving days and times.",
+          "eligibility": "Open to visitors regardless of religion, gender, background or income. No referral is stated; serving days and times need confirmation.",
+          "phone": "+65 6337 6301",
+          "email": null,
+          "website": "https://singhsabha.sg/",
+          "address": "90-92 Wilkie Road",
+          "postal": "228086",
+          "source": "https://singhsabha.sg/",
+          "provider_source": "https://singhsabha.sg/",
+          "contact_source": "https://singhsabha.sg/contact",
+          "verification_status": "provider_reviewed",
+          "location_type": "confirmed_collection_site",
+          "access_method": "contact_to_confirm",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "verification_notes": "Website-source review only. Current official site confirms free vegetarian visitor meal and exact contact location. Meal days/times are not published; do not infer them from worship service listings.",
+          "id": "provider-sri-guru-singh-sabha",
+          "kind": "provider",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "active": true,
+          "demo": false,
+          "location_notes": "Only an explicitly sourced meal site is mapped. Confirm arrangements before travelling.",
+          "directory_facts": {
+            "research_review": {
+              "reviewed_at": "2026-10-17T16:25:21+00:00",
+              "scope": "Primary-source website review; no live availability or on-site check.",
+              "sources": [
+                {
+                  "url": "https://singhsabha.sg/",
+                  "fields": [
+                    "free meal",
+                    "visitors",
+                    "vegetarian"
+                  ]
+                },
+                {
+                  "url": "https://singhsabha.sg/contact",
+                  "fields": [
+                    "address",
+                    "postal",
+                    "phone"
+                  ]
+                }
+              ],
+              "unknowns": [
+                "Meal days and serving hours",
+                "Whether meals are available every day or only during services/events",
+                "Current public access instructions"
+              ]
+            },
+            "reviewed_programmes": {
+              "Free vegetarian meals": {
+                "listed": true,
+                "source": "https://singhsabha.sg/",
+                "frequency": "Ask about serving days",
+                "recipients": "Visitors",
+                "delivery_methods": "Meal at the listed site",
+                "distribution_days_raw": "Not confirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": [
+                  "Vegetarian"
+                ],
+                "regions": "Ask the provider",
+                "notes": ""
+              }
+            }
+          },
+          "latitude": 1.303807826291119,
+          "longitude": 103.8470237628321
+        },
+        {
+          "name": "Sri Guru Singh Sabha langar",
+          "address": "90-92 Wilkie Road",
+          "postal": "228086",
+          "support_type": "Hot meals",
+          "diets": [
+            "Vegetarian"
+          ],
+          "distribution_schedules": [],
+          "eligibility": "All visitors, as described on provider site.",
+          "phone": "+65 6337 6301",
+          "website": "https://singhsabha.sg/",
+          "access_method": "contact_to_confirm",
+          "location_role": "collection_site",
+          "description": "Free vegetarian meal for visitors; service times not published.",
+          "id": "sri-guru-singh-sabha-meals",
+          "kind": "service",
+          "organisation_id": "org-sri-guru-singh-sabha",
+          "provider_id": "provider-sri-guru-singh-sabha",
+          "latitude": 1.303807826291119,
+          "longitude": 103.8470237628321,
+          "source": "https://singhsabha.sg/",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "demo": false,
+          "active": true,
+          "wheelchair": null,
+          "schedules": [],
+          "exceptions": {},
+          "observations": []
+        }
+      ]
+    },
+    {
+      "source": "https://www.sreeramartemple.org.sg/seva",
+      "permission": "Manually reviewed public programme/contact facts for FoodBridge. Not a partner export or live availability feed. Retain sources, limits and review notes; review site terms before wider redistribution.",
+      "records": [
+        {
+          "name": "Sree Ramar Temple",
+          "support_types": [
+            "Cooked Meals",
+            "Food Rations"
+          ],
+          "description": "Annadhana vegetarian meals for invited groups, plus Project Akshaya monthly rations for selected families.",
+          "eligibility": "Meal groups include invited care-home residents. Ration recipients are selected with agencies/FSCs. Ask about referral; public walk-in collection is not confirmed.",
+          "phone": "+65 6543 1463",
+          "email": "enquiries@sreeramartemple.org.sg",
+          "website": "https://www.sreeramartemple.org.sg/seva",
+          "address": null,
+          "postal": null,
+          "source": "https://www.sreeramartemple.org.sg/seva",
+          "provider_source": "https://www.sreeramartemple.org.sg/seva",
+          "contact_source": "https://www.sreeramartemple.org.sg/general-information",
+          "verification_status": "provider_reviewed",
+          "location_type": "coordination_site",
+          "access_method": "referral_required",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "verification_notes": "Website-source review only. Current provider page confirms ongoing Saturday vegetarian meals and ration programme but meal recipients are invited/selected. Temple address is not a public walk-in meal collection claim.",
+          "id": "provider-sree-ramar-temple",
+          "kind": "provider",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "active": true,
+          "demo": false,
+          "latitude": null,
+          "longitude": null,
+          "location_notes": "No public collection point is confirmed; contact the provider for arrangements.",
+          "directory_facts": {
+            "research_review": {
+              "reviewed_at": "2026-10-17T16:25:21+00:00",
+              "scope": "Primary-source website review; no live availability or on-site check.",
+              "sources": [
+                {
+                  "url": "https://www.sreeramartemple.org.sg/seva",
+                  "fields": [
+                    "Saturday vegetarian lunches",
+                    "recipient groups",
+                    "monthly rations",
+                    "eligibility"
+                  ]
+                },
+                {
+                  "url": "https://www.sreeramartemple.org.sg/annadhanam-seva",
+                  "fields": [
+                    "meal sponsorship/donation context"
+                  ]
+                },
+                {
+                  "url": "https://www.sreeramartemple.org.sg/general-information",
+                  "fields": [
+                    "service address",
+                    "postal",
+                    "contact",
+                    "temple hours"
+                  ]
+                }
+              ],
+              "unknowns": [
+                "Exact Saturday meal service time",
+                "Any current beneficiary self-application process",
+                "Whether additional eligible groups can be referred",
+                "Project Akshaya intake and latest beneficiary count"
+              ]
+            },
+            "reviewed_programmes": {
+              "Annadhana": {
+                "listed": true,
+                "source": "https://www.sreeramartemple.org.sg/seva",
+                "frequency": "Saturday and special occasions",
+                "recipients": "Invited groups, including care-home residents",
+                "delivery_methods": "Arranged with the provider",
+                "distribution_days_raw": "Saturday; serving time unconfirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": [
+                  "Vegetarian"
+                ],
+                "regions": "Ask the provider",
+                "notes": ""
+              },
+              "Project Akshaya": {
+                "listed": true,
+                "source": "https://www.sreeramartemple.org.sg/seva",
+                "frequency": "Monthly",
+                "recipients": "Families selected with agencies/FSCs",
+                "delivery_methods": "Arranged collection; mobility-related delivery may be available",
+                "distribution_days_raw": "Not confirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": "Not confirmed",
+                "regions": "Ask the provider",
+                "notes": ""
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "source": "https://bwmonastery.org.sg/bwm-faqs",
+      "permission": "Manually reviewed public programme/contact facts for FoodBridge. Not a partner export or live availability feed. Retain sources, limits and review notes; review site terms before wider redistribution.",
+      "records": [
+        {
+          "kind": "organisation",
+          "id": "org-bw-monastery",
+          "name": "BW Monastery"
+        },
+        {
+          "name": "BW Monastery",
+          "support_types": [
+            "Cooked Meals"
+          ],
+          "description": "Joyfeast offers free vegetarian lunch to visitors on the first Sunday of each month. Check the event calendar for current arrangements.",
+          "eligibility": "All visitors may join Joyfeast. Other meal occasions depend on the monastery programme; ask about serving time before visiting.",
+          "phone": "+65 6547 1580",
+          "email": null,
+          "website": "https://bwmonastery.org.sg/",
+          "address": "1 Woodlands Drive 16",
+          "postal": "737764",
+          "source": "https://bwmonastery.org.sg/bwm-faqs",
+          "provider_source": "https://bwmonastery.org.sg/bwm-faqs",
+          "contact_source": "https://bwmonastery.org.sg/",
+          "verification_status": "provider_reviewed",
+          "location_type": "confirmed_collection_site",
+          "access_method": "contact_to_confirm",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "verification_notes": "Website-source review only. Current FAQ confirms monthly free vegetarian lunch to all visitors. No specific meal time is published; use event calendar to check dates.",
+          "id": "provider-bw-monastery",
+          "kind": "provider",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "active": true,
+          "demo": false,
+          "location_notes": "Only an explicitly sourced meal site is mapped. Confirm arrangements before travelling.",
+          "directory_facts": {
+            "research_review": {
+              "reviewed_at": "2026-10-17T16:25:21+00:00",
+              "scope": "Primary-source website review; no live availability or on-site check.",
+              "sources": [
+                {
+                  "url": "https://bwmonastery.org.sg/bwm-faqs",
+                  "fields": [
+                    "free vegetarian lunch",
+                    "visitor eligibility",
+                    "recurrence",
+                    "programme clarification"
+                  ]
+                },
+                {
+                  "url": "https://bwmonastery.org.sg/",
+                  "fields": [
+                    "address",
+                    "phone",
+                    "current organisation identity"
+                  ]
+                },
+                {
+                  "url": "https://bwmonastery.org.sg/events-list",
+                  "fields": [
+                    "upcoming event details"
+                  ]
+                }
+              ],
+              "unknowns": [
+                "Meal serving time",
+                "Current public holiday / event changes",
+                "Availability on dates not shown on event calendar"
+              ]
+            },
+            "reviewed_programmes": {
+              "Joyfeast": {
+                "listed": true,
+                "source": "https://bwmonastery.org.sg/bwm-faqs",
+                "frequency": "First Sunday of each month",
+                "recipients": "All visitors",
+                "delivery_methods": "Meal at the monastery",
+                "distribution_days_raw": "Not confirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": [
+                  "Vegetarian"
+                ],
+                "regions": "Ask the provider",
+                "notes": "Serving time is not published. English/Chinese FAQ text differs on other Sunday meals, so do not infer an every-Sunday schedule."
+              }
+            }
+          },
+          "latitude": 1.430613389873341,
+          "longitude": 103.7988623875545
+        },
+        {
+          "name": "BW Monastery Joyfeast",
+          "address": "1 Woodlands Drive 16",
+          "postal": "737764",
+          "support_type": "Hot meals",
+          "diets": [
+            "Vegetarian"
+          ],
+          "distribution_schedules": [],
+          "eligibility": "Free vegetarian lunch to all visitors every first Sunday of the month; check current calendar for exact date/time.",
+          "phone": "+65 6547 1580",
+          "website": "https://bwmonastery.org.sg/events-list",
+          "access_method": "contact_to_confirm",
+          "location_role": "collection_site",
+          "description": "Free vegetarian Joyfeast lunch on the first Sunday of the month. Serving time is unconfirmed; check the current event calendar.",
+          "id": "bw-monastery-meals",
+          "kind": "service",
+          "organisation_id": "org-bw-monastery",
+          "provider_id": "provider-bw-monastery",
+          "latitude": 1.430613389873341,
+          "longitude": 103.7988623875545,
+          "source": "https://bwmonastery.org.sg/bwm-faqs",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "demo": false,
+          "active": true,
+          "wheelchair": null,
+          "schedules": [],
+          "exceptions": {},
+          "observations": []
+        }
+      ]
+    },
+    {
+      "source": "https://lop.sg/contact-us/",
+      "permission": "Manually reviewed public programme/contact facts for FoodBridge. Not a partner export or live availability feed. Retain sources, limits and review notes; review site terms before wider redistribution.",
+      "records": [
+        {
+          "name": "Langar Outreach Program",
+          "support_types": [
+            "Cooked Meals"
+          ],
+          "description": "Free vegetarian meal delivery for people facing financial or physical difficulties. Request help through the provider.",
+          "eligibility": "Contact LOP about financial or physical needs, assessment and delivery coverage. Partner kitchens are not confirmed beneficiary pickup points.",
+          "phone": null,
+          "email": "info@lop.sg",
+          "website": "https://lop.sg/",
+          "address": null,
+          "postal": null,
+          "source": "https://lop.sg/contact-us/",
+          "provider_source": "https://lop.sg/contact-us/",
+          "contact_source": "https://lop.sg/contact-us/",
+          "verification_status": "provider_reviewed",
+          "location_type": "no_confirmed_collection_site",
+          "access_method": "contact_to_confirm",
+          "verified_at": "2026-10-17T16:25:21+00:00",
+          "verification_notes": "Website-source review only. Current LOP contact page confirms free vegetarian meal delivery programme, help form and email. Katong Gurdwara is named as office location, not as beneficiary collection site.",
+          "id": "provider-langar-outreach-program",
+          "kind": "provider",
+          "imported_at": "2026-10-17T16:25:21+00:00",
+          "active": true,
+          "demo": false,
+          "latitude": null,
+          "longitude": null,
+          "location_notes": "No public collection point is confirmed; contact the provider for arrangements.",
+          "directory_facts": {
+            "research_review": {
+              "reviewed_at": "2026-10-17T16:25:21+00:00",
+              "scope": "Primary-source website review; no live availability or on-site check.",
+              "sources": [
+                {
+                  "url": "https://lop.sg/contact-us/",
+                  "fields": [
+                    "free meal delivery",
+                    "recipient eligibility",
+                    "meal diet",
+                    "contact",
+                    "delivery schedule",
+                    "partner kitchens"
+                  ]
+                }
+              ],
+              "unknowns": [
+                "Intake response and individual assessment procedure",
+                "Geographic delivery limits",
+                "Whether each accepted beneficiary receives daily meals",
+                "Current beneficiary capacity"
+              ]
+            },
+            "reviewed_programmes": {
+              "Meal delivery": {
+                "listed": true,
+                "source": "https://lop.sg/contact-us/",
+                "frequency": "Not confirmed",
+                "recipients": "People facing financial or physical difficulties",
+                "delivery_methods": "Delivery after provider confirmation",
+                "distribution_days_raw": "Not confirmed",
+                "distribution_dates_raw": "Confirm dates with the provider",
+                "dietary_preferences": [
+                  "Vegetarian"
+                ],
+                "regions": "Ask the provider",
+                "notes": ""
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

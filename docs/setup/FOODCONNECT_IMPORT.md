@@ -1,6 +1,6 @@
 # FoodConnect provider intake
 
-Reviewed 3 October 2026. The current provider seed is `backend/seeds/foodconnect-providers.json`; a separately mapped meal location is staged in `backend/seeds/foodconnect-map-services.json`.
+Initial review: 3 October 2026. The sections below describe that initial 22-provider intake. The [18 October source review](../research/FOOD_SUPPORT_REVIEW_2026-10-18.md) adds current provider facts, seven providers and five meal sites through a separate audited batch. The canonical `backend/seeds/foodconnect-providers.json` retains the original directory fields alongside clearly separated newer programme reviews. The initial mapped meal seed remains `backend/seeds/foodconnect-map-services.json`.
 
 ## Coverage and source extraction
 

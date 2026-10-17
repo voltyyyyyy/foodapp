@@ -338,17 +338,21 @@ import org.json.JSONObject
                 Icon(Icons.Outlined.OpenInNew, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Open in Google Maps")
             }
         }
-        Text("${collectionLocationLabel(destination.json.optString("location_role"))} · ${destination.address}", color = Teal, style = MaterialTheme.typography.bodySmall)
-        if (destination.json.optString("location_role") == "coordination_site") Text("${accessMethodLabel(destination.json.optString("access_method", "contact_to_confirm"))}. This is a meal-delivery coordination site, not a confirmed walk-in collection point.", color = Muted, style = MaterialTheme.typography.bodySmall)
-        Text(destination.json.optString("eligibility").ifBlank { "Eligibility not confirmed. Contact the provider." }, style = MaterialTheme.typography.bodyMedium)
+        IconFact(collectionLocationLabel(destination.json.optString("location_role")), Icons.Outlined.LocationOn)
+        IconFact(destination.address, Icons.Outlined.NearMe)
+        IconFact(accessMethodLabel(destination.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Groups)
         Availability(destination.availability)
+        IconFact("Contact the provider before going. Food is not guaranteed.", Icons.Outlined.Info)
+        ExpandableSection("Eligibility & how to apply", Icons.Outlined.Groups) {
+            Text(destination.json.optString("eligibility").ifBlank { "Eligibility unconfirmed. Ask the provider." }, style = MaterialTheme.typography.bodyMedium)
+        }
         AvailabilityEvidence(destination)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             destination.json.optString("phone").takeUnless { it.isBlank() || it == "null" }?.let { phone ->
-                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone"))) }.onFailure { model.error("No phone app is available. Call $phone using another phone.") } }) { Text("Call provider") }
+                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone"))) }.onFailure { model.error("No phone app is available. Call $phone using another phone.") } }) { Icon(Icons.Outlined.Call, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Call") }
             }
             destination.json.optString("website").takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { site ->
-                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(site))) }.onFailure { model.error("No browser is available. Provider website: $site") } }) { Text("Provider website") }
+                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(site))) }.onFailure { model.error("No browser is available. Provider website: $site") } }) { Icon(Icons.Outlined.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Website") }
             }
         }
         TextButton(onClick = { model.detail(destination) }, contentPadding = PaddingValues(0.dp)) { Text("Support details"); Icon(Icons.Outlined.ChevronRight, null) }
@@ -405,6 +409,9 @@ private class MapController(private val view: MapView, private val overlay: Bool
     private var released = false
     private var gesture = false
     init {
+        view.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) render()
+        }
         view.getMapAsync { googleMap ->
             if (!released) {
                 map = googleMap
@@ -425,7 +432,7 @@ private class MapController(private val view: MapView, private val overlay: Bool
     }
     private fun render() {
         val googleMap = map ?: return
-        val next = services.joinToString { "${it.id}:${it.latitude}:${it.longitude}" } + route.toString() + origin.toString() + focusPoint.toString() + ":$topInset:$bottomInset"
+        val next = services.joinToString { "${it.id}:${it.latitude}:${it.longitude}" } + route.toString() + origin.toString() + focusPoint.toString() + ":$topInset:$bottomInset:${view.width}:${view.height}"
         if (signature == next) return
         signature = next
         googleMap.clear()
@@ -434,8 +441,8 @@ private class MapController(private val view: MapView, private val overlay: Bool
                 .icon(BitmapDescriptorFactory.defaultMarker(183f)))?.tag = service.id
         }
         origin?.let {
-            googleMap.addCircle(CircleOptions().center(it).radius(32.0).fillColor(android.graphics.Color.argb(45, 66, 133, 244)).strokeWidth(0f))
-            googleMap.addCircle(CircleOptions().center(it).radius(9.0).fillColor(android.graphics.Color.rgb(66, 133, 244)).strokeColor(android.graphics.Color.WHITE).strokeWidth(3f))
+            googleMap.addCircle(CircleOptions().center(it).radius(32.0).fillColor(android.graphics.Color.argb(45, 66, 133, 244)).strokeWidth(0f).zIndex(1f))
+            googleMap.addCircle(CircleOptions().center(it).radius(9.0).fillColor(android.graphics.Color.rgb(66, 133, 244)).strokeColor(android.graphics.Color.WHITE).strokeWidth(3f).zIndex(2f))
         }
         val geometry = route?.optJSONArray("geometry")
         val routePoints = if (geometry == null) emptyList() else (0 until geometry.length()).map { index ->
@@ -446,7 +453,9 @@ private class MapController(private val view: MapView, private val overlay: Bool
         val density = view.resources.displayMetrics.density
         fun dp(value: Int) = (value * density).toInt()
         // SDK padding also keeps Google's logo/attribution clear of the floating cards.
-        googleMap.setPadding(dp(16), if (overlay) topInset + dp(8) else dp(20), dp(16), if (overlay) bottomInset + dp(8) else dp(20))
+        val mapTop = if (overlay) topInset + dp(8) else dp(20)
+        val mapBottom = if (overlay) bottomInset + dp(8) else dp(20)
+        googleMap.setPadding(dp(16), mapTop, dp(16), mapBottom)
         if (points.isEmpty()) {
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(1.3521, 103.8198), 11.0f))
             return
@@ -456,9 +465,18 @@ private class MapController(private val view: MapView, private val overlay: Bool
             val focus = focusPoint
             if (focus != null || points.distinct().size == 1) {
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(focus ?: points.first(), 15f))
-            } else if (view.width > dp(100) && view.height > dp(460)) {
+            } else if (view.width > dp(100) && view.height - mapTop - mapBottom > dp(64)) {
                 val bounds = LatLngBounds.builder().apply { points.forEach { include(it) } }.build()
-                googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, dp(24)))
+                // Use the rendered pixel scale so display density and overlay cards cannot crop the journey.
+                googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.builder(googleMap.cameraPosition).bearing(0f).tilt(0f).build()))
+                val projected = points.map { googleMap.projection.toScreenLocation(it) }
+                val spanX = (projected.maxOf { it.x } - projected.minOf { it.x }).coerceAtLeast(1)
+                val spanY = (projected.maxOf { it.y } - projected.minOf { it.y }).coerceAtLeast(1)
+                val scale = minOf((view.width - dp(96)).toDouble() / spanX,
+                    (view.height - mapTop - mapBottom - dp(64)).toDouble() / spanY)
+                val zoom = (googleMap.cameraPosition.zoom + kotlin.math.log2(scale)).toFloat()
+                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(bounds.center, zoom))
             }
         }
     }

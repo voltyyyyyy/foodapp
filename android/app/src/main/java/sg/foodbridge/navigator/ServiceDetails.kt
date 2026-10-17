@@ -46,7 +46,7 @@ fun reportCategoryLabel(category: String) = when (category) {
 @Composable fun ReportInformationButton(model: AppViewModel) {
     OutlinedButton(onClick = model::openReport, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(12.dp)) {
         Icon(Icons.Outlined.Flag, null, Modifier.size(20.dp)); Spacer(Modifier.width(10.dp))
-        Text("Report incorrect information")
+        Text("Report an issue")
     }
 }
 
@@ -79,7 +79,7 @@ fun reportCategoryLabel(category: String) = when (category) {
             Icon(Icons.Outlined.WarningAmber, "Warning", Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurface)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Not a confirmed collection point", fontWeight = FontWeight.Bold)
-                Text("Contact the provider to confirm where to go. An office or coordination address may not be a place to collect food.",
+                Text("Ask the provider where to go before travelling.",
                     style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -128,7 +128,7 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
     val monthFormat = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         DetailHeading("Distribution schedule", Icons.Outlined.CalendarMonth)
-        Text("Singapore time. Scheduled sessions do not guarantee food availability.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text("Singapore time · food is not guaranteed.", color = Muted, style = MaterialTheme.typography.bodySmall)
         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -159,8 +159,8 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
         Text(selected.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH)), fontWeight = FontWeight.Bold)
         if (override) Text("Date-specific schedule", color = Teal, style = MaterialTheme.typography.labelMedium)
         when {
-            unknown -> Text("Schedule not confirmed. Contact the provider to ask about dates and hours.", color = Muted)
-            sessions.isEmpty() -> Text("No session is recorded for this date. Confirm any alternative arrangements with the provider.", color = Muted)
+            unknown -> Text("Schedule unconfirmed. Ask the provider for dates and times.", color = Muted)
+            sessions.isEmpty() -> Text("No session listed. Ask the provider about other arrangements.", color = Muted)
             else -> sessions.forEach { session ->
                 val overnight = session.optString("end") < session.optString("start")
                 val continuation = session.optBoolean("calendar_continuation")
@@ -175,7 +175,7 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
         }
         if (recurring.isNotEmpty()) {
             TextButton(onClick = { weeklyExpanded = !weeklyExpanded }, contentPadding = PaddingValues(0.dp)) {
-                Text("Regular collection / meal sessions"); Icon(if (weeklyExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
+                Text("Weekly sessions"); Icon(if (weeklyExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
             }
             if (weeklyExpanded) recurring.forEach { row ->
                 val dayLabels = row.optJSONArray("days")?.let { a -> (0 until a.length()).map { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")[a.getInt(it)] }.joinToString(", ") }.orEmpty()
@@ -187,71 +187,61 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
 
 @Composable fun DetailScreen(service: Service, s: UiState, model: AppViewModel) {
     val context = LocalContext.current
-    val mode = s.routeMode
-    var evidenceExpanded by remember(service.id) { mutableStateOf(false) }
-    var calendarExpanded by remember(service.id) { mutableStateOf(false) }
     var contactError by remember(service.id) { mutableStateOf<String?>(null) }
     fun open(uri: Uri, action: String = Intent.ACTION_VIEW) {
-        runCatching { context.startActivity(Intent(action, uri)) }.onFailure { contactError = "No app can open this contact. Use the details shown below." }
+        runCatching { context.startActivity(Intent(action, uri)) }.onFailure { contactError = "No app can open this contact. Use the details below." }
     }
     val phone = service.json.detailText("phone")
     val site = service.json.detailText("website")
+    val hours = service.json.optJSONArray("schedules")?.objects().orEmpty()
+    val hasSessions = (service.json.optJSONArray("distribution_schedules")?.length() ?: 0) > 0 ||
+        (service.json.optJSONObject("distribution_exceptions")?.length() ?: 0) > 0
+    val directoryProvider = s.providers.firstOrNull { it.optString("id") == service.json.optString("provider_id") }
     Page {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(service.type, color = Teal, style = MaterialTheme.typography.labelLarge)
+            IconFact(service.type, foodSupportIcon(service.type))
             Text(service.name, style = MaterialTheme.typography.headlineMedium)
             if (service.organisationName != service.name) Text(service.organisationName, color = Muted)
-            if (service.demo) Text("Demo listing — fictional service", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+            if (service.demo) Text("Demo · do not travel here", color = MaterialTheme.colorScheme.error)
+            if (!service.json.optBoolean("active", true)) Banner("Inactive service · do not travel here for support.", Icons.Outlined.WarningAmber, Peach)
             if (service.json.optString("location_role") !in listOf("collection_site", "confirmed_collection_site")) CollectionPointWarning()
-            ListingNavigateButton(enabled = !s.loading,
-                label = directionsButtonLabel(service.json.optString("location_role")).replace("Get directions", "Navigate")) { model.route(mode) }
-            Text(service.address, color = Muted, style = MaterialTheme.typography.bodyMedium)
-            Text(collectionLocationLabel(service.json.optString("location_role")), color = Teal, style = MaterialTheme.typography.bodySmall)
-            Text("Contact the provider before travelling. Food availability is not guaranteed.", color = Muted, style = MaterialTheme.typography.bodySmall)
-            service.json.detailText("description")?.let { Text(it, color = Muted) }
-            ReportInformationButton(model)
-        }
-        if (!service.json.optBoolean("active", true)) Panel(Peach) { Text("This service is no longer active", fontWeight = FontWeight.Bold); Text("Do not travel here for support. Contact the provider or choose another service.") }
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            DetailHeading("Before you go", Icons.Outlined.Info)
             Availability(service.availability)
-            AvailabilityEvidence(service)
-            Text(operatingLabel(service), color = Muted)
-            Text("Contact the provider before travelling. Opening hours and available food can change.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-            service.evidence?.let { Text("Latest availability observation: ${formatTime(it.optString("observed_at"))}", color = Muted, style = MaterialTheme.typography.bodySmall) }
+            IconFact(accessMethodLabel(service.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Groups)
+            IconFact(service.address, Icons.Outlined.LocationOn)
+            IconFact("Contact the provider before going. Food is not guaranteed.", Icons.Outlined.Info)
+            ListingNavigateButton(enabled = !s.loading, label = directionsButtonLabel(service.json.optString("location_role"))) { model.route(s.routeMode) }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            DetailHeading("Contact", Icons.Outlined.ContactPhone)
+            if (phone != null) Primary("Call $phone", Icons.Outlined.Call) { open(Uri.parse("tel:$phone"), Intent.ACTION_DIAL) }
+            if (site != null) OutlinedButton(onClick = { open(Uri.parse(site)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Icon(Icons.Outlined.Language, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Website")
+            }
+            if (phone == null && site == null) Text("Contact details not confirmed", color = Muted)
+            contactError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            DetailHeading("Contact", Icons.Outlined.ContactPhone)
-            if (phone != null) { Primary("Call provider", Icons.Outlined.Call) { open(Uri.parse("tel:$phone"), Intent.ACTION_DIAL) }; Text(phone, color = Muted) }
-            if (site != null) OutlinedButton(onClick = { open(Uri.parse(site)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Provider website") }
-            if (phone == null && site == null) Text("Contact information not confirmed", color = Muted)
-            contactError?.let { Text(it, color = Muted) }
+            DetailHeading("Good to know", Icons.Outlined.VolunteerActivism)
+            DetailFact("Dietary options", service.strings("diets").joinToString().ifBlank { "Not confirmed. Ask about diets and allergies." }, Icons.Outlined.RestaurantMenu)
+            DetailFact("Wheelchair access", if (!service.json.has("wheelchair") || service.json.isNull("wheelchair")) "Not confirmed" else if (service.json.optBoolean("wheelchair")) "Listed as accessible" else "Not listed as accessible", Icons.Outlined.Accessible)
+            IconFact(operatingLabel(service), Icons.Outlined.Schedule)
+            if (!hasSessions) IconFact("Collection / meal times not confirmed", Icons.Outlined.EventBusy)
         }
-        HorizontalDivider()
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            DetailHeading("Support details", Icons.Outlined.VolunteerActivism)
-            DetailFact("Application / referral", accessMethodDetail(service.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Groups)
-            DetailFact("Who can receive support / how to apply", service.json.detailText("eligibility") ?: "Eligibility not confirmed. Ask the provider how to apply.", Icons.Outlined.Groups)
-            service.json.detailText("delivery_information")?.let { DetailFact("Delivery / collection arrangements", it, Icons.Outlined.LocalShipping) }
-            DetailFact("Confirmed dietary options", service.strings("diets").joinToString().ifBlank { "Not confirmed. Ask about dietary requirements and allergies." }, Icons.Outlined.RestaurantMenu)
-            DetailFact("Wheelchair access", if (service.json.isNull("wheelchair")) "Not confirmed" else if (service.json.optBoolean("wheelchair")) "Accessible according to the listing" else "Not recorded as accessible", Icons.Outlined.Accessible)
-            val reasons = service.strings("explanations")
-            if (reasons.isNotEmpty()) {
-                Text("Why it matched your search", fontWeight = FontWeight.Bold)
-                reasons.forEach { reason -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(Icons.Outlined.Check, null, Modifier.size(18.dp), tint = Teal); Text(reason, color = Teal, style = MaterialTheme.typography.bodySmall) } }
-            }
+        ExpandableSection("Eligibility & how to apply", Icons.Outlined.Groups) {
+            Text(accessMethodDetail(service.json.optString("access_method", "contact_to_confirm")))
+            Text(service.json.detailText("eligibility") ?: "Eligibility unconfirmed. Ask the provider how to apply.")
+            service.json.detailText("delivery_information")?.let { DetailFact("Delivery / collection", it, Icons.Outlined.LocalShipping) }
         }
-        HorizontalDivider()
-        val directoryProvider = s.providers.firstOrNull { it.optString("id") == service.json.optString("provider_id") }
-        if (directoryProvider != null) DirectoryDistributionInfo(directoryProvider)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            DetailHeading("Operating hours", Icons.Outlined.Schedule)
-            Text("These hours do not confirm collection or meal sessions.", color = Muted)
-            val hours = service.json.optJSONArray("schedules")?.objects().orEmpty()
-            if (hours.isEmpty()) Text("Operating hours not confirmed", color = Muted)
+        service.json.detailText("description")?.let { description ->
+            ExpandableSection("About this support", Icons.Outlined.Info) { Text(description, color = Muted) }
+        }
+        ExpandableSection("Collection & meal times", Icons.Outlined.CalendarMonth) { DistributionCalendar(service) }
+        ExpandableSection("Operating hours", Icons.Outlined.Schedule) {
+            Text("Opening hours do not confirm meal or collection times.", color = Muted)
+            if (hours.isEmpty()) Text("Hours not confirmed", color = Muted)
             hours.forEach { row ->
                 val days = row.optJSONArray("days")?.let { a -> (0 until a.length()).map { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")[a.getInt(it)] }.joinToString(", ") }.orEmpty()
-                Text("$days · ${clock(row.optString("start"))} – ${clock(row.optString("end"))}${if (row.optString("end") < row.optString("start")) " (next day)" else ""}")
+                DetailFact(days, "${clock(row.optString("start"))} – ${clock(row.optString("end"))}${if (row.optString("end") < row.optString("start")) " (next day)" else ""}", Icons.Outlined.Schedule)
             }
             service.json.optJSONObject("exceptions")?.let { overrides ->
                 overrides.keys().asSequence().sorted().forEach { date ->
@@ -260,43 +250,30 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
                 }
             }
         }
-        val hasHours = (service.json.optJSONArray("distribution_schedules")?.length() ?: 0) > 0 || (service.json.optJSONObject("distribution_exceptions")?.length() ?: 0) > 0
-        if (hasHours || directoryProvider == null) DistributionCalendar(service)
-        else {
-            TextButton(onClick = { calendarExpanded = !calendarExpanded }) {
-                Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp))
-                Text(if (calendarExpanded) "Hide calendar" else "View calendar (sessions not confirmed)")
-            }
-            if (calendarExpanded) DistributionCalendar(service)
-        }
-        HorizontalDivider()
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            DetailHeading("Location & directions", Icons.Outlined.LocationOn)
-            Text(collectionLocationLabel(service.json.optString("location_role")), fontWeight = FontWeight.Bold, color = Teal)
+        if (directoryProvider != null) ExpandableSection("Provider programmes", Icons.Outlined.LocalShipping) { DirectoryDistributionInfo(directoryProvider) }
+        ExpandableSection("Location details", Icons.Outlined.LocationOn) {
+            Text(collectionLocationLabel(service.json.optString("location_role")), color = Teal)
             Text(service.address)
-            Text("Singapore ${service.json.optString("postal")}", color = Muted)
-            if (service.json.optString("location_role") == "coordination_site") Text("This is a meal-delivery coordination site, not a confirmed walk-in collection point. ${accessMethodDetail(service.json.optString("access_method", "contact_to_confirm"))}", color = Muted, style = MaterialTheme.typography.bodyMedium)
-            if (!service.distance.isNaN()) Text("%.1f km from your search address (straight-line distance)".format(service.distance), color = Muted, style = MaterialTheme.typography.bodySmall)
-
+            service.json.detailText("postal")?.let { Text("Singapore $it", color = Muted) }
+            if (service.json.optString("location_role") == "coordination_site") Text("Coordinates delivery. Walk-in collection is not confirmed.", color = Muted)
+            if (!service.distance.isNaN()) Text("%.1f km from your search · straight-line distance".format(service.distance), color = Muted)
         }
-        HorizontalDivider()
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth().clickable { evidenceExpanded = !evidenceExpanded }.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.FactCheck, null, Modifier.size(22.dp), tint = Teal); Spacer(Modifier.width(10.dp))
-                Text("Sources & verification", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Icon(if (evidenceExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, "Toggle source details")
-            }
-            Text("Record checked ${formatTime(service.json.optString("verified_at"))}", color = Muted, style = MaterialTheme.typography.bodySmall)
-            if (evidenceExpanded) {
-                service.evidence?.let { evidence ->
-                    DetailFact("Availability evidence", evidence.optString("source"), Icons.Outlined.Info)
-                    Text("Observed: ${formatTime(evidence.optString("observed_at"))}\nValid until: ${formatTime(evidence.optString("valid_until"))}\nConfidence: ${evidence.detailText("confidence") ?: "Not confirmed"}", color = Muted, style = MaterialTheme.typography.bodySmall)
-                } ?: Text("Availability evidence not confirmed", color = Muted)
-                Text("Record source: ${service.json.optString("source")}", color = Muted, style = MaterialTheme.typography.bodySmall)
-                service.json.detailText("source")?.takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { url -> TextButton(onClick = { open(Uri.parse(url)) }) { Text("Open source") } }
+        val reasons = service.strings("explanations")
+        if (reasons.isNotEmpty()) ExpandableSection("Why this matched", Icons.Outlined.CheckCircle) {
+            reasons.forEach { IconFact(it, Icons.Outlined.Check) }
+        }
+        ExpandableSection("Sources & checks", Icons.Outlined.FactCheck) {
+            IconFact("Checked ${formatTime(service.json.optString("verified_at"))}", Icons.Outlined.FactCheck)
+            service.json.detailText("imported_at")?.let { IconFact("Imported ${formatTime(it)}", Icons.Outlined.History) }
+            service.evidence?.let { evidence ->
+                DetailFact("Availability source", evidence.optString("source").ifBlank { "Not confirmed" }, Icons.Outlined.Info)
+                Text("Observed ${formatTime(evidence.optString("observed_at"))}\nValid until ${formatTime(evidence.optString("valid_until"))}\nConfidence: ${evidence.detailText("confidence") ?: "Not confirmed"}", color = Muted, style = MaterialTheme.typography.bodySmall)
+            } ?: Text("Availability evidence not confirmed", color = Muted)
+            service.json.detailText("source")?.let { source ->
+                Text(source, color = Muted, style = MaterialTheme.typography.bodySmall)
+                if (source.startsWith("https://") || source.startsWith("http://")) TextButton(onClick = { open(Uri.parse(source)) }) { Text("Open source") }
             }
         }
         ReportInformationButton(model)
-        if (service.demo) DemoNotice()
     }
 }

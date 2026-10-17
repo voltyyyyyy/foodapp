@@ -54,12 +54,12 @@ import androidx.compose.ui.unit.dp
                 Text("foodbridge", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(when (s.authPage) { "register" -> "A little closer\nto support."; "forgot" -> "Reset your password"; "resend" -> "Verify your email"; else -> "Welcome to\nFoodBridge." }, style = MaterialTheme.typography.headlineLarge)
-                Text(when (s.authPage) { "register" -> "FoodBridge requires an account to search and view support, save listings and send corrections. After registering, verify your email in your browser, then return here to sign in."; "forgot" -> "We’ll email you a link to choose a new password."; "resend" -> "Open the activation link in your email, then return to FoodBridge and sign in with the same email and password."; else -> "An account is required to search and view support, save services and report corrections. New accounts verify their email before signing in." }, color = Muted)
+                Text(when (s.authPage) { "register" -> "Create an account"; "forgot" -> "Reset your password"; "resend" -> "Verify your email"; else -> "Welcome to FoodBridge" }, style = MaterialTheme.typography.headlineLarge)
+                Text(when (s.authPage) { "register" -> "Find and save food support. Verify your email, then sign in."; "forgot" -> "We’ll email you a link to choose a new password."; "resend" -> "Open the link in your email, then return here to sign in."; else -> "Sign in to find and save food support." }, color = Muted)
             }
             s.authError?.let { Banner(it, Icons.Outlined.Info, Peach) }
             s.authMessage?.let { Banner(it, Icons.Outlined.MarkEmailRead, Mint) }
-            if (s.authMessage != null && s.account == null) Text("After verifying your email or resetting your password in the browser, return to this screen and sign in. Your email stays in the form.", color = Muted)
+            if (s.authMessage != null && s.account == null) Text("Finished in your browser? Return here to sign in.", color = Muted)
             if (s.authBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (registration) OutlinedTextField(name, { name = it }, label = { Text("Display name") }, enabled = !s.authBusy,
@@ -71,7 +71,7 @@ import androidx.compose.ui.unit.dp
                     PasswordField("Password", password, { password = it }, !s.authBusy)
                     if (registration) {
                         PasswordField("Confirm password", confirmation, { confirmation = it }, !s.authBusy)
-                        Text("Use 12 to 128 characters. You’ll verify your email before signing in.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Text("12–128 characters.", color = Muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 Primary(when (s.authPage) { "register" -> "Create account"; "forgot" -> "Send reset link"; "resend" -> "Send verification link"; else -> "Sign in" },
@@ -94,11 +94,11 @@ import androidx.compose.ui.unit.dp
                         Spacer(Modifier.width(10.dp))
                         Text("Sign in with Google", fontFamily = FontFamily(Font(R.font.google_sans, FontWeight.Medium)), fontWeight = FontWeight.Medium)
                     }
-                    TextButton(onClick = { model.authPage("register") }, enabled = !s.authBusy, modifier = Modifier.fillMaxWidth()) { Text("New to FoodBridge? Create an account") }
+                    TextButton(onClick = { model.authPage("register") }, enabled = !s.authBusy, modifier = Modifier.fillMaxWidth()) { Text("Create an account") }
                     TextButton(onClick = { model.authPage("resend") }, enabled = !s.authBusy, modifier = Modifier.fillMaxWidth()) { Text("Resend verification email") }
                 } else TextButton(onClick = { model.authPage("signin") }, enabled = !s.authBusy) { Text("Back to sign in") }
             }
-            if (!recovery) Text("Check eligibility and contact the provider before travelling. Availability is never a guarantee.", color = Muted, style = MaterialTheme.typography.bodySmall)
+
         }
     } }
 }
@@ -114,7 +114,7 @@ import androidx.compose.ui.unit.dp
         Text(account.optString("email"))
         Text(if (account.optString("role") == "ADMINISTRATOR") "Administrator" else "Registered user", color = Muted)
         if (account.optString("role") == "ADMINISTRATOR") {
-            Text("Moderate listings and correction reports in the browser staff portal. Sign in there with your administrator email.")
+            Text("Manage listings and reports in the staff portal.")
             OutlinedButton(onClick = {
                 runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(BuildConfig.API_URL.trimEnd('/') + "/staff/"))) }
                     .onFailure { model.error("No browser is available. Open the FoodBridge staff portal in your browser.") }

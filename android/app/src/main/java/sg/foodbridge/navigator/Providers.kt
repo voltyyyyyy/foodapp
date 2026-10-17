@@ -51,20 +51,12 @@ private fun factText(value: Any?): String = when (value) {
     else -> value.toString()
 }
 
-private fun supportIcon(type: String): ImageVector = when (type) {
-    "Cooked Meals" -> Icons.Outlined.Restaurant
-    "Food Rations" -> Icons.Outlined.ShoppingBag
-    "Food Vouchers" -> Icons.Outlined.LocalOffer
-    "Fresh Produce" -> Icons.Outlined.Eco
-    else -> Icons.Outlined.VolunteerActivism
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable private fun ProviderBadges(types: List<String>) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         types.forEach { type -> Surface(color = Mint, shape = RoundedCornerShape(8.dp)) {
             Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(supportIcon(type), null, Modifier.size(16.dp), tint = Teal); Spacer(Modifier.width(6.dp))
+                Icon(foodSupportIcon(type), null, Modifier.size(16.dp), tint = Teal); Spacer(Modifier.width(6.dp))
                 Text(type, color = Teal, style = MaterialTheme.typography.labelMedium)
             }
         } }
@@ -91,11 +83,13 @@ private fun supportIcon(type: String): ImageVector = when (type) {
 
 @Composable private fun ProgrammeCard(name: String, programme: JSONObject, initiallyExpanded: Boolean, distributionFocus: Boolean = false) {
     var expanded by remember(name, programme.toString()) { mutableStateOf(initiallyExpanded) }
+    val context = LocalContext.current
+    var linkError by remember(name) { mutableStateOf<String?>(null) }
     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(supportIcon(name), null, tint = Teal)
+                Icon(foodSupportIcon(name), null, tint = Teal)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(name, fontWeight = FontWeight.Bold)
                     programme.text("frequency")?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
@@ -104,19 +98,29 @@ private fun supportIcon(type: String): ImageVector = when (type) {
             }
             if (expanded) Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (distributionFocus) {
-                    ProgrammeFact("Frequency", programme.text("frequency") ?: "Not specified in the directory", Icons.Outlined.Repeat)
-                    ProgrammeFact("Listed days", factText(programme.opt("distribution_days_raw")).takeUnless { it.isBlank() || it == "Not listed" } ?: "Not specified. Ask the provider to confirm.", Icons.Outlined.CalendarMonth)
-                    ProgrammeFact("Listed dates", factText(programme.opt("distribution_dates_raw")).takeUnless { it.isBlank() || it == "Not listed" } ?: "No specific dates listed. Ask the provider to confirm.", Icons.Outlined.Event)
+                    ProgrammeFact("Frequency", programme.text("frequency") ?: "Not listed", Icons.Outlined.Repeat)
+                    ProgrammeFact("Listed days", factText(programme.opt("distribution_days_raw")).takeUnless { it.isBlank() || it == "Not listed" } ?: "Days unconfirmed. Ask the provider.", Icons.Outlined.CalendarMonth)
+                    ProgrammeFact("Listed dates", factText(programme.opt("distribution_dates_raw")).takeUnless { it.isBlank() || it == "Not listed" } ?: "Dates unconfirmed. Ask the provider.", Icons.Outlined.Event)
                 }
                 ProgrammeFact("Who it supports", factText(programme.opt("recipients")), Icons.Outlined.Groups)
-                ProgrammeFact("Delivery or collection", factText(programme.opt("delivery_methods")), Icons.Outlined.LocalShipping)
-                ProgrammeFact("Listed service regions", factText(programme.opt("regions")), Icons.Outlined.LocationOn)
-                ProgrammeFact("Listed areas", factText(programme.opt("estate_group_raw")), Icons.Outlined.NearMe)
-                ProgrammeFact("Listed dietary options", factText(programme.opt("dietary_preferences")), Icons.Outlined.RestaurantMenu)
+                ProgrammeFact("Delivery / collection", factText(programme.opt("delivery_methods")), Icons.Outlined.LocalShipping)
+                ProgrammeFact("Service regions", factText(programme.opt("regions")), Icons.Outlined.LocationOn)
+                ProgrammeFact("Areas", factText(programme.opt("estate_group_raw")), Icons.Outlined.NearMe)
+                ProgrammeFact("Dietary options", factText(programme.opt("dietary_preferences")), Icons.Outlined.RestaurantMenu)
                 if (!distributionFocus) {
                     ProgrammeFact("Listed days", factText(programme.opt("distribution_days_raw")), Icons.Outlined.CalendarMonth)
                     ProgrammeFact("Listed dates", factText(programme.opt("distribution_dates_raw")), Icons.Outlined.Event)
                 }
+                programme.text("notes")?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
+                listOf("application_url" to "Apply on provider website", "source" to "Programme source").forEach { (field, label) ->
+                    programme.text(field)?.takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { url ->
+                        TextButton(onClick = {
+                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                                .onFailure { linkError = "No browser available. Try the provider contact instead." }
+                        }) { Icon(Icons.Outlined.OpenInNew, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(label) }
+                    }
+                }
+                linkError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
         }
     }
@@ -125,14 +129,31 @@ private fun supportIcon(type: String): ImageVector = when (type) {
 @Composable fun DirectoryDistributionInfo(provider: JSONObject) {
     val context = LocalContext.current
     val facts = provider.optJSONObject("directory_facts") ?: return
+    val reviewed = facts.optJSONObject("reviewed_programmes")
+    if (reviewed != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (reviewed.length() == 0) IconFact("Current programme details are not confirmed. Ask the provider.", Icons.Outlined.Info)
+            reviewed.keys().asSequence().toList().forEach { name ->
+                ProgrammeCard(name, reviewed.getJSONObject(name), false, distributionFocus = true)
+            }
+            facts.optJSONObject("research_review")?.text("reviewed_at")?.let {
+                Text("Sources checked ${formatTime(it)}. Food availability is not confirmed.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            }
+            if (facts.optJSONObject("programmes") != null) ExpandableSection("Older FoodConnect details", Icons.Outlined.History) {
+                Text("Older directory facts may differ from the provider's current information.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                DirectoryDistributionInfo(JSONObject(provider.toString()).put("directory_facts", JSONObject(facts.toString()).apply { remove("reviewed_programmes") }))
+            }
+        }
+        return
+    }
     val programmes = facts.optJSONObject("programmes") ?: return
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ProviderHeading("Directory distribution details", Icons.Outlined.LocalShipping)
-        Text("FoodConnect lists these arrangements for ${provider.getString("name")}. They may cover several programmes or locations; confirm your collection or delivery arrangements with the provider.", color = Muted, style = MaterialTheme.typography.bodySmall)
-        provider.types().filter { programmes.optJSONObject(it)?.optBoolean("listed") == true }.forEachIndexed { index, name ->
-            ProgrammeCard(name, programmes.getJSONObject(name), index == 0, distributionFocus = true)
+        ProviderHeading("Provider programmes", Icons.Outlined.LocalShipping)
+        Text("FoodConnect directory details. Ask the provider to confirm your arrangements.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        provider.types().filter { programmes.optJSONObject(it)?.optBoolean("listed") == true }.forEach { name ->
+            ProgrammeCard(name, programmes.getJSONObject(name), false, distributionFocus = true)
         }
-        Text("Directory page last updated ${facts.optString("source_page_last_updated", "date not stated")}. Listed frequency does not establish exact opening hours or live food availability.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text("Source updated ${facts.optString("source_page_last_updated", "date unknown")}. Frequency does not confirm dates or food availability.", color = Muted, style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(provider.optString("source", "https://foodconnect.gov.sg/directory/")))) } }) { Text("View directory source") }
     }
 }
@@ -149,11 +170,10 @@ private fun supportIcon(type: String): ImageVector = when (type) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Food support providers", style = MaterialTheme.typography.headlineMedium)
-                Text("Explore Singapore's FoodConnect directory, including delivery, vouchers and referrals.", color = Muted)
-                Text("General directory. Contact each provider to confirm eligibility, dietary needs and availability.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text("Providers", style = MaterialTheme.typography.headlineMedium)
+                IconFact("Ask providers about eligibility and availability.", Icons.Outlined.Info)
                 OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    placeholder = { Text("Search providers or support") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, shape = RoundedCornerShape(14.dp))
+                    label = { Text("Search providers") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, shape = RoundedCornerShape(14.dp))
                 Box {
                     OutlinedButton(onClick = { menu = true }) { Text(if (category == "All") "All support types" else category); Spacer(Modifier.width(8.dp)); Icon(Icons.Outlined.ExpandMore, null) }
                     DropdownMenu(menu, { menu = false }) { categories.forEach { value -> DropdownMenuItem(text = { Text(if (value == "All") "All support types" else value) }, onClick = { category = value; menu = false }) } }
@@ -171,14 +191,15 @@ private fun supportIcon(type: String): ImageVector = when (type) {
                     Icon(Icons.Outlined.ChevronRight, "View provider", tint = Muted)
                 }
                 ProviderBadges(provider.types())
-                Text("${accessMethodLabel(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified"))} · ${collectionLocationLabel(provider.optString("location_type"))}", color = Muted, style = MaterialTheme.typography.bodySmall)
+                IconFact(accessMethodLabel(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified")), Icons.Outlined.Groups)
+                IconFact(collectionLocationLabel(provider.optString("location_type")), Icons.Outlined.LocationOn)
                 provider.optJSONObject("directory_facts")?.optJSONArray("aggregate_regions")?.takeIf { it.length() > 0 }?.let { regions ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Outlined.LocationOn, null, Modifier.size(16.dp), tint = Muted)
                         Text("Listed in ${factText(regions)}", color = Muted, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                Text(if (provider.optString("verification_status") == "provider_reviewed") "Provider sources reviewed · confirm before requesting" else "Directory listing · details need confirmation", color = Muted, style = MaterialTheme.typography.bodySmall)
+
             }
             HorizontalDivider()
         }
@@ -191,7 +212,6 @@ private fun supportIcon(type: String): ImageVector = when (type) {
 @Composable fun ProviderDetailScreen(provider: JSONObject, model: AppViewModel) {
     val context = LocalContext.current
     val s by model.state.collectAsState()
-    var sourceDetails by remember { mutableStateOf(false) }
     var actionError by remember { mutableStateOf<String?>(null) }
     fun open(uri: Uri, action: String = Intent.ACTION_VIEW, failureMessage: String = "No app is available to open this contact. Use the details below.") {
         runCatching { context.startActivity(Intent(action, uri)) }.onFailure { actionError = failureMessage }
@@ -200,7 +220,7 @@ private fun supportIcon(type: String): ImageVector = when (type) {
     val linkedServices = s.services.filter { it.json.optString("provider_id") == provider.getString("id") && it.json.optBoolean("active", true) }
     var chooseDestination by remember(provider.getString("id")) { mutableStateOf(false) }
     if (chooseDestination) AlertDialog(onDismissRequest = { chooseDestination = false },
-        title = { Text("Choose a service location") },
+        title = { Text("Choose service location") },
         text = { Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
             linkedServices.forEach { service -> TextButton(onClick = {
                 chooseDestination = false; model.detail(service); model.route(s.routeMode)
@@ -214,9 +234,9 @@ private fun supportIcon(type: String): ImageVector = when (type) {
             else Text(collectionLocationLabel(provider.optString("location_type")), fontWeight = FontWeight.Bold, color = Teal)
             ListingNavigateButton(enabled = linkedServices.isNotEmpty() || address != null,
                 label = when {
-                    linkedServices.isEmpty() && address != null -> "Navigate to provider address"
-                    linkedServices.size > 1 -> "Choose a service location"
-                    else -> "Navigate to service location"
+                    linkedServices.isEmpty() && address != null -> "Directions to provider address"
+                    linkedServices.size > 1 -> "Choose service location"
+                    else -> "Directions to service"
                 }) {
                 when {
                     linkedServices.size == 1 -> { model.detail(linkedServices.first()); model.route(s.routeMode) }
@@ -225,51 +245,45 @@ private fun supportIcon(type: String): ImageVector = when (type) {
                         failureMessage = "No map or browser is available. Use the provider address shown in this listing.")
                 }
             }
-            if (linkedServices.isEmpty() && address == null) Text("Navigation unavailable: no destination address is confirmed.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            if (linkedServices.isEmpty() && address == null) Text("No address confirmed for directions.", color = Muted, style = MaterialTheme.typography.bodySmall)
             actionError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-            Text("Contact the provider before travelling. Food availability is not guaranteed.", color = Muted, style = MaterialTheme.typography.bodySmall)
-            if (provider.optString("verification_status") != "provider_reviewed") Text("This listing comes from FoodConnect. Current programme and contact details need confirmation.", color = Muted, style = MaterialTheme.typography.bodySmall)
-            ReportInformationButton(model)
+            IconFact("Contact the provider before going. Food is not guaranteed.", Icons.Outlined.Info)
+            if (provider.optString("verification_status") != "provider_reviewed") IconFact("Directory details need confirmation.", Icons.Outlined.FactCheck)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ProviderHeading("Contact", Icons.Outlined.ContactPhone)
-            if (provider.text("contact_source") == null) Text("These contact details are from FoodConnect. Confirm they are still current.", color = Muted, style = MaterialTheme.typography.bodySmall)
-            provider.text("phone")?.let { phone -> Primary("Call provider", Icons.Outlined.Call) { open(Uri.parse("tel:$phone"), Intent.ACTION_DIAL) }; Text(phone, color = Muted) }
-            provider.text("website")?.let { url -> OutlinedButton(onClick = { open(Uri.parse(url)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Provider website") } }
+            if (provider.text("contact_source") == null) Text("FoodConnect contact details · confirm they are current.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            provider.text("phone")?.let { phone -> Primary("Call $phone", Icons.Outlined.Call) { open(Uri.parse("tel:$phone"), Intent.ACTION_DIAL) } }
+            provider.text("website")?.let { url -> OutlinedButton(onClick = { open(Uri.parse(url)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.Language, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Website") } }
             provider.text("email")?.let { email -> TextButton(onClick = { open(Uri.fromParts("mailto", email, null), Intent.ACTION_SENDTO) }) { Icon(Icons.Outlined.Email, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(email) } }
             actionError?.let { Text(it, color = Muted) }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProviderHeading("Application and referral", Icons.Outlined.VolunteerActivism)
+        ExpandableSection("Eligibility & how to apply", Icons.Outlined.Groups) {
             Text(accessMethodDetail(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified")), fontWeight = FontWeight.SemiBold)
-            Text(provider.text("eligibility") ?: "Contact the provider to ask how to apply and whether you are eligible.")
-            Text("Confirm current availability, dietary needs and any collection arrangements with the provider.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+            Text(provider.text("eligibility") ?: "Ask the provider about eligibility and how to apply.")
         }
         provider.text("address")?.let { address ->
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProviderHeading(if (provider.optString("location_type") == "confirmed_collection_site") "Confirmed service location" else "Provider address", Icons.Outlined.LocationOn)
+            ExpandableSection("Provider address", Icons.Outlined.LocationOn) {
                 Text(address)
-                Text(provider.text("location_notes") ?: "This is not confirmed as a public food collection point. Contact the provider before travelling.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text(provider.text("location_notes") ?: "Collection is not confirmed here. Contact the provider first.", color = Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
-        DirectoryDistributionInfo(provider)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { sourceDetails = !sourceDetails }) { Icon(Icons.Outlined.FactCheck, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Sources and review notes"); Spacer(Modifier.width(8.dp)); Icon(if (sourceDetails) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null) }
-            if (sourceDetails) {
-                Text("Reviewed ${formatTime(provider.optString("verified_at"))}", color = Muted, style = MaterialTheme.typography.bodySmall)
-                Text(provider.optString("verification_notes"), color = Muted, style = MaterialTheme.typography.bodyMedium)
-                Text(provider.getString("description"), color = Muted, style = MaterialTheme.typography.bodyMedium)
-                provider.text("source")?.let { url -> TextButton(onClick = { open(Uri.parse(url)) }) { Text("FoodConnect directory source") } }
-                provider.text("provider_source")?.let { url -> TextButton(onClick = { open(Uri.parse(url)) }) { Text("Provider source") } }
-                provider.text("contact_source")?.takeIf { it != provider.text("provider_source") }?.let { url -> TextButton(onClick = { open(Uri.parse(url)) }) { Text("Contact source") } }
-                provider.optJSONObject("directory_facts")?.let { facts ->
-                    Text("FoodConnect page last updated ${facts.optString("source_page_last_updated", "Not stated")}", color = Muted, style = MaterialTheme.typography.bodySmall)
-                    listOf("directory_contact" to "Original listed contact", "directory_email" to "Original listed email", "directory_website" to "Original listed website").forEach { (key, label) ->
-                        val value = factText(facts.opt(key))
-                        if (value.isNotBlank() && value != "Not listed") Text("$label: $value", color = Muted, style = MaterialTheme.typography.bodySmall)
-                    }
+        ExpandableSection("Support programmes", Icons.Outlined.LocalShipping) { DirectoryDistributionInfo(provider) }
+        ExpandableSection("Sources & checks", Icons.Outlined.FactCheck) {
+            Text("Reviewed ${formatTime(provider.optString("verified_at"))}", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text(provider.optString("verification_notes"), color = Muted, style = MaterialTheme.typography.bodyMedium)
+            Text(provider.getString("description"), color = Muted, style = MaterialTheme.typography.bodyMedium)
+            provider.text("source")?.let { url -> TextButton(onClick = { open(Uri.parse(url)) }) { Text("FoodConnect directory source") } }
+            provider.text("provider_source")?.let { url -> TextButton(onClick = { open(Uri.parse(url)) }) { Text("Provider source") } }
+            provider.text("contact_source")?.takeIf { it != provider.text("provider_source") }?.let { url -> TextButton(onClick = { open(Uri.parse(url)) }) { Text("Contact source") } }
+            provider.optJSONObject("directory_facts")?.let { facts ->
+                Text("FoodConnect page last updated ${facts.optString("source_page_last_updated", "Not stated")}", color = Muted, style = MaterialTheme.typography.bodySmall)
+                listOf("directory_contact" to "Original listed contact", "directory_email" to "Original listed email", "directory_website" to "Original listed website").forEach { (key, label) ->
+                    val value = factText(facts.opt(key))
+                    if (value.isNotBlank() && value != "Not listed") Text("$label: $value", color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
+        ReportInformationButton(model)
     }
 }

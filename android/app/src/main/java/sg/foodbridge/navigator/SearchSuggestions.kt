@@ -33,10 +33,10 @@ fun organisationMatches(s: UiState): List<OrganisationMatch> {
 
 @Composable private fun OrganisationMatchRow(match: OrganisationMatch, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-        Icon(if (match.service != null) Icons.Outlined.LocationOn else Icons.Outlined.Groups, null, Modifier.size(22.dp), tint = Teal)
+        Icon(if (match.service != null) foodSupportIcon(match.service.type) else Icons.Outlined.Groups, null, Modifier.size(22.dp), tint = Teal)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(match.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Text(if (match.service != null) "${match.service.type} · Service location${if (match.service.demo) " · Fictional demo" else ""}" else "Provider · Contact and programme information", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text(if (match.service != null) "${match.service.type}${if (match.service.demo) " · Demo" else ""}" else "Provider", color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         Icon(Icons.Outlined.ChevronRight, "View information", Modifier.size(20.dp), tint = Muted)
     }
@@ -49,10 +49,10 @@ fun organisationMatches(s: UiState): List<OrganisationMatch> {
         if (matches.isNotEmpty()) {
             Text("Organisations & services", color = Muted, style = MaterialTheme.typography.labelMedium)
             matches.take(4).forEach { match -> OrganisationMatchRow(match) { onSelect(); if (onMatch != null) onMatch(match) else model.openOrganisation(match) } }
-            if (matches.size > 4) TextButton(onClick = { onSelect(); model.showOrganisations() }) { Text("View all ${matches.size} name matches") }
+            if (matches.size > 4) TextButton(onClick = { onSelect(); model.showOrganisations() }) { Text("All ${matches.size} matches") }
         }
         TextButton(onClick = { onSelect(); model.searchAddress() }, enabled = !s.loading && s.origin.trim().length >= 3) {
-            Icon(Icons.Outlined.LocationOn, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Search this as an address")
+            Icon(Icons.Outlined.LocationOn, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Search as an address")
         }
         if (s.providerLoading) Text("Loading provider names…", color = Muted, style = MaterialTheme.typography.bodySmall)
     }
@@ -66,15 +66,15 @@ fun organisationMatches(s: UiState): List<OrganisationMatch> {
                 Text(if (browseAll) "All food support" else "Name matches", style = MaterialTheme.typography.headlineMedium)
                 if (browseAll) {
                     Text("${matches.count { it.provider != null }} providers · ${matches.count { it.service != null }} service locations", color = Muted)
-                    Text("All active listings, A–Z. Your search filters are not applied in this view. Enter an address to find your nearest matching services.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { model.update { it.copy(page = "home") } }) { Icon(Icons.Outlined.LocationOn, null); Spacer(Modifier.width(8.dp)); Text("Search by address or name") }
+                    Text("A–Z · filters not applied. Search an address to match your needs.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { model.update { it.copy(page = "home") } }) { Icon(Icons.Outlined.LocationOn, null); Spacer(Modifier.width(8.dp)); Text("Search instead") }
                     if (s.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     if (s.offline || s.providerOffline) Text("Includes saved offline listings", color = Muted, style = MaterialTheme.typography.bodySmall)
                     if (s.error != null) TextButton(onClick = model::browseAllSupport) { Text("Retry loading listings") }
                 } else {
                     Text("For “${s.origin}”", color = Muted)
-                    Text("${matches.size} organisations and service locations. Name matches have not been checked against your dietary or accessibility filters.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = model::searchAddress) { Icon(Icons.Outlined.LocationOn, null); Spacer(Modifier.width(8.dp)); Text("Search this as an address instead") }
+                    Text("${matches.size} name matches · dietary and access filters not applied.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = model::searchAddress) { Icon(Icons.Outlined.LocationOn, null); Spacer(Modifier.width(8.dp)); Text("Search as an address") }
                 }
             }
         }

@@ -1,0 +1,168 @@
+// Jarbobo diagram — open this file with the Jarbobo extension to view it as
+// an interactive diagram (nodes link back to source). Install the viewer:
+//   https://github.com/tch1001/jarbobo
+// The JSON below is the diagram data (one file per diagram, all versions inside).
+{
+  "id": "foodbridge-lab-3-android-class-r-q2l1",
+  "versions": [
+    {
+      "type": "class",
+      "title": "FoodBridge Lab 3 - Android Class Responsibilities",
+      "classes": [
+        {
+          "id": "activity",
+          "name": "MainActivity",
+          "attributes": [],
+          "tooltip": "Hosts Compose screens and observes application state.",
+          "detail": "Hosts Compose screens and observes application state.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/MainActivity.kt",
+          "line": 77,
+          "_anchor": {
+            "lineText": "class MainActivity : ComponentActivity() {"
+          }
+        },
+        {
+          "id": "viewmodel",
+          "name": "AppViewModel",
+          "attributes": [
+            "+ state: StateFlow<UiState>"
+          ],
+          "tooltip": "Coordinates search, account actions and reports; exposes UiState through StateFlow.",
+          "detail": "Coordinates search, account actions and reports; exposes UiState through StateFlow.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/AppViewModel.kt",
+          "line": 52,
+          "_anchor": {
+            "lineText": "class AppViewModel(application: Application) : AndroidViewModel(application) {"
+          }
+        },
+        {
+          "id": "repository",
+          "name": "Repository",
+          "attributes": [
+            "+ sessionStore: SessionStore"
+          ],
+          "tooltip": "Calls protected APIs and stores approved snapshots and account-separated bookmarks.",
+          "detail": "Calls protected APIs and stores approved snapshots and account-separated bookmarks.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/Repository.kt",
+          "line": 88,
+          "_anchor": {
+            "lineText": "class Repository(private val context: Context) {"
+          }
+        },
+        {
+          "id": "receiver",
+          "name": "ReminderReceiver",
+          "attributes": [],
+          "tooltip": "Dispatches Android alarm and lifecycle broadcasts to local reminder logic.",
+          "detail": "Dispatches Android alarm and lifecycle broadcasts to local reminder logic.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/Reminders.kt",
+          "line": 202,
+          "_anchor": {
+            "lineText": "class ReminderReceiver : BroadcastReceiver() {"
+          }
+        },
+        {
+          "id": "reminders",
+          "name": "ReminderStore",
+          "attributes": [],
+          "tooltip": "Maintains account-separated reminders, notification requests and cached schedule checks.",
+          "detail": "Maintains account-separated reminders, notification requests and cached schedule checks.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/Reminders.kt",
+          "line": 17,
+          "_anchor": {
+            "lineText": "class ReminderStore(private val context: Context) {"
+          }
+        },
+        {
+          "id": "session",
+          "name": "SessionStore",
+          "attributes": [],
+          "tooltip": "Encrypts local session data using a key held by Android Keystore.",
+          "detail": "Encrypts local session data using a key held by Android Keystore.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/SessionStore.kt",
+          "line": 16,
+          "_anchor": {
+            "lineText": "class SessionStore(context: Context) {"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "from": "activity",
+          "to": "viewmodel",
+          "kind": "dependency",
+          "label": "observes state",
+          "tooltip": "Activity connects Compose presentation to the ViewModel.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/MainActivity.kt",
+          "line": 77,
+          "_anchor": {
+            "lineText": "class MainActivity : ComponentActivity() {"
+          }
+        },
+        {
+          "from": "viewmodel",
+          "to": "repository",
+          "kind": "association",
+          "label": "requests data",
+          "directed": true,
+          "tooltip": "ViewModel holds its repository.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/AppViewModel.kt",
+          "line": 53,
+          "_anchor": {
+            "lineText": "    private val repo = Repository(application)"
+          }
+        },
+        {
+          "from": "viewmodel",
+          "to": "reminders",
+          "kind": "association",
+          "label": "manages reminders",
+          "directed": true,
+          "tooltip": "ViewModel controls reminder preferences and refreshes.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/AppViewModel.kt",
+          "line": 54,
+          "_anchor": {
+            "lineText": "    private val reminderStore = ReminderStore(application)"
+          }
+        },
+        {
+          "from": "repository",
+          "to": "session",
+          "kind": "association",
+          "label": "protects session",
+          "directed": true,
+          "tooltip": "Repository owns encrypted local session access.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/Repository.kt",
+          "line": 91,
+          "_anchor": {
+            "lineText": "    val sessionStore = SessionStore(context)"
+          }
+        },
+        {
+          "from": "receiver",
+          "to": "reminders",
+          "kind": "dependency",
+          "label": "dispatches",
+          "tooltip": "Broadcast receiver invokes the reminder store.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/Reminders.kt",
+          "line": 202,
+          "_anchor": {
+            "lineText": "class ReminderReceiver : BroadcastReceiver() {"
+          }
+        },
+        {
+          "from": "reminders",
+          "to": "session",
+          "kind": "dependency",
+          "label": "checks owner",
+          "tooltip": "Reminder delivery checks the local owning account and session.",
+          "file": "C:/Users/Mingchen/foodapp/android/app/src/main/java/sg/foodbridge/navigator/Reminders.kt",
+          "line": 20,
+          "_anchor": {
+            "lineText": "    private val sessions = SessionStore(context)"
+          }
+        }
+      ]
+    }
+  ]
+}

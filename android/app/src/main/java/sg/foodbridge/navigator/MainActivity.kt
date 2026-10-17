@@ -208,7 +208,7 @@ class MainActivity : ComponentActivity() {
                     }) { Text("Open staff portal") }
                 }
             }
-            if (s.offline) Banner("Offline · last local update ${formatTime(s.lastUpdate.orEmpty())}", Icons.Outlined.CloudOff, Peach)
+            if (s.offline) Banner("Offline · saved ${formatTime(s.lastUpdate.orEmpty())}", Icons.Outlined.CloudOff, Peach)
             s.error?.let { Banner(it, Icons.Outlined.Info, Color(0xFFFFE9E6), onClose = { model.error(null) }) }
             s.notice?.let { Banner(it, Icons.Outlined.CheckCircle, Mint, onClose = { model.update { it.copy(notice = null) } }) }
             if (model.hasReportDraft() && s.page !in listOf("report", "confirmation")) TextButton(onClick = model::openReport, modifier = Modifier.padding(horizontal = 24.dp)) { Text("Resume unfinished report") }
@@ -271,7 +271,8 @@ class MainActivity : ComponentActivity() {
 }
 @Composable fun Filter(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(selected = selected, onClick = onClick, label = { Text(label) }, modifier = Modifier.heightIn(min = 48.dp),
-        leadingIcon = if (selected) { { Icon(Icons.Outlined.Check, null, Modifier.size(16.dp)) } } else null,
+        leadingIcon = if (selected) { { Icon(Icons.Outlined.Check, null, Modifier.size(16.dp)) } }
+            else if (label in listOf("Hot meals", "Groceries", "Food bank", "Delivery")) { { Icon(foodSupportIcon(label), null, Modifier.size(18.dp)) } } else null,
         shape = RoundedCornerShape(12.dp),
         border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected, borderColor = Color(0xFFDDE4DF), selectedBorderColor = Color.Transparent),
         colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Muted, selectedContainerColor = Mint, selectedLabelColor = Teal))
@@ -291,7 +292,7 @@ fun SearchSummary(s: UiState): String = buildList {
         Icon(Icons.Outlined.Tune, null, Modifier.size(20.dp), tint = Teal)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(if (s.origin.isBlank()) "Search filters (inactive for browsing)" else "Search filters", fontWeight = FontWeight.Medium)
+            Text(if (s.origin.isBlank()) "Filters · address search only" else "Filters", fontWeight = FontWeight.Medium)
             Text(SearchSummary(s), color = Muted, fontSize = 13.sp)
         }
         Icon(Icons.Outlined.ChevronRight, "Edit search filters", tint = Muted)
@@ -312,7 +313,7 @@ fun SearchSummary(s: UiState): String = buildList {
         if (s.locationLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
         s.locationError?.let { Text(it, color = Muted) }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Find food support\nnear you.", style = MaterialTheme.typography.headlineLarge)
+            Text("Find food support", style = MaterialTheme.typography.headlineLarge)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(s.origin, model::origin, label = { Text("Address or organisation") },
@@ -325,22 +326,22 @@ fun SearchSummary(s: UiState): String = buildList {
                 if (context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate()
                 else permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
             }, contentPadding = PaddingValues(horizontal = 0.dp), modifier = Modifier.heightIn(min = 48.dp)) {
-                Icon(Icons.Outlined.MyLocation, null, Modifier.size(17.dp)); Spacer(Modifier.width(8.dp)); Text("Use current location", fontSize = 14.sp)
+                Icon(Icons.Outlined.MyLocation, null, Modifier.size(17.dp)); Spacer(Modifier.width(8.dp)); Text("Use my location", fontSize = 14.sp)
             }
             HorizontalDivider(color = Color(0xFFE4E8E5))
             SearchOptionsRow(s) { focus.clearFocus(); filters = true }
             HorizontalDivider(color = Color(0xFFE4E8E5))
         }
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Primary(if (s.loading) "Finding support…" else "Find matching services", Icons.Outlined.Search, !s.loading && s.origin.isNotBlank()) { search() }
-            if (s.origin.isBlank()) Text("Enter an address to match your needs and distance. Browsing A–Z does not apply these filters or confirm suitability.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-            OutlinedButton(onClick = model::browseAllSupport, enabled = !s.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Browse all listings (A–Z)") }
+            Primary(if (s.loading) "Finding support…" else "Find support", Icons.Outlined.Search, !s.loading && s.origin.isNotBlank()) { search() }
+            if (s.origin.isBlank()) Text("Search an address to use filters. Browse A–Z without matching.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick = model::browseAllSupport, enabled = !s.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.FormatListBulleted, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Browse all (A–Z)") }
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TextButton(onClick = model::browseProviders, contentPadding = PaddingValues(0.dp)) {
-                Icon(Icons.Outlined.Groups, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Browse food support providers", fontSize = 14.sp)
+                Icon(Icons.Outlined.Groups, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Providers", fontSize = 14.sp)
             }
-            TextButton(onClick = { model.update { it.copy(page = "help") } }, contentPadding = PaddingValues(0.dp)) { Text("Need help getting started?", fontSize = 14.sp) }
+            TextButton(onClick = { model.update { it.copy(page = "help") } }, contentPadding = PaddingValues(0.dp)) { Icon(Icons.Outlined.HelpOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("How to find support", fontSize = 14.sp) }
         }
     }
     if (filters) SearchFiltersSheet(s, model) { filters = false }
@@ -353,7 +354,7 @@ fun SearchSummary(s: UiState): String = buildList {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.88f)) {
             Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
                 Text("Refine your search", style = MaterialTheme.typography.headlineMedium)
-                Text("Set your area and support type. Scroll for dietary, time and access filters.", color = Muted, modifier = Modifier.padding(top = 6.dp))
+                Text("Choose what you need.", color = Muted, modifier = Modifier.padding(top = 6.dp))
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column {
@@ -394,12 +395,12 @@ fun SearchSummary(s: UiState): String = buildList {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("Halal", "Vegetarian", "Vegan", "Gluten-free", "Nut-free").forEach { diet -> Filter(diet, diet in s.diets) { model.toggleDiet(diet) } }
                     }
-                    Text("Every selected need must match. Confirm allergens with the provider.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+                    Text("Must match all selections. Ask about allergens.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
                 }
                 Column {
                     HorizontalDivider(color = Color(0xFFE4E8E5))
                     Toggle(if (s.preferred.isBlank()) "Within operating hours now" else "Open at selected time", s.openOnly) { value -> model.update { it.copy(openOnly = value) } }
-                    Text("Operating hours do not confirm a food distribution session or food availability.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+                    Text("Opening hours do not mean food is available.", color = Muted, style = MaterialTheme.typography.bodyMedium)
                     Toggle("Wheelchair accessible", s.wheelchair) { value -> model.update { it.copy(wheelchair = value) } }
                     HorizontalDivider(color = Color(0xFFE4E8E5))
                 }
@@ -419,7 +420,7 @@ fun SearchSummary(s: UiState): String = buildList {
                     Text("Nearest support", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
                     Text("${s.results.size} of ${s.totalMatches}", fontSize = 12.sp, color = Muted)
                 }
-                Text("Up to 10 matches, closest first by straight-line distance.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text("10 nearest matches at most · straight-line distance", color = Muted, style = MaterialTheme.typography.bodySmall)
                 Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, Color(0xFFE8ECE9))) {
                     Row(Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -431,10 +432,10 @@ fun SearchSummary(s: UiState): String = buildList {
                 }
             }
         }
-        if (s.results.isEmpty()) item { Empty("No confirmed matches", "No listed service confirms all your selected requirements. Your current filters: ${SearchSummary(s)}. You can review filters or browse provider contacts to ask about support.", Icons.Outlined.SearchOff) { Primary("Review search filters", Icons.Outlined.Tune) { model.update { it.copy(page = "home") } }; TextButton(onClick = model::browseProviders) { Text("Browse provider contacts") } } }
+        if (s.results.isEmpty()) item { Empty("No confirmed matches", "No service confirms all your needs. Change filters or ask a provider.", Icons.Outlined.SearchOff) { Primary("Change filters", Icons.Outlined.Tune) { model.update { it.copy(page = "home") } }; TextButton(onClick = model::browseProviders) { Text("Browse provider contacts") } } }
         items(s.results, key = { it.id }) { ServiceCard(it, s, model) }
         item { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Contact the provider before travelling. Opening hours do not guarantee food availability.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+            Text("Contact the provider before going. Food is not guaranteed.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
             Text("Updated ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, fontSize = 14.sp)
             if (s.results.any { it.demo }) DemoNotice()
         } }
@@ -453,30 +454,25 @@ fun SearchSummary(s: UiState): String = buildList {
     } }
 }
 @Composable fun ServiceCard(service: Service, s: UiState, model: AppViewModel) {
-    Surface(color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFE8ECE9)),
+    Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFE8ECE9)),
         modifier = Modifier.fillMaxWidth().clickable { model.detail(service) }) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(buildList {
-                    add(service.type)
-                    if (!service.distance.isNaN()) add("%.1f km".format(service.distance))
-                }.joinToString(" · "), color = Muted, fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.weight(1f))
-                if (service.demo) Text("Demo", color = Color(0xFF8A6035), fontSize = 14.sp, lineHeight = 21.sp)
-                IconButton(onClick = { model.save(service) }, modifier = Modifier.size(48.dp)) {
-                    Icon(if (service.id in s.saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
-                        if (service.id in s.saved) "Remove saved service" else "Save service", tint = Teal, modifier = Modifier.size(22.dp))
-                }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(foodSupportIcon(service.type), null, Modifier.size(20.dp), tint = Teal)
+                Text(service.type, color = Teal, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                if (!service.distance.isNaN()) Text("%.1f km".format(service.distance), color = Muted, style = MaterialTheme.typography.labelMedium)
+                ListingBookmarkButton(service.id in s.saved) { model.save(service) }
             }
-            Text(service.organisationName, fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
-            if (service.organisationName != service.name) Text(service.name, fontSize = 13.sp, color = Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text("${accessMethodLabel(service.json.optString("access_method", "contact_to_confirm"))} · ${collectionLocationLabel(service.json.optString("location_role"))}", color = Teal, fontSize = 12.sp, lineHeight = 18.sp)
-            Availability(service.availability)
-            AvailabilityEvidence(service)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(operatingLabel(service), color = Muted, fontSize = 14.sp, lineHeight = 21.sp)
-                service.strings("explanations").firstOrNull()?.let { Text(it, color = Teal, fontSize = 12.sp, lineHeight = 18.sp) }
-                s.eta[service.id]?.let { Text(it, color = Muted, fontSize = 12.sp, lineHeight = 18.sp) }
+                Text(service.organisationName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                if (service.organisationName != service.name) Text(service.name, style = MaterialTheme.typography.bodySmall, color = Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
+            if (service.demo) Text("Demo · do not travel here", color = Color(0xFF8A6035), style = MaterialTheme.typography.labelMedium)
+            Availability(service.availability)
+            IconFact(accessMethodLabel(service.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Groups)
+            IconFact(collectionLocationLabel(service.json.optString("location_role")), Icons.Outlined.LocationOn)
+            IconFact(operatingLabel(service), Icons.Outlined.Schedule)
+            s.eta[service.id]?.let { IconFact(it, Icons.Outlined.NearMe) }
         }
     }
 }
@@ -491,20 +487,24 @@ fun operatingLabel(service: Service): String {
 }
 
 @Composable fun AvailabilityEvidence(service: Service) {
-    val evidence = service.evidence
-    Text(if (evidence == null) "Source, observation time, validity and confidence not confirmed."
-        else "Source: ${evidence.optString("source").ifBlank { "Not confirmed" }}\nObserved ${formatTime(evidence.optString("observed_at"))} · Valid until ${formatTime(evidence.optString("valid_until"))}\nConfidence: ${evidence.optString("confidence").takeUnless { it.isBlank() || it == "null" } ?: "Not confirmed"}",
-        color = Muted, style = MaterialTheme.typography.bodyMedium)
-    Text("Contact the provider before travelling. Food availability is not guaranteed.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+    ExpandableSection("Availability details", Icons.Outlined.FactCheck) {
+        val evidence = service.evidence
+        Text(if (evidence == null) "Availability evidence not confirmed."
+            else "Source: ${evidence.optString("source").ifBlank { "Not confirmed" }}\nObserved ${formatTime(evidence.optString("observed_at"))}\nValid until ${formatTime(evidence.optString("valid_until"))}\nConfidence: ${evidence.optString("confidence").takeUnless { it.isBlank() || it == "null" } ?: "Not confirmed"}",
+            color = Muted, style = MaterialTheme.typography.bodySmall)
+    }
 }
 
 @Composable fun Empty(title: String, detail: String, icon: ImageVector, action: @Composable () -> Unit = {}) {
     Panel { Icon(icon, null, Modifier.size(32.dp), tint = Teal); Text(title, style = MaterialTheme.typography.titleLarge); Text(detail, color = Muted); action() }
 }
 @Composable fun SavedScreen(s: UiState, model: AppViewModel) { Page {
-    Text("Saved", style = MaterialTheme.typography.headlineMedium); Text("Your bookmarked services and providers, kept on this device.", color = Muted)
-    Text("Last local update: ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, style = MaterialTheme.typography.bodyMedium)
-    Text("One daily Singapore time is shared by saved services. Reminders use approved sessions and never confirm food availability. Signing out stops them; after session expiry, notifications hide service details until you sign in.", color = Muted)
+    Text("Saved", style = MaterialTheme.typography.headlineMedium); Text("Your saved support, on this device.", color = Muted)
+    Text("Updated ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, style = MaterialTheme.typography.bodyMedium)
+    ExpandableSection("How reminders work", Icons.Outlined.NotificationsNone) {
+        Text("One daily time for all saved services, in Singapore time. Reminders need a confirmed session and do not reserve food. Android may delay delivery.", color = Muted)
+        Text("Signing out stops reminders. If your session expires, notifications hide listing details until you sign in.", color = Muted)
+    }
     DailyReminderTime(s, model)
     if (!s.notificationsAllowed) NotificationSettings(model)
     val services = s.services.filter { it.id in s.saved }
@@ -526,7 +526,7 @@ fun operatingLabel(service: Service): String {
     val context = LocalContext.current
     Panel(Peach) {
         Text("Notifications are blocked", fontWeight = FontWeight.Bold)
-        Text("Allow FoodBridge notifications and the Saved support reminders channel. Enabled reminder preferences are kept while notifications are blocked.")
+        Text("Allow notifications in Android settings. Your reminder choices are kept.")
         OutlinedButton(onClick = {
             runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)) }
                 .onFailure { model.error("Open Android Settings, then Apps, FoodBridge, Notifications to allow reminders.") }
@@ -541,7 +541,7 @@ fun operatingLabel(service: Service): String {
         TimePickerDialog(context, { _, hour, minute ->
             model.reminderTime("%02d:%02d".format(java.util.Locale.ROOT, hour, minute))
         }, time.hour, time.minute, false).show()
-    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Daily reminder time: ${s.reminderTime} (Singapore)") }
+    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.NotificationsNone, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Remind me at ${s.reminderTime} · Singapore") }
 }
 
 @Composable fun ReminderControls(service: Service, s: UiState, model: AppViewModel) {
@@ -554,8 +554,8 @@ fun operatingLabel(service: Service): String {
         if (!granted) model.error("Notification permission was declined. Your reminder stays enabled, with no notification while blocked. You can allow notifications in Android settings.")
     }
     Panel {
-        Text("Reminder for ${service.name}", style = MaterialTheme.typography.titleMedium)
-        if (!hasSessions) Text("Schedule not confirmed. You can keep this reminder enabled, but no notification will be issued until a valid approved session exists. Operating hours alone are insufficient.", color = Muted)
+        IconFact("${service.name} reminder", Icons.Outlined.NotificationsNone)
+        if (!hasSessions) IconFact("Schedule unconfirmed. Reminders wait for a confirmed session.", Icons.Outlined.EventBusy)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Session-day reminder", Modifier.weight(1f))
             Switch(checked = enabled, onCheckedChange = { value ->
@@ -565,10 +565,10 @@ fun operatingLabel(service: Service): String {
             })
         }
         Text(if (enabled && !s.notificationsAllowed) "Paused: notifications are blocked. Your time is kept."
-            else if (enabled && !hasSessions) "Enabled preference kept. No notification until the schedule is confirmed."
-            else if (enabled) "Enabled around ${s.reminderTime}, while a recorded session is upcoming or in progress. At most one notification per service per Singapore date; Android may delay delivery."
-            else "Reminder off. No notification will be sent.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-        Text("A reminder does not reserve food or confirm availability. Check the listing and contact the provider before travelling.", color = Muted)
+            else if (enabled && !hasSessions) "Waiting for a confirmed schedule."
+            else if (enabled) "Around ${s.reminderTime} on session days · once daily."
+            else "Off", color = Muted, style = MaterialTheme.typography.bodyMedium)
+
     }
 }
 
@@ -599,7 +599,7 @@ fun operatingLabel(service: Service): String {
     val description = s.reportDescription
     val evidence = s.reportEvidence
     Page {
-        Text("Report incorrect information", style = MaterialTheme.typography.headlineMedium); Text("For ${s.selected?.name ?: s.selectedProvider?.optString("name").orEmpty()}", color = Teal)
+        Text("Report an issue", style = MaterialTheme.typography.headlineMedium); Text("For ${s.selected?.name ?: s.selectedProvider?.optString("name").orEmpty()}", color = Teal)
         Panel {
             Text("What is incorrect?", fontWeight = FontWeight.SemiBold)
             Box {
@@ -614,8 +614,8 @@ fun operatingLabel(service: Service): String {
             }
             OutlinedTextField(description, { value -> if (value.length <= 1000) model.update { it.copy(reportDescription = value) } }, label = { Text("Describe the issue") }, supportingText = { Text("${description.length} / 1000 characters") }, modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp), minLines = 4)
             OutlinedTextField(evidence, { value -> model.update { it.copy(reportEvidence = value) } }, label = { Text("Evidence link (optional)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-            Text("Your report is linked to your account. Please avoid including names, phone numbers or other personal details.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-            Text("An official website or public announcement helps staff verify your report. Reports are reviewed before a listing changes.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text("Linked to your account. Leave out personal details.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+            Text("Add a public source if you can. Staff review reports before making changes.", color = Muted, style = MaterialTheme.typography.bodySmall)
             Primary("Submit report", Icons.Outlined.Send, !s.loading && category.isNotBlank() && description.isNotBlank()) { model.report(category, description, evidence) }
             OutlinedButton(onClick = model::cancelReport, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Cancel report") }
         }
@@ -623,21 +623,53 @@ fun operatingLabel(service: Service): String {
 }
 @Composable fun Confirmation(s: UiState, model: AppViewModel) { Page {
     Spacer(Modifier.height(24.dp)); Icon(Icons.Outlined.CheckCircle, null, Modifier.size(64.dp), tint = Teal)
-    Text("Thank you for helping.", style = MaterialTheme.typography.headlineMedium); Text("Your correction is awaiting staff review. It has not changed the public listing.", color = Muted)
+    Text("Report sent", style = MaterialTheme.typography.headlineMedium); Text("Staff will review it before changing the listing.", color = Muted)
     Panel(Mint) { Eyebrow("Your report reference"); Text(s.reference.orEmpty(), fontWeight = FontWeight.Bold, fontSize = 20.sp) }
     Primary("Back to support", Icons.Outlined.ArrowBack) { model.returnToInformation() }
 } }
 
-@Composable fun HelpScreen() { Page {
-    Eyebrow("One step at a time"); Text("Need food support today?", style = MaterialTheme.typography.headlineMedium)
-    Panel(Mint) { Text("Start with a nearby service", style = MaterialTheme.typography.titleLarge); Text("Search for hot meals or groceries, check eligibility, and contact the provider before travelling. Scheduled opening does not guarantee food is available.") }
-    Panel { Text("If you need help finding assistance", style = MaterialTheme.typography.titleLarge); Text("Visit Singapore's SupportGoWhere directory for current official assistance options.", color = Muted)
-        val context = LocalContext.current
-        Primary("Open SupportGoWhere", Icons.Outlined.OpenInNew) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://supportgowhere.life.gov.sg/"))) }
+@Composable fun HelpScreen() {
+    var linkError by remember { mutableStateOf<String?>(null) }
+    Page {
+    Text("How to find support", style = MaterialTheme.typography.headlineMedium)
+    Panel(Mint) {
+        IconFact("Search an address for nearby support.", Icons.Outlined.Search)
+        IconFact("Check eligibility, diets and collection details.", Icons.Outlined.Checklist)
+        IconFact("Call before going. Food is not guaranteed.", Icons.Outlined.Call)
     }
-    Text("This is a directory, not an emergency dispatch service. We do not promise immediate food provision.", color = Muted)
-} }
+    Panel {
+        Text("More assistance", style = MaterialTheme.typography.titleLarge)
+        Text("Find official support on SupportGoWhere.", color = Muted)
+        val context = LocalContext.current
+        Primary("Open SupportGoWhere", Icons.Outlined.OpenInNew) {
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://supportgowhere.life.gov.sg/"))) }
+                .onFailure { linkError = "No browser available. Open supportgowhere.life.gov.sg in a browser." }
+        }
+        linkError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+    Text("FoodBridge cannot arrange emergency food support.", color = Muted)
+    }
+}
 @Composable fun PrivacyScreen() { Page {
     Text("Privacy & data use", style = MaterialTheme.typography.headlineMedium)
-    Panel { Text("An active account and valid session are required to search, view details, plan routes, save services, set reminders and report corrections."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground, the search is replaced, or you sign out. It is not saved in profiles, bookmarks or app backups."); Text("OneMap receives address requests. Google Maps receives map and route requests. Route origins and results are held only for the current session."); Text("Saved service IDs, reminder settings and dietary preferences stay on this device and are separated by account. Reminders store approved session details locally and share one daily time per account, defaulting to 08:00 Singapore time. After ordinary session expiry, cached reminders continue with generic text that omits identifying details. Opening one requires the owning account to sign in. Sign-out, known revocation or switching accounts cancels that account's pending notifications. Enabled preferences are kept when permission is blocked or schedules are unconfirmed; no notification is sent without permission and a valid approved session. Session credentials are encrypted using Android Keystore."); Text("Your account identifier is stored with correction reports for staff review. Unfinished report drafts are encrypted on this device per account until submission or explicit discard. Avoid sending sensitive personal details."); Text("A production operator must publish its contact and retention policy before release.", color = Muted) }
+    IconFact("Saved support stays on this device. Location is temporary.", Icons.Outlined.Shield)
+    ExpandableSection("Your account", Icons.Outlined.AccountCircle) {
+        Text("Sign in to search, view support, get directions, save listings, set reminders and report issues.")
+        Text("Session credentials are encrypted with Android Keystore.")
+    }
+    ExpandableSection("Location & maps", Icons.Outlined.LocationOn) {
+        Text("Location is used for your current search and route. It is cleared when you leave the app, replace the search or sign out. It is never saved in profiles, bookmarks or backups.")
+        Text("OneMap receives address searches. Google Maps receives map and route requests. Route origins and results stay in memory for the current session.")
+    }
+    ExpandableSection("Saved support & reminders", Icons.Outlined.NotificationsNone) {
+        Text("Saved listing IDs, diets and reminder settings stay on this device, separated by account. Reminders store approved session details and share one daily time, initially 08:00 Singapore time.")
+        Text("Reminders need notification permission and a valid approved session. Your choices are kept if either is missing.")
+        Text("After session expiry, reminders hide listing details. Sign in to the same account to open them. Signing out, switching accounts or known session revocation cancels pending notifications.")
+    }
+    ExpandableSection("Correction reports", Icons.Outlined.Flag) {
+        Text("Reports include your account ID for staff review. Drafts are encrypted on this device by account until sent or discarded. Leave out sensitive personal details.")
+    }
+    ExpandableSection("Contact & retention", Icons.Outlined.Policy) {
+        Text("The operator must publish contact details and a data retention policy before production release.")
+    }
 } }

@@ -9,3 +9,4 @@ backups/
 **/__pycache__/
 .env
 *.log
+/tmp/pdfs/

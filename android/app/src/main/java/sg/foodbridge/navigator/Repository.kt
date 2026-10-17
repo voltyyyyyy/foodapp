@@ -26,29 +26,29 @@ val Context.store by preferencesDataStore("foodbridge_local")
 fun accessMethodLabel(value: String) = when (value) {
     "referral_required" -> "Referral required"
     "application_required" -> "Application required"
-    "provider_assessment" -> "Provider assessment required"
-    "unverified" -> "Current access requirements unverified"
-    else -> "Contact provider to confirm access"
+    "provider_assessment" -> "Eligibility check required"
+    "unverified" -> "Access not confirmed"
+    else -> "Ask how to apply"
 }
 
 fun accessMethodDetail(value: String) = when (value) {
-    "referral_required" -> "Referral required. A social worker, caseworker, or partner agency must refer or apply on your behalf. Contact the provider to confirm the current process."
-    "application_required" -> "An application is required. Use the provider's application process and confirm current eligibility directly."
-    "provider_assessment" -> "The provider assesses eligibility. Contact them to ask about current intake and assessment steps."
-    "unverified" -> "This food-support listing or its access requirements have not been independently confirmed as current. Contact the provider before relying on it."
-    else -> "Referral or application requirements are not confirmed. Contact the provider before travelling or relying on this listing."
+    "referral_required" -> "Ask a social worker or partner agency to refer you. Confirm the steps with the provider."
+    "application_required" -> "Apply through the provider. Ask about eligibility first."
+    "provider_assessment" -> "The provider checks eligibility. Contact them to ask how to apply."
+    "unverified" -> "Current support and access requirements are unverified. Contact the provider first."
+    else -> "Application steps are not confirmed. Contact the provider first."
 }
 
 fun collectionLocationLabel(value: String) = when (value) {
-    "collection_site", "confirmed_collection_site" -> "Confirmed collection/service location"
-    "coordination_site" -> "Coordination site — not a confirmed walk-in collection point"
-    else -> "No confirmed collection-site address"
+    "collection_site", "confirmed_collection_site" -> "Confirmed service location"
+    "coordination_site" -> "Coordination site · collection not confirmed"
+    else -> "Collection location not confirmed"
 }
 
 fun directionsButtonLabel(value: String) = when (value) {
-    "collection_site", "confirmed_collection_site" -> "Get directions to collection site"
-    "coordination_site" -> "Get directions to coordination site"
-    else -> "Get directions to the listed address"
+    "collection_site", "confirmed_collection_site" -> "Directions to service"
+    "coordination_site" -> "Directions to coordination site"
+    else -> "Directions to listed address"
 }
 
 data class Service(val json: JSONObject) {

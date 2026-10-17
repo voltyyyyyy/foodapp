@@ -1,0 +1,159 @@
+// Jarbobo diagram — open this file with the Jarbobo extension to view it as
+// an interactive diagram (nodes link back to source). Install the viewer:
+//   https://github.com/tch1001/jarbobo
+// The JSON below is the diagram data (one file per diagram, all versions inside).
+{
+  "id": "foodbridge-lab-3-backend-persist-mgjr",
+  "versions": [
+    {
+      "type": "class",
+      "title": "FoodBridge Lab 3 - Backend Persistence Classes",
+      "classes": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "attributes": [
+            "+ latitude: float",
+            "+ longitude: float"
+          ],
+          "tooltip": "Validates finite Singapore coordinates.",
+          "detail": "Validates finite Singapore coordinates.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/domain.py",
+          "line": 14,
+          "_anchor": {
+            "lineText": "class Origin(BaseModel):"
+          }
+        },
+        {
+          "id": "service",
+          "name": "Service",
+          "attributes": [
+            "+ organisation_id: str",
+            "+ schedules: list<Schedule>",
+            "+ observations: list<Observation>"
+          ],
+          "tooltip": "Validated support data with separate hours, distribution schedules and availability evidence.",
+          "detail": "Validated support data with separate hours, distribution schedules and availability evidence.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/domain.py",
+          "line": 78,
+          "_anchor": {
+            "lineText": "class Service(Origin):"
+          }
+        },
+        {
+          "id": "record",
+          "name": "Record",
+          "attributes": [
+            "+ kind: str",
+            "+ version: int",
+            "+ data: JSON"
+          ],
+          "tooltip": "Persists a typed and versioned JSON entity; service data is one record kind.",
+          "detail": "Persists a typed and versioned JSON entity; service data is one record kind.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/db.py",
+          "line": 32,
+          "_anchor": {
+            "lineText": "class Record(Base):"
+          }
+        },
+        {
+          "id": "account",
+          "name": "Account",
+          "attributes": [
+            "+ email: str",
+            "+ role: str"
+          ],
+          "tooltip": "Stores identity, role and account state.",
+          "detail": "Stores identity, role and account state.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/db.py",
+          "line": 64,
+          "_anchor": {
+            "lineText": "class Account(Base):"
+          }
+        },
+        {
+          "id": "accountsession",
+          "name": "AccountSession",
+          "attributes": [
+            "+ account_id: FK",
+            "+ expires_at: datetime"
+          ],
+          "tooltip": "Stores hashed sessions with an account foreign key and expiry.",
+          "detail": "Stores hashed sessions with an account foreign key and expiry.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/db.py",
+          "line": 77,
+          "_anchor": {
+            "lineText": "class AccountSession(Base):"
+          }
+        },
+        {
+          "id": "audit",
+          "name": "Audit",
+          "attributes": [
+            "+ actor: str",
+            "+ target: str"
+          ],
+          "tooltip": "Stores actor, action and logical target ID in the same publication transaction.",
+          "detail": "Stores actor, action and logical target ID in the same publication transaction.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/db.py",
+          "line": 54,
+          "_anchor": {
+            "lineText": "class Audit(Base):"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "from": "service",
+          "to": "origin",
+          "kind": "inheritance",
+          "tooltip": "Service inherits coordinate validation from Origin.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/domain.py",
+          "line": 78,
+          "_anchor": {
+            "lineText": "class Service(Origin):"
+          }
+        },
+        {
+          "from": "record",
+          "to": "service",
+          "kind": "dependency",
+          "label": "service JSON",
+          "tooltip": "Record.data holds the validated service payload; this is a mapping rather than a SQL foreign key.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/db.py",
+          "line": 38,
+          "_anchor": {
+            "lineText": "    data: Mapped[dict] = mapped_column(JSON)"
+          }
+        },
+        {
+          "from": "accountsession",
+          "to": "account",
+          "kind": "association",
+          "label": "account_id FK",
+          "fromLabel": "0..*",
+          "toLabel": "1",
+          "directed": true,
+          "tooltip": "Many session rows refer to one owning account.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/db.py",
+          "line": 80,
+          "_anchor": {
+            "lineText": "    account_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'), index=True)"
+          }
+        },
+        {
+          "from": "audit",
+          "to": "record",
+          "kind": "dependency",
+          "label": "logical target",
+          "tooltip": "Audit.target identifies the target record without a declared SQL foreign key.",
+          "file": "C:/Users/Mingchen/foodapp/backend/app/db.py",
+          "line": 59,
+          "_anchor": {
+            "lineText": "    target: Mapped[str] = mapped_column(String(64), index=True)"
+          }
+        }
+      ]
+    }
+  ]
+}
