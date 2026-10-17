@@ -163,9 +163,12 @@ class MainActivity : ComponentActivity() {
     if (s.account == null) { AccountEntryScreen(s, model); return }
     val context = LocalContext.current
     LaunchedEffect(s.authChecking) {
-        (context as? MainActivity)?.intent?.getStringExtra("service_id")?.let { id ->
-            (context as MainActivity).intent.removeExtra("service_id")
-            model.openReminder(id)
+        val activity = context as? MainActivity
+        activity?.intent?.getStringExtra("service_id")?.let { id ->
+            val owner = activity.intent.getStringExtra("reminder_account_id")
+            activity.intent.removeExtra("service_id")
+            activity.intent.removeExtra("reminder_account_id")
+            model.openReminder(id, owner)
         }
     }
     var showDemoInfo by remember { mutableStateOf(false) }
@@ -176,6 +179,13 @@ class MainActivity : ComponentActivity() {
             else { Icon(Icons.Outlined.Spa, null, Modifier.size(24.dp), tint = Teal); Spacer(Modifier.width(8.dp)) }
             Text("foodbridge", fontSize = 19.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.6).sp)
             Spacer(Modifier.weight(1f))
+            if (s.page == "detail") s.selected?.let { service ->
+                ListingBookmarkButton(saved = service.id in s.saved, onClick = { model.save(service) })
+            }
+            if (s.page == "providerDetail") s.selectedProvider?.let { provider ->
+                ListingBookmarkButton(saved = providerBookmarkId(provider) in s.saved,
+                    onClick = { model.removeOrSave(providerBookmarkId(provider)) })
+            }
             if (s.services.any { it.demo }) TextButton(onClick = { showDemoInfo = true }) { Text("Demo data", color = Muted, fontSize = 12.sp) }
         }
     }, bottomBar = {
@@ -343,7 +353,7 @@ fun SearchSummary(s: UiState): String = buildList {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.88f)) {
             Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
                 Text("Refine your search", style = MaterialTheme.typography.headlineMedium)
-                Text("Choose what works for you.", color = Muted, modifier = Modifier.padding(top = 6.dp))
+                Text("Set your area and support type. Scroll for dietary, time and access filters.", color = Muted, modifier = Modifier.padding(top = 6.dp))
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column {
@@ -357,20 +367,6 @@ fun SearchSummary(s: UiState): String = buildList {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("All", "Hot meals", "Groceries", "Food bank", "Delivery").forEach { type -> Filter(if (type == "All") "Any" else type, s.type == type) { model.update { it.copy(type = type) } } }
                     }
-                }
-                Column {
-                    Text("Dietary needs", fontWeight = FontWeight.SemiBold)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Halal", "Vegetarian", "Vegan", "Gluten-free", "Nut-free").forEach { diet -> Filter(diet, diet in s.diets) { model.toggleDiet(diet) } }
-                    }
-                    Text("Every selected need must match. Confirm allergens with the provider.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-                }
-                Column {
-                    HorizontalDivider(color = Color(0xFFE4E8E5))
-                    Toggle(if (s.preferred.isBlank()) "Within operating hours now" else "Open at selected time", s.openOnly) { value -> model.update { it.copy(openOnly = value) } }
-                    Text("Operating hours do not confirm a food distribution session or food availability.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-                    Toggle("Wheelchair accessible", s.wheelchair) { value -> model.update { it.copy(wheelchair = value) } }
-                    HorizontalDivider(color = Color(0xFFE4E8E5))
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Preferred time", fontWeight = FontWeight.SemiBold)
@@ -392,6 +388,20 @@ fun SearchSummary(s: UiState): String = buildList {
                         Text(if (s.preferred.isBlank()) "Now · change time" else s.preferred.replace("T", " at "))
                     }
                     if (s.preferred.isNotBlank()) TextButton(onClick = { model.update { it.copy(preferred = "") } }) { Text("Use current time") }
+                }
+                Column {
+                    Text("Dietary needs", fontWeight = FontWeight.SemiBold)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Halal", "Vegetarian", "Vegan", "Gluten-free", "Nut-free").forEach { diet -> Filter(diet, diet in s.diets) { model.toggleDiet(diet) } }
+                    }
+                    Text("Every selected need must match. Confirm allergens with the provider.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+                }
+                Column {
+                    HorizontalDivider(color = Color(0xFFE4E8E5))
+                    Toggle(if (s.preferred.isBlank()) "Within operating hours now" else "Open at selected time", s.openOnly) { value -> model.update { it.copy(openOnly = value) } }
+                    Text("Operating hours do not confirm a food distribution session or food availability.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+                    Toggle("Wheelchair accessible", s.wheelchair) { value -> model.update { it.copy(wheelchair = value) } }
+                    HorizontalDivider(color = Color(0xFFE4E8E5))
                 }
             }
             Surface(color = Canvas) {
@@ -492,16 +502,21 @@ fun operatingLabel(service: Service): String {
     Panel { Icon(icon, null, Modifier.size(32.dp), tint = Teal); Text(title, style = MaterialTheme.typography.titleLarge); Text(detail, color = Muted); action() }
 }
 @Composable fun SavedScreen(s: UiState, model: AppViewModel) { Page {
-    Text("Saved", style = MaterialTheme.typography.headlineMedium); Text("Your bookmarked services, kept on this device.", color = Muted)
+    Text("Saved", style = MaterialTheme.typography.headlineMedium); Text("Your bookmarked services and providers, kept on this device.", color = Muted)
     Text("Last local update: ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, style = MaterialTheme.typography.bodyMedium)
-    Text("Reminders use the last approved session schedule saved on this device. They pause when you sign out or your session expires. Sign in and open Saved to resume. Settings are separate for each account.", color = Muted)
+    Text("One daily Singapore time is shared by saved services. Reminders use approved sessions and never confirm food availability. Signing out stops them; after session expiry, notifications hide service details until you sign in.", color = Muted)
+    DailyReminderTime(s, model)
     if (!s.notificationsAllowed) NotificationSettings(model)
     val services = s.services.filter { it.id in s.saved }
     if (s.saved.isEmpty()) Empty("No saved services", "Tap a service’s bookmark to keep it here.", Icons.Outlined.BookmarkBorder) { Primary("Find food support", Icons.Outlined.Search) { model.tab("Find") } }
     services.forEach { service -> ServiceCard(service, s, model); ReminderControls(service, s, model) }
-    (s.saved - s.services.map { it.id }.toSet()).forEach { id ->
-        Panel { Text("Service no longer listed", fontWeight = FontWeight.Bold)
-            Text("This saved service is no longer in the latest approved information available to this device.", color = Muted)
+    s.providers.filter { providerBookmarkId(it) in s.saved }.forEach { provider -> SavedProviderCard(provider, s, model) }
+    val listedIds = s.services.map { it.id }.toSet() + s.providers.map(::providerBookmarkId)
+    (s.saved - listedIds).forEach { id ->
+        val provider = id.startsWith("provider:")
+        Panel { Text(if (provider) "Provider details unavailable" else "Service no longer listed", fontWeight = FontWeight.Bold)
+            Text(if (provider) "This saved provider is not in the latest directory available to this device."
+                else "This saved service is no longer in the latest approved information available to this device.", color = Muted)
             OutlinedButton(onClick = { model.removeOrSave(id) }) { Text("Remove bookmark") }
         }
     }
@@ -511,7 +526,7 @@ fun operatingLabel(service: Service): String {
     val context = LocalContext.current
     Panel(Peach) {
         Text("Notifications are blocked", fontWeight = FontWeight.Bold)
-        Text("Allow FoodBridge notifications and the Saved support reminders channel, then enable your reminder.")
+        Text("Allow FoodBridge notifications and the Saved support reminders channel. Enabled reminder preferences are kept while notifications are blocked.")
         OutlinedButton(onClick = {
             runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)) }
                 .onFailure { model.error("Open Android Settings, then Apps, FoodBridge, Notifications to allow reminders.") }
@@ -519,37 +534,39 @@ fun operatingLabel(service: Service): String {
     }
 }
 
+@Composable fun DailyReminderTime(s: UiState, model: AppViewModel) {
+    val context = LocalContext.current
+    OutlinedButton(onClick = {
+        val time = LocalTime.parse(s.reminderTime)
+        TimePickerDialog(context, { _, hour, minute ->
+            model.reminderTime("%02d:%02d".format(java.util.Locale.ROOT, hour, minute))
+        }, time.hour, time.minute, false).show()
+    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Daily reminder time: ${s.reminderTime} (Singapore)") }
+}
+
 @Composable fun ReminderControls(service: Service, s: UiState, model: AppViewModel) {
     val context = LocalContext.current
     val enabled = service.id in s.reminders
-    var chosenTime by remember(service.id) { mutableStateOf(s.reminders[service.id] ?: "09:00") }
     val hasSessions = service.json.optJSONArray("distribution_schedules")?.length()?.let { it > 0 } == true ||
         service.json.optJSONObject("distribution_exceptions")?.let { dates -> dates.keys().asSequence().any { dates.optJSONArray(it)?.length()?.let { length -> length > 0 } == true } } == true
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         model.notificationState()
-        if (granted) model.reminder(service, true, chosenTime)
-        else model.error("Notification permission was declined. Your reminder is off. You can allow notifications in Android settings.")
+        if (!granted) model.error("Notification permission was declined. Your reminder stays enabled, with no notification while blocked. You can allow notifications in Android settings.")
     }
     Panel {
         Text("Reminder for ${service.name}", style = MaterialTheme.typography.titleMedium)
-        if (!hasSessions) Text("Schedule not confirmed. A reminder can be enabled after staff verify a collection or meal session. Operating hours alone are insufficient.", color = Muted)
+        if (!hasSessions) Text("Schedule not confirmed. You can keep this reminder enabled, but no notification will be issued until a valid approved session exists. Operating hours alone are insufficient.", color = Muted)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Session-day reminder", Modifier.weight(1f))
-            Switch(checked = enabled, enabled = hasSessions || enabled, onCheckedChange = { value ->
-                if (value && android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+            Switch(checked = enabled, onCheckedChange = { value ->
+                model.reminder(service, value)
+                if (value && model.state.value.account != null && android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                     permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                else model.reminder(service, value, chosenTime)
             })
         }
-        OutlinedButton(onClick = {
-            val time = LocalTime.parse(chosenTime)
-            TimePickerDialog(context, { _, hour, minute ->
-                chosenTime = "%02d:%02d".format(java.util.Locale.ROOT, hour, minute)
-                if (enabled) model.reminder(service, true, chosenTime)
-            }, time.hour, time.minute, false).show()
-        }, enabled = hasSessions) { Text("Daily time: $chosenTime (Singapore)") }
         Text(if (enabled && !s.notificationsAllowed) "Paused: notifications are blocked. Your time is kept."
-            else if (enabled) "Enabled around $chosenTime on recorded session days, while a session is still upcoming or in progress. Android may delay delivery."
+            else if (enabled && !hasSessions) "Enabled preference kept. No notification until the schedule is confirmed."
+            else if (enabled) "Enabled around ${s.reminderTime}, while a recorded session is upcoming or in progress. At most one notification per service per Singapore date; Android may delay delivery."
             else "Reminder off. No notification will be sent.", color = Muted, style = MaterialTheme.typography.bodyMedium)
         Text("A reminder does not reserve food or confirm availability. Check the listing and contact the provider before travelling.", color = Muted)
     }
@@ -622,5 +639,5 @@ fun operatingLabel(service: Service): String {
 } }
 @Composable fun PrivacyScreen() { Page {
     Text("Privacy & data use", style = MaterialTheme.typography.headlineMedium)
-    Panel { Text("An active account and valid session are required to search, view details, plan routes, save services, set reminders and report corrections."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground, the search is replaced, or you sign out. It is not saved in profiles, bookmarks or app backups."); Text("OneMap receives address and route requests. Google Maps receives map requests. Route origins and results are held only for the current session."); Text("Saved service IDs, reminder settings and dietary preferences stay on this device and are separated by account. Reminders store approved session details locally and pause at sign-out or session expiry. Session credentials are encrypted using Android Keystore."); Text("Your account identifier is stored with correction reports for staff review. Unfinished report drafts are encrypted on this device per account until submission or explicit discard. Avoid sending sensitive personal details."); Text("A production operator must publish its contact and retention policy before release.", color = Muted) }
+    Panel { Text("An active account and valid session are required to search, view details, plan routes, save services, set reminders and report corrections."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground, the search is replaced, or you sign out. It is not saved in profiles, bookmarks or app backups."); Text("OneMap receives address requests. Google Maps receives map and route requests. Route origins and results are held only for the current session."); Text("Saved service IDs, reminder settings and dietary preferences stay on this device and are separated by account. Reminders store approved session details locally and share one daily time per account, defaulting to 08:00 Singapore time. After ordinary session expiry, cached reminders continue with generic text that omits identifying details. Opening one requires the owning account to sign in. Sign-out, known revocation or switching accounts cancels that account's pending notifications. Enabled preferences are kept when permission is blocked or schedules are unconfirmed; no notification is sent without permission and a valid approved session. Session credentials are encrypted using Android Keystore."); Text("Your account identifier is stored with correction reports for staff review. Unfinished report drafts are encrypted on this device per account until submission or explicit discard. Avoid sending sensitive personal details."); Text("A production operator must publish its contact and retention policy before release.", color = Muted) }
 } }

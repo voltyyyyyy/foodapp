@@ -97,6 +97,10 @@ import org.json.JSONObject
         else if (matches.isNotEmpty() && matches.map { it.name.lowercase() }.distinct().size == 1) preview(matches.first())
         else model.search()
     }
+    fun submitStart() {
+        focus.clearFocus(); showSaved = false; showStart = false; savedFocus = null; moved = false
+        if (routing) model.searchRouteOrigin() else model.searchAddress()
+    }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result.values.any { it }) locate()
         else { model.locationFailed("Location access is off. Enter a starting address to continue."); showStart = true }
@@ -108,7 +112,7 @@ import org.json.JSONObject
     // Only request once on entry/new destination. Editing an address must not trigger GPS again.
     LaunchedEffect(s.routeDestination?.id, resumeGeneration) {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
-        if (s.startingLatitude == null && (routing || s.originLatitude == null) && !s.locationLoading) {
+        if (s.origin.isBlank() && s.originLatitude == null && !s.locationLoading) {
             if (hasPermission() && locationEnabled()) locate()
             else showStart = true
         }
@@ -197,7 +201,7 @@ import org.json.JSONObject
             Surface(Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), shadowElevation = 4.dp) {
                 Column(Modifier.padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.align(Alignment.CenterHorizontally).width(32.dp).height(4.dp).background(Color(0xFFD9DFDF), CircleShape))
-                    if (routing) MapRouteSummary(s, model, onChooseStart = { showStart = true })
+                    if (routing) key(s.routeDestination?.id, s.routeMode, s.origin) { MapRouteSummary(s, model, onChooseStart = { showStart = true }) }
                     else if (selected != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(selected.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
@@ -242,8 +246,8 @@ import org.json.JSONObject
             Text(s.locationError ?: if (!hasPermission()) "Allow location access or enter an address." else if (!locationEnabled()) "Device location is off. Turn it on or enter an address." else "Use your device location or choose another starting point.", color = Muted, style = MaterialTheme.typography.bodyMedium)
             FilledTonalButton(onClick = { useDevice() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.MyLocation, null, Modifier.size(20.dp)); Spacer(Modifier.width(12.dp)); Text("Use your location") }
             OutlinedTextField(if (s.origin in listOf("Your location", "Selected map area")) "" else s.origin, model::origin, modifier = Modifier.fillMaxWidth(), label = { Text("Address or postal code") }, placeholder = { Text("e.g. 560123") }, singleLine = true,
-                shape = RoundedCornerShape(12.dp), leadingIcon = { Icon(Icons.Outlined.LocationOn, null) }, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }))
-            Button(onClick = { search() }, enabled = s.origin.trim().length >= 3 && s.origin !in listOf("Your location", "Selected map area"), modifier = Modifier.fillMaxWidth()) { Text("Use this starting location") }
+                shape = RoundedCornerShape(12.dp), leadingIcon = { Icon(Icons.Outlined.LocationOn, null) }, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { submitStart() }))
+            Button(onClick = { submitStart() }, enabled = s.origin.trim().length >= 3 && s.origin !in listOf("Your location", "Selected map area"), modifier = Modifier.fillMaxWidth()) { Text("Use this starting location") }
         }
     }
 }
@@ -255,19 +259,6 @@ import org.json.JSONObject
     val route = s.route
     Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(destination.name, style = MaterialTheme.typography.titleLarge)
-        Text(destination.json.optString("eligibility").ifBlank { "Eligibility not confirmed. Contact the provider." }, style = MaterialTheme.typography.bodyMedium)
-        Availability(destination.availability)
-        AvailabilityEvidence(destination)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            destination.json.optString("phone").takeUnless { it.isBlank() || it == "null" }?.let { phone ->
-                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone"))) }.onFailure { model.error("No phone app is available. Call $phone using another phone.") } }) { Text("Call provider") }
-            }
-            destination.json.optString("website").takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { site ->
-                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(site))) }.onFailure { model.error("No browser is available. Provider website: $site") } }) { Text("Provider website") }
-            }
-        }
-        Text("${collectionLocationLabel(destination.json.optString("location_role"))} · ${destination.address}", color = Teal, style = MaterialTheme.typography.bodySmall)
-        if (destination.json.optString("location_role") == "coordination_site") Text("${accessMethodLabel(destination.json.optString("access_method", "contact_to_confirm"))}. This is a meal-delivery coordination site, not a confirmed walk-in collection point.", color = Muted, style = MaterialTheme.typography.bodySmall)
         when {
             s.locationLoading -> { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Finding your location...", color = Muted, style = MaterialTheme.typography.bodyMedium) }
             s.routeLoading -> { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Finding your route…", color = Muted, style = MaterialTheme.typography.bodySmall) }
@@ -331,6 +322,33 @@ import org.json.JSONObject
             else -> {
                 Text(route?.optString("message") ?: "Choose a travel option to calculate your route.", color = Muted, style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { model.searchRouteOrigin() }) { Text("Try route again") }
+            }
+        }
+        if (!s.locationLoading && !s.routeLoading && s.originLatitude != null && s.originLongitude != null && route?.optBoolean("available") != true) {
+            Button(onClick = {
+                val travelMode = when (s.routeMode) { "drive" -> "driving"; "pt" -> "transit"; else -> "walking" }
+                val uri = android.net.Uri.parse("https://www.google.com/maps/dir/").buildUpon()
+                    .appendQueryParameter("api", "1")
+                    .appendQueryParameter("origin", "${s.originLatitude},${s.originLongitude}")
+                    .appendQueryParameter("destination", "${destination.latitude},${destination.longitude}")
+                    .appendQueryParameter("travelmode", travelMode).build()
+                runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
+                    .onFailure { model.error("No map app or browser is available. Try again or use the destination address below.") }
+            }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.OpenInNew, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Open in Google Maps")
+            }
+        }
+        Text("${collectionLocationLabel(destination.json.optString("location_role"))} · ${destination.address}", color = Teal, style = MaterialTheme.typography.bodySmall)
+        if (destination.json.optString("location_role") == "coordination_site") Text("${accessMethodLabel(destination.json.optString("access_method", "contact_to_confirm"))}. This is a meal-delivery coordination site, not a confirmed walk-in collection point.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Text(destination.json.optString("eligibility").ifBlank { "Eligibility not confirmed. Contact the provider." }, style = MaterialTheme.typography.bodyMedium)
+        Availability(destination.availability)
+        AvailabilityEvidence(destination)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            destination.json.optString("phone").takeUnless { it.isBlank() || it == "null" }?.let { phone ->
+                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone"))) }.onFailure { model.error("No phone app is available. Call $phone using another phone.") } }) { Text("Call provider") }
+            }
+            destination.json.optString("website").takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { site ->
+                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(site))) }.onFailure { model.error("No browser is available. Provider website: $site") } }) { Text("Provider website") }
             }
         }
         TextButton(onClick = { model.detail(destination) }, contentPadding = PaddingValues(0.dp)) { Text("Support details"); Icon(Icons.Outlined.ChevronRight, null) }

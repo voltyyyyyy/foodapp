@@ -45,7 +45,8 @@ data class UiState(
     val profileNameDraft: String? = null,
     val reportService: Service? = null, val reportProvider: JSONObject? = null,
     val reportLeavePrompt: Boolean = false, val reportNextTab: String? = null,
-    val reminders: Map<String, String> = emptyMap(), val notificationsAllowed: Boolean = false
+    val reminders: Map<String, String> = emptyMap(), val notificationsAllowed: Boolean = false,
+    val reminderTime: String = "08:00"
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -64,7 +65,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var lastServerActivity = 0L
     private var sessionGeneration = 0L
     init {
-        repo.onSessionExpired = { viewModelScope.launch { if (state.value.account != null && !repo.sessionValid()) endSession(expired = true) } }
+        repo.onSessionExpired = { revoked -> viewModelScope.launch { if (state.value.account != null && !repo.sessionValid()) endSession(expired = true, revoked = revoked) } }
         viewModelScope.launch {
             repo.retryRevocations()
             if (repo.sessionValid()) {
@@ -73,11 +74,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     val account = JSONObject(repo.request("/api/auth/me"))
                     signedIn(account)
-                } catch (_: SessionExpired) { endSession(expired = true) }
+                } catch (e: SessionExpired) { endSession(expired = true, revoked = e.revoked) }
                 catch (_: Exception) { if (repo.sessionValid() && stored != null) signedIn(stored) else endSession(expired = true) }
             } else {
                 val hadSession = repo.sessionStore.read().has("token")
-                endSession(expired = hadSession)
+                endSession(expired = hadSession || reminderStore.hasOwner())
             }
         }
         viewModelScope.launch { while (true) {
@@ -108,7 +109,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         userScope.launch {
             repo.retryRevocations()
             try { repo.request("/api/auth/me") } catch (e: CancellationException) { throw e }
-            catch (_: SessionExpired) { if (state.value.account != null) endSession(expired = true) } catch (_: Exception) { }
+            catch (e: SessionExpired) { if (state.value.account != null) endSession(expired = true, revoked = e.revoked) } catch (_: Exception) { }
         }
     }
     private fun signedIn(account: JSONObject) {
@@ -124,10 +125,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 reportDescription = draft.optString("description"), reportEvidence = draft.optString("evidence"))
         }
         interrupted = null; interruptedAccount = null
-        reminderStore.resume()
+        reminderStore.activate(account.getString("id"))
         refresh(); loadProviders()
     }
-    private fun endSession(expired: Boolean = false, message: String? = null) {
+    private fun endSession(expired: Boolean = false, message: String? = null, revoked: Boolean = false) {
         sessionGeneration += 1
         val current = state.value
         if (expired && current.account != null) {
@@ -139,10 +140,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         userScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]))
         coordinates = null; etaJob?.cancel(); searchJob?.cancel(); routeJob?.cancel()
         repo.accountId = null
-        reminderStore.pause()
         repo.sessionStore.endSession()
+        if (expired && !revoked) reminderStore.sessionExpired() else reminderStore.deactivate()
         mutable.value = UiState(authChecking = false, authMessage = message,
-            authError = if (expired) "Your session has expired. Sign in again." else null)
+            authError = if (revoked) "Your session ended and reminders were cancelled. Sign in again."
+                else if (expired && reminderStore.hasEnabled()) "Your session has expired. Generic reminders continue from cached schedules. Sign in to view service details."
+                else if (expired) "Your session has expired. Sign in again." else null)
     }
     fun requestSignIn() { update { it.copy(authPage = "signin", authError = null) } }
     private fun requireAccount(): Boolean {
@@ -254,7 +257,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val diets = repo.diets()
             reminderStore.updateServices(services)
             update { it.copy(services = services, offline = offline, saved = saved, diets = diets, lastUpdate = repo.lastUpdate,
-                reminders = reminderStore.times(), notificationsAllowed = reminderStore.allowed()) }
+                reminders = reminderStore.times(), reminderTime = reminderStore.dailyTime(), notificationsAllowed = reminderStore.allowed()) }
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { error("Could not load services. Start the API or try again. ${e.message}") }
     } }
@@ -376,16 +379,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (serviceId !in ids) { reminderStore.remove(serviceId); update { it.copy(reminders = reminderStore.times()) } }
         userScope.launch { repo.saveBookmarks(ids, account) }
     }
-    fun clearLocal() { userScope.launch { repo.clearLocal(); reminderStore.clear(); clearLocation(); update { it.copy(saved = emptySet(), diets = emptySet(), reminders = emptyMap(), notice = "Local bookmarks, reminder settings and dietary preferences cleared.") } } }
+    fun clearLocal() { userScope.launch { repo.clearLocal(); reminderStore.clear(); clearLocation(); update { it.copy(saved = emptySet(), diets = emptySet(), reminders = emptyMap(), reminderTime = reminderStore.dailyTime(), notice = "Local bookmarks, reminder settings and dietary preferences cleared.") } } }
     fun notificationState() { reminderStore.resume(); update { it.copy(notificationsAllowed = reminderStore.allowed(), clock = System.currentTimeMillis()) } }
-    fun reminder(service: Service, enabled: Boolean, time: String = "09:00") {
+    fun reminderTime(time: String) {
         if (!requireAccount()) return
-        if (enabled && !reminderStore.allowed()) { error("Notifications are blocked. Allow them in notification settings, then enable your reminder."); return }
-        reminderStore.set(service, enabled, time)
+        reminderStore.setDailyTime(time)
+        update { it.copy(reminderTime = reminderStore.dailyTime(), reminders = reminderStore.times(), notice = "All reminders for this account now use $time Singapore time.") }
+    }
+    fun reminder(service: Service, enabled: Boolean) {
+        if (!requireAccount()) return
+        reminderStore.set(service, enabled)
         update { it.copy(reminders = reminderStore.times(), notificationsAllowed = reminderStore.allowed(),
-            notice = if (enabled) "Reminder enabled around $time Singapore time on recorded session days. Food availability is not guaranteed." else "Reminder disabled.") }
+            notice = if (!enabled) "Reminder disabled."
+                else if (!reminderStore.allowed()) "Reminder enabled. Notifications are blocked; your preference is kept. Allow notifications in Android settings."
+                else "Reminder enabled around ${reminderStore.dailyTime()} Singapore time when a confirmed session qualifies. Food availability is not guaranteed.") }
     }
     fun searchAddress() {
+        if (state.value.tab == "Map" && state.value.routeDestination != null) { searchRouteOrigin(); return }
         searchJob?.cancel()
         searchJob = userScope.launch {
         update { it.copy(loading = true, error = null, eta = emptyMap()) }
@@ -454,7 +464,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    fun openReminder(serviceId: String) { userScope.launch {
+    fun openReminder(serviceId: String, owningAccountId: String?) { userScope.launch {
+        if (owningAccountId.isNullOrBlank() || state.value.account?.optString("id") != owningAccountId || !repo.sessionValid()) {
+            error("This reminder belongs to another account. Sign in with the account that enabled it to open its details.")
+            return@launch
+        }
         try { detail(Service(JSONObject(repo.request("/api/services/$serviceId")))) }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { error("This reminder’s service could not be loaded. Open Saved to check the latest approved information.") }
@@ -466,7 +480,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun closeRoute() { routeJob?.cancel(); update { it.copy(routeDestination = null, route = null, routeLoading = false, candidates = emptyList(), error = null) } }
     fun searchRouteOrigin() {
-        routeJob?.cancel()
+        routeJob?.cancel(); searchJob?.cancel(); etaJob?.cancel()
         val destination = state.value.routeDestination ?: return
         val mode = state.value.routeMode
         if (coordinates != null) { route(mode); return }

@@ -1,6 +1,16 @@
 # Connect Google Maps
 
-**Revised SRS:** Google Maps SDK still renders the Android map. The API now uses OneMap for routing as well as address lookup; set `ONEMAP_EMAIL` and `ONEMAP_PASSWORD` on the API. The old Google Routes configuration below is retained as historical reference and is not required by the current route endpoint. Google sign-in uses separate OAuth client configuration in [Accounts](ACCOUNTS.md), not a Maps API key.
+Google Maps SDK renders the Android map, and Google Routes supplies walking, public transport and driving directions through the backend. OneMap supplies address lookup. Google sign-in uses separate OAuth client configuration in [Accounts](ACCOUNTS.md), not a Maps API key.
+
+## Connect in-app directions locally
+
+The local startup script reads the server key from ignored `backend/data/google-routes-api-key.txt`, or from `GOOGLE_ROUTES_API_KEY` in the launching shell. Run from the repository root:
+
+```powershell
+./tools/start-local.ps1
+```
+
+The script passes the key to the API without printing it and retains database and backup volumes. OneMap routing credentials are not required for Google directions. Address lookup can succeed while the Google routing key is unconfigured. Route failures appear above listing information, with retry and **Open in Google Maps**, passing the selected start, destination and travel mode through [Google Maps URLs](https://developers.google.com/maps/documentation/urls/get-started).
 
 ## 1. Create a Google Cloud project
 

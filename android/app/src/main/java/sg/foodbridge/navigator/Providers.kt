@@ -3,6 +3,7 @@ package sg.foodbridge.navigator
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +25,24 @@ import org.json.JSONArray
 
 private fun JSONObject.text(key: String) = optString(key).takeUnless { it.isBlank() || it == "null" }
 private fun JSONObject.types() = optJSONArray("support_types")?.let { array -> (0 until array.length()).map { array.getString(it) } } ?: emptyList()
+fun providerBookmarkId(provider: JSONObject) = "provider:${provider.getString("id")}"
+
+@Composable fun SavedProviderCard(provider: JSONObject, s: UiState, model: AppViewModel) {
+    Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth().clickable { model.providerDetail(provider) }) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Provider", color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                ListingBookmarkButton(saved = providerBookmarkId(provider) in s.saved,
+                    onClick = { model.removeOrSave(providerBookmarkId(provider)) })
+            }
+            Text(provider.getString("name"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            ProviderBadges(provider.types())
+            Text(collectionLocationLabel(provider.optString("location_type")), color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
 private fun factText(value: Any?): String = when (value) {
     null, JSONObject.NULL -> "Not listed"
     is Boolean -> if (value) "Yes" else "No"
@@ -171,26 +190,46 @@ private fun supportIcon(type: String): ImageVector = when (type) {
 
 @Composable fun ProviderDetailScreen(provider: JSONObject, model: AppViewModel) {
     val context = LocalContext.current
+    val s by model.state.collectAsState()
     var sourceDetails by remember { mutableStateOf(false) }
     var actionError by remember { mutableStateOf<String?>(null) }
-    fun open(uri: Uri, action: String = Intent.ACTION_VIEW) {
-        runCatching { context.startActivity(Intent(action, uri)) }.onFailure { actionError = "No app is available to open this contact. Use the details below." }
+    fun open(uri: Uri, action: String = Intent.ACTION_VIEW, failureMessage: String = "No app is available to open this contact. Use the details below.") {
+        runCatching { context.startActivity(Intent(action, uri)) }.onFailure { actionError = failureMessage }
     }
+    val address = provider.text("address")
+    val linkedServices = s.services.filter { it.json.optString("provider_id") == provider.getString("id") && it.json.optBoolean("active", true) }
+    var chooseDestination by remember(provider.getString("id")) { mutableStateOf(false) }
+    if (chooseDestination) AlertDialog(onDismissRequest = { chooseDestination = false },
+        title = { Text("Choose a service location") },
+        text = { Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+            linkedServices.forEach { service -> TextButton(onClick = {
+                chooseDestination = false; model.detail(service); model.route(s.routeMode)
+            }) { Column(Modifier.fillMaxWidth()) { Text(service.name); Text(service.address, color = Muted, style = MaterialTheme.typography.bodySmall) } } }
+        } }, confirmButton = { TextButton(onClick = { chooseDestination = false }) { Text("Cancel") } })
     Page {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(provider.getString("name"), style = MaterialTheme.typography.headlineMedium)
             ProviderBadges(provider.types())
-            ReportInformationButton(model)
-            Surface(color = Peach, shape = RoundedCornerShape(14.dp)) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(collectionLocationLabel(provider.optString("location_type")), fontWeight = FontWeight.Bold)
-                    Text(if (provider.optString("location_type") == "confirmed_collection_site")
-                        provider.text("location_notes") ?: "The provider publishes this as a service location. Contact them to confirm before travelling."
-                    else "No public collection point is confirmed for this listing. Do not travel to an office or programme address unless the provider confirms it is where you should go.", style = MaterialTheme.typography.bodySmall)
-                    Text(accessMethodDetail(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified")), style = MaterialTheme.typography.bodySmall)
+            if (provider.optString("location_type") !in listOf("collection_site", "confirmed_collection_site")) CollectionPointWarning()
+            else Text(collectionLocationLabel(provider.optString("location_type")), fontWeight = FontWeight.Bold, color = Teal)
+            ListingNavigateButton(enabled = linkedServices.isNotEmpty() || address != null,
+                label = when {
+                    linkedServices.isEmpty() && address != null -> "Navigate to provider address"
+                    linkedServices.size > 1 -> "Choose a service location"
+                    else -> "Navigate to service location"
+                }) {
+                when {
+                    linkedServices.size == 1 -> { model.detail(linkedServices.first()); model.route(s.routeMode) }
+                    linkedServices.size > 1 -> chooseDestination = true
+                    address != null -> open(Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${Uri.encode(address + ", Singapore")}"),
+                        failureMessage = "No map or browser is available. Use the provider address shown in this listing.")
                 }
             }
+            if (linkedServices.isEmpty() && address == null) Text("Navigation unavailable: no destination address is confirmed.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            actionError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            Text("Contact the provider before travelling. Food availability is not guaranteed.", color = Muted, style = MaterialTheme.typography.bodySmall)
             if (provider.optString("verification_status") != "provider_reviewed") Text("This listing comes from FoodConnect. Current programme and contact details need confirmation.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            ReportInformationButton(model)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ProviderHeading("Contact", Icons.Outlined.ContactPhone)

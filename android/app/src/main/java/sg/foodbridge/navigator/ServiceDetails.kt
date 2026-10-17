@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -55,6 +54,35 @@ fun reportCategoryLabel(category: String) = when (category) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(icon, null, Modifier.size(22.dp), tint = Teal)
         Text(title, style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+@Composable fun ListingBookmarkButton(saved: Boolean, onClick: () -> Unit) {
+    IconToggleButton(checked = saved, onCheckedChange = { onClick() }, modifier = Modifier.size(48.dp)) {
+        Icon(if (saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+            if (saved) "Remove saved listing" else "Save listing", tint = Teal, modifier = Modifier.size(26.dp))
+    }
+}
+
+@Composable fun ListingNavigateButton(enabled: Boolean = true, label: String = "Navigate", onClick: () -> Unit) {
+    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
+        shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(18.dp)) {
+        Icon(Icons.Outlined.NearMe, null, Modifier.size(26.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable fun CollectionPointWarning() {
+    Surface(color = Peach, shape = RoundedCornerShape(14.dp)) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Outlined.WarningAmber, "Warning", Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurface)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Not a confirmed collection point", fontWeight = FontWeight.Bold)
+                Text("Contact the provider to confirm where to go. An office or coordination address may not be a place to collect food.",
+                    style = MaterialTheme.typography.bodySmall)
+            }
+        }
     }
 }
 
@@ -170,13 +198,16 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
     val site = service.json.detailText("website")
     Page {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(service.type, color = Teal, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                IconButton(onClick = { model.save(service) }) { Icon(if (service.id in s.saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder, if (service.id in s.saved) "Remove saved service" else "Save service", tint = Teal) }
-            }
+            Text(service.type, color = Teal, style = MaterialTheme.typography.labelLarge)
             Text(service.name, style = MaterialTheme.typography.headlineMedium)
             if (service.organisationName != service.name) Text(service.organisationName, color = Muted)
             if (service.demo) Text("Demo listing — fictional service", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+            if (service.json.optString("location_role") !in listOf("collection_site", "confirmed_collection_site")) CollectionPointWarning()
+            ListingNavigateButton(enabled = !s.loading,
+                label = directionsButtonLabel(service.json.optString("location_role")).replace("Get directions", "Navigate")) { model.route(mode) }
+            Text(service.address, color = Muted, style = MaterialTheme.typography.bodyMedium)
+            Text(collectionLocationLabel(service.json.optString("location_role")), color = Teal, style = MaterialTheme.typography.bodySmall)
+            Text("Contact the provider before travelling. Food availability is not guaranteed.", color = Muted, style = MaterialTheme.typography.bodySmall)
             service.json.detailText("description")?.let { Text(it, color = Muted) }
             ReportInformationButton(model)
         }
@@ -246,8 +277,6 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
             Text("Singapore ${service.json.optString("postal")}", color = Muted)
             if (service.json.optString("location_role") == "coordination_site") Text("This is a meal-delivery coordination site, not a confirmed walk-in collection point. ${accessMethodDetail(service.json.optString("access_method", "contact_to_confirm"))}", color = Muted, style = MaterialTheme.typography.bodyMedium)
             if (!service.distance.isNaN()) Text("%.1f km from your search address (straight-line distance)".format(service.distance), color = Muted, style = MaterialTheme.typography.bodySmall)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("walk" to "Walk", "pt" to "Public transport", "drive" to "Drive").forEach { (value, label) -> Filter(label, mode == value) { model.update { it.copy(routeMode = value) } } } }
-            OutlinedButton(onClick = { model.route(mode) }, enabled = !s.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Icon(Icons.Outlined.NearMe, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text(directionsButtonLabel(service.json.optString("location_role"))) }
 
         }
         HorizontalDivider()

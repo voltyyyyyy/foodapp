@@ -46,9 +46,9 @@ fun collectionLocationLabel(value: String) = when (value) {
 }
 
 fun directionsButtonLabel(value: String) = when (value) {
-    "collection_site" -> "Get directions to collection site"
+    "collection_site", "confirmed_collection_site" -> "Get directions to collection site"
     "coordination_site" -> "Get directions to coordination site"
-    else -> "Get directions"
+    else -> "Get directions to the listed address"
 }
 
 data class Service(val json: JSONObject) {
@@ -89,7 +89,7 @@ class Repository(private val context: Context) {
     private val client = OkHttpClient.Builder().callTimeout(4500, TimeUnit.MILLISECONDS).build()
     private val authClient = client.newBuilder().callTimeout(20, TimeUnit.SECONDS).build()
     val sessionStore = SessionStore(context)
-    var onSessionExpired: (() -> Unit)? = null
+    var onSessionExpired: ((Boolean) -> Unit)? = null
     @Volatile var accountId: String? = null
     var lastUpdate: String? = null
     private fun bookmarksKey(id: String) = stringSetPreferencesKey("bookmarks_$id")
@@ -119,8 +119,9 @@ class Repository(private val context: Context) {
             val content = response.body?.string() ?: "{}"
             if (!response.isSuccessful) {
                 if (response.code == 401 && protected) {
-                    expireSession(token)
-                    throw SessionExpired()
+                    val revoked = response.header("X-FoodBridge-Session") != "expired"
+                    expireSession(token, revoked)
+                    throw SessionExpired(revoked)
                 }
                 val detail = runCatching { JSONObject(content).opt("detail")?.toString() ?: "Request failed" }.getOrDefault("Request failed")
                 throw IOException(if (response.code == 422) "Check your input: $detail" else detail)
@@ -130,16 +131,19 @@ class Repository(private val context: Context) {
     }
     suspend fun all(): Pair<List<Service>, Boolean> {
         return try {
-            val response = JSONObject(request("/api/services")).put("local_updated_at", Instant.now().toString()).toString()
-            context.store.edit { it[cacheKey] = response }
-            lastUpdate = JSONObject(response).optString("local_updated_at")
-            JSONObject(response).getJSONArray("services").objects().map(::Service).filterNot { it.demo } to false
+            val payload = JSONObject(request("/api/services"))
+            lastUpdate = Instant.now().toString()
+            payload.put("local_updated_at", lastUpdate)
+            val services = payload.getJSONArray("services").objects().onEach { it.put("local_updated_at", lastUpdate) }
+            context.store.edit { it[cacheKey] = payload.toString() }
+            services.map(::Service).filterNot { it.demo } to false
         } catch (error: Exception) {
             if (error is SessionExpired || error is kotlinx.coroutines.CancellationException) throw error
             requireSession()
             val cached = context.store.data.first()[cacheKey] ?: throw error
-            lastUpdate = JSONObject(cached).optString("local_updated_at", JSONObject(cached).optString("last_update"))
-            JSONObject(cached).getJSONArray("services").objects().map { it.put("cached", true); Service(it) }.filterNot { it.demo } to true
+            val payload = JSONObject(cached)
+            lastUpdate = payload.optString("local_updated_at")
+            payload.getJSONArray("services").objects().map { it.put("cached", true).put("local_updated_at", lastUpdate); Service(it) }.filterNot { it.demo } to true
         }
     }
     fun sessionValid(): Boolean {
@@ -150,7 +154,7 @@ class Repository(private val context: Context) {
             current >= data.optLong("last_activity") && current - data.optLong("last_activity") < 30 * 60_000
     }
     fun requireSession() { if (!sessionValid()) { expireSession(); throw SessionExpired() } }
-    private fun expireSession(expectedToken: String? = null) {
+    private fun expireSession(expectedToken: String? = null, revoked: Boolean = false) {
         var ended = false
         sessionStore.update { data ->
             if (expectedToken == null || data.optString("token") == expectedToken) {
@@ -158,7 +162,11 @@ class Repository(private val context: Context) {
                 ended = true
             }
         }
-        if (ended) { accountId = null; onSessionExpired?.invoke() }
+        if (ended) {
+            accountId = null
+            if (revoked) ReminderStore(context).deactivate() else ReminderStore(context).sessionExpired()
+            onSessionExpired?.invoke(revoked)
+        }
     }
     suspend fun bookmarks(): Set<String> { requireSession(); val id = accountId ?: throw SessionExpired(); return context.store.data.first()[bookmarksKey(id)] ?: emptySet() }
     suspend fun diets(): Set<String> { requireSession(); val id = accountId ?: throw SessionExpired(); return context.store.data.first()[dietsKey(id)] ?: emptySet() }
@@ -188,4 +196,4 @@ class Repository(private val context: Context) {
     }
 }
 
-class SessionExpired : IOException("Your session has expired. Sign in again.")
+class SessionExpired(val revoked: Boolean = false) : IOException("Your session has expired. Sign in again.")

@@ -23,6 +23,7 @@ from sqlalchemy import func, select, text, update
 from .db import Admin, Audit, Base, Record, Session, Token, engine, iso, now
 from .domain import Origin, Provider, Report, Search, Service, distance, public_service
 from .onemap import adapter
+from .google_routes import adapter as routing_adapter
 from .auth import router as auth_router, session_account, administrator, login as account_login, Login as AccountLogin
 from .db import Account
 
@@ -245,7 +246,7 @@ async def route(body: Route, account=Depends(session_account)):
         if not destination.get('active', True):
             raise HTTPException(404, 'Service no longer listed')
     try:
-        return await asyncio.wait_for(adapter.route(body.model_dump(), destination, body.mode), timeout=4)
+        return await asyncio.wait_for(routing_adapter.route(body.model_dump(), destination, body.mode), timeout=4)
     except Exception:
         return {'available': False, 'message': 'Route unavailable. Service details are still available. Try again or contact the provider.'}
 

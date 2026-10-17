@@ -62,10 +62,11 @@ def session_account(credentials=Depends(security)):
         account = locked(db, session.account_id) if session else None
         if session:
             session = db.scalar(select(AccountSession).where(AccountSession.digest == session.digest).execution_options(populate_existing=True))
-        if (not session or not account or account.state != 'ACTIVE'
-                or timestamp(session.expires_at) <= now()
+        if not session or not account or account.state != 'ACTIVE':
+            raise HTTPException(401, 'Your session has expired. Sign in again.', headers={'X-FoodBridge-Session': 'revoked'})
+        if (timestamp(session.expires_at) <= now()
                 or timestamp(session.last_activity) + timedelta(minutes=30) <= now()):
-            raise HTTPException(401, 'Your session has expired. Sign in again.')
+            raise HTTPException(401, 'Your session has expired. Sign in again.', headers={'X-FoodBridge-Session': 'expired'})
         session.last_activity = now()
         return public_account(account)
 

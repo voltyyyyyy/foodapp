@@ -46,7 +46,8 @@ import androidx.compose.ui.unit.dp
     val registration = s.authPage == "register"
     val recovery = s.authPage in listOf("forgot", "resend")
     BackHandler(s.authPage != "signin" && !s.authBusy) { model.authPage("signin") }
-    Surface(color = Canvas, modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+    // Reset the shared form scroll position when switching between sign-in and account-access pages.
+    key(s.authPage) { Surface(color = Canvas, modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
         Page {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Outlined.Spa, null, tint = Teal)
@@ -99,7 +100,7 @@ import androidx.compose.ui.unit.dp
             }
             if (!recovery) Text("Check eligibility and contact the provider before travelling. Availability is never a guarantee.", color = Muted, style = MaterialTheme.typography.bodySmall)
         }
-    }
+    } }
 }
 
 @Composable fun ProfilePanel(s: UiState, model: AppViewModel) {
