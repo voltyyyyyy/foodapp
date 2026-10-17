@@ -1,0 +1,1498 @@
+// Jarbobo diagram — open this file with the Jarbobo extension to view it as
+// an interactive diagram (nodes link back to source). Install the viewer:
+//   https://github.com/tch1001/jarbobo
+// The JSON below is the diagram data (one file per diagram, all versions inside).
+{
+  "id": "foodbridge-system-architecture-cxc0",
+  "versions": [
+    {
+      "type": "graph",
+      "title": "FoodBridge System Architecture",
+      "layout": "layered",
+      "direction": "LR",
+      "groups": [
+        {
+          "id": "clients",
+          "label": "User-facing clients",
+          "color": "#dceeff"
+        },
+        {
+          "id": "backend",
+          "label": "Shared backend",
+          "color": "#e7f4e8"
+        },
+        {
+          "id": "external",
+          "label": "External services",
+          "color": "#fff0d8"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "android",
+          "label": "Android app",
+          "color": "#3b82f6",
+          "group": "clients",
+          "tooltip": "Public Kotlin app for finding support, saving listings locally, and submitting correction reports.",
+          "detail": "The repository calls public API endpoints and keeps approved-data snapshots and bookmarks on the device.",
+          "file": "C:\\Users\\Mingchen\\foodapp/android/app/src/main/java/sg/foodbridge/navigator/Repository.kt",
+          "line": 88,
+          "_anchor": {
+            "lineText": "class Repository(private val context: Context) {"
+          }
+        },
+        {
+          "id": "staff",
+          "label": "Staff portal",
+          "color": "#3b82f6",
+          "group": "clients",
+          "tooltip": "Browser-based administration UI served from the same origin as the API.",
+          "detail": "Staff sign in with a User ID and use protected /api/admin routes to review and publish changes.",
+          "file": "C:\\Users\\Mingchen\\foodapp/staff-portal/portal.js",
+          "line": 18,
+          "_anchor": {
+            "lineText": "  let response;"
+          }
+        },
+        {
+          "id": "api",
+          "label": "FastAPI service",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Public discovery and report endpoints plus server-authorized staff workflows.",
+          "detail": "The API validates requests, applies moderation and authorization rules, and coordinates persistence and external lookups.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/main.py",
+          "line": 50,
+          "_anchor": {
+            "lineText": "app = FastAPI(title='FoodBridge Navigator', version='1.0.0', lifespan=lifespan)"
+          }
+        },
+        {
+          "id": "database",
+          "label": "PostgreSQL",
+          "shape": "cylinder",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Shared persistence for approved records, reports, staff accounts, sessions, and audit history.",
+          "detail": "Production uses PostgreSQL. The code defaults to SQLite for local Python development.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/db.py",
+          "line": 18,
+          "_anchor": {
+            "lineText": "DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/foodbridge.db')"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Maintenance worker",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Scheduled process for expiring observations and creating database backups.",
+          "detail": "Waits for API readiness, runs expiry work hourly, and makes backups on a 20-hour cadence.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/scheduler.py",
+          "line": 25,
+          "_anchor": {
+            "lineText": "            db.add(Record(id='daily-backup', kind='operation', data=data))"
+          }
+        },
+        {
+          "id": "onemap",
+          "label": "OneMap",
+          "color": "#f59e0b",
+          "group": "external",
+          "tooltip": "Singapore address geocoding and route lookup adapter.",
+          "detail": "Address search and route results come from OneMap; route credentials are read from environment configuration.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/onemap.py",
+          "line": 24,
+          "_anchor": {
+            "lineText": "            self.token, self.expiry = data['access_token'], float(data['expiry_timestamp'])"
+          }
+        },
+        {
+          "id": "google",
+          "label": "Google Routes",
+          "color": "#f59e0b",
+          "group": "external",
+          "tooltip": "Optional route adapter for walking, public transport, and driving directions.",
+          "detail": "When no API key is configured, the adapter returns an explicit unavailable message.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/google_routes.py",
+          "line": 10,
+          "_anchor": {
+            "lineText": "    async def route(self, origin, destination, mode):"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "android",
+          "to": "api",
+          "label": "HTTPS /api/*",
+          "tooltip": "The Android view model sends address-search requests through the repository.",
+          "detail": "The app also loads services and providers, requests routes, and submits reports through public endpoints.",
+          "file": "C:\\Users\\Mingchen\\foodapp/android/app/src/main/java/sg/foodbridge/navigator/AppViewModel.kt",
+          "line": 186,
+          "_anchor": {
+            "lineText": "            val response = JSONObject(repo.request(\"/api/search\", \"POST\", body))"
+          }
+        },
+        {
+          "from": "staff",
+          "to": "api",
+          "label": "same-origin /api/admin/*",
+          "tooltip": "The portal sends authenticated staff operations to the API.",
+          "detail": "The token is sent in the Authorization header; the API enforces administrator access.",
+          "file": "C:\\Users\\Mingchen\\foodapp/staff-portal/portal.js",
+          "line": 19,
+          "_anchor": {
+            "lineText": "  try {response=await fetch('/api/admin/'+path,{method,headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store'});}"
+          }
+        },
+        {
+          "from": "api",
+          "to": "database",
+          "label": "records and audit transactions",
+          "tooltip": "API handlers use SQLAlchemy models and sessions from the database module.",
+          "detail": "Approved records and audit entries share the backend database.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/main.py",
+          "line": 18,
+          "_anchor": {
+            "lineText": "from pydantic import BaseModel, Field, ValidationError, field_validator"
+          }
+        },
+        {
+          "from": "api",
+          "to": "onemap",
+          "label": "geocode and route requests",
+          "tooltip": "FastAPI wires the OneMap adapter into public geocode and routing handlers.",
+          "detail": "External lookup failures are surfaced as service errors rather than being treated as confirmed food availability.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/main.py",
+          "line": 20,
+          "_anchor": {
+            "lineText": ""
+          }
+        },
+        {
+          "from": "api",
+          "to": "google",
+          "label": "optional route requests",
+          "tooltip": "FastAPI wires the Google Routes adapter for route calculations.",
+          "detail": "Routing remains optional and can report that it is not connected.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/main.py",
+          "line": 21,
+          "_anchor": {
+            "lineText": "from .db import Admin, Audit, Base, Record, Session, Token, engine, iso, now"
+          }
+        },
+        {
+          "from": "maintenance",
+          "to": "database",
+          "label": "expiry and backups",
+          "tooltip": "The maintenance process reads and updates persisted records.",
+          "detail": "It expires dated observations and records the outcome of scheduled database backups.",
+          "file": "C:\\Users\\Mingchen\\foodapp/backend/app/scheduler.py",
+          "line": 8,
+          "_anchor": {
+            "lineText": "from .db import Record, Session, iso, now"
+          }
+        }
+      ],
+      "_layout": {
+        "v": 2,
+        "nodes": {
+          "android": {
+            "x": -18.72429653679653,
+            "y": 279.38690476190476
+          },
+          "staff": {
+            "x": -18.72429653679653,
+            "y": 194.88690476190476
+          },
+          "api": {
+            "x": 319.2113095238095,
+            "y": 114.84740259740263
+          },
+          "database": {
+            "x": 526.7843614718615,
+            "y": 30.30871212121211
+          },
+          "maintenance": {
+            "x": 272.66829004329,
+            "y": 30.347402597402578
+          },
+          "onemap": {
+            "x": 542.2987012987013,
+            "y": 262.7345779220779
+          },
+          "google": {
+            "x": 553.25,
+            "y": 371.875
+          }
+        },
+        "edgeLabels": {}
+      }
+    },
+    {
+      "type": "graph",
+      "title": "FoodBridge System Architecture",
+      "layout": "layered",
+      "direction": "LR",
+      "groups": [
+        {
+          "id": "android",
+          "label": "Android public app",
+          "color": "#dceeff"
+        },
+        {
+          "id": "staff",
+          "label": "Staff browser portal",
+          "color": "#f0e7ff"
+        },
+        {
+          "id": "backend",
+          "label": "Shared backend",
+          "color": "#e7f4e8"
+        },
+        {
+          "id": "platform",
+          "label": "Data and external services",
+          "color": "#fff0d8"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "ui",
+          "label": "Compose screens",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Jetpack Compose screens for finding, saving, and reporting food support.",
+          "detail": "The Android app is public-facing. People can browse services, save listings, and submit correction reports without an account.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\MainActivity.kt",
+          "line": 147,
+          "_anchor": {
+            "lineText": "@Composable fun FoodBridge(model: AppViewModel) {"
+          }
+        },
+        {
+          "id": "state",
+          "label": "AppViewModel",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Coordinates screen state, discovery, routes, bookmarks, and report submission.",
+          "detail": "Address search applies suitability rules before ranking. Empty Find support browsing follows a separate path without the nearest-ten cap.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\AppViewModel.kt",
+          "line": 41,
+          "_anchor": {
+            "lineText": "class AppViewModel(application: Application) : AndroidViewModel(application) {"
+          }
+        },
+        {
+          "id": "repository",
+          "label": "Repository",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Makes API calls and stores approved snapshots and device preferences.",
+          "detail": "The repository loads services and providers through the API, falls back to approved snapshots offline, and keeps bookmarks and diet preferences locally.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 88,
+          "_anchor": {
+            "lineText": "class Repository(private val context: Context) {"
+          }
+        },
+        {
+          "id": "localdata",
+          "label": "Device cache and saves",
+          "shape": "cylinder",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Local approved-data snapshots and bookmark preferences.",
+          "detail": "This device data supports offline viewing and private saves. It does not update provider verification.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 117,
+          "_anchor": {
+            "lineText": "    suspend fun all(): Pair<List<Service>, Boolean> {"
+          }
+        },
+        {
+          "id": "portal",
+          "label": "Staff portal",
+          "color": "#8b5cf6",
+          "group": "staff",
+          "tooltip": "Same-origin browser application for staff review and publishing.",
+          "detail": "Staff sign in with a User ID. The portal keeps drafts available across recoverable request errors and calls protected admin endpoints.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\staff-portal\\portal.js",
+          "line": 18,
+          "_anchor": {
+            "lineText": "  let response;"
+          }
+        },
+        {
+          "id": "api",
+          "label": "FastAPI routes",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Serves public discovery and reporting plus protected staff operations.",
+          "detail": "The same API origin serves /staff/ and /api/. Administrator routes enforce server-side authorization.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 50,
+          "_anchor": {
+            "lineText": "app = FastAPI(title='FoodBridge Navigator', version='1.0.0', lifespan=lifespan)"
+          }
+        },
+        {
+          "id": "discovery",
+          "label": "Search and service rules",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Validates search requests and ranks suitable food-support services.",
+          "detail": "Address search filters for suitability before distance ranking. Public records retain explicit unknowns for hours, diets, access, stock, and delivery.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "id": "moderation",
+          "label": "Review, publish, audit",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Staff workflow for assessing reports and publishing reviewed changes.",
+          "detail": "The server checks record versions and commits approved record updates with audit entries in one transaction.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 377,
+          "_anchor": {
+            "lineText": "@app.post('/api/admin/{collection}/{id_}/decision')"
+          }
+        },
+        {
+          "id": "database",
+          "label": "PostgreSQL",
+          "shape": "cylinder",
+          "color": "#f59e0b",
+          "group": "platform",
+          "tooltip": "Shared records, reports, sessions, staff accounts, and audit history.",
+          "detail": "Production uses PostgreSQL. Local Python runs can default to SQLite. Record versions support stale-edit detection.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\db.py",
+          "line": 32,
+          "_anchor": {
+            "lineText": "class Record(Base):"
+          }
+        },
+        {
+          "id": "onemap",
+          "label": "OneMap",
+          "color": "#f59e0b",
+          "group": "platform",
+          "tooltip": "Singapore address geocoding and route lookups.",
+          "detail": "The adapter sends geocoding and route requests to OneMap and returns provider results to the API.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\onemap.py",
+          "line": 27,
+          "_anchor": {
+            "lineText": "    async def geocode(self, query):"
+          }
+        },
+        {
+          "id": "google",
+          "label": "Google Routes",
+          "color": "#f59e0b",
+          "group": "platform",
+          "tooltip": "Optional route adapter for supported travel modes.",
+          "detail": "If routing is not configured, the API receives an explicit unavailable result; route responses are not persisted.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\google_routes.py",
+          "line": 10,
+          "_anchor": {
+            "lineText": "    async def route(self, origin, destination, mode):"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Maintenance worker",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Scheduled expiry and backup process.",
+          "detail": "Waits for API readiness, expires observations hourly, and attempts a database backup every 20 hours.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\scheduler.py",
+          "line": 27,
+          "_anchor": {
+            "lineText": "def run():"
+          }
+        },
+        {
+          "id": "backups",
+          "label": "Backup files",
+          "shape": "cylinder",
+          "color": "#f59e0b",
+          "group": "platform",
+          "tooltip": "Database backup artifacts written to the configured backup directory.",
+          "detail": "The worker writes a SQLite backup or PostgreSQL dump and records backup health for staff operations.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\maintenance.py",
+          "line": 34,
+          "_anchor": {
+            "lineText": "def backup(directory):"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "ui",
+          "to": "state",
+          "label": "user actions and state",
+          "tooltip": "The activity owns the AppViewModel used by the Compose application.",
+          "detail": "Screens render model state and call model actions for discovery, saved listings, and reports.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\MainActivity.kt",
+          "line": 74,
+          "_anchor": {
+            "lineText": "    private val model: AppViewModel by viewModels()"
+          }
+        },
+        {
+          "from": "state",
+          "to": "repository",
+          "label": "load and submit",
+          "tooltip": "The view model loads approved services and providers through the repository.",
+          "detail": "Other calls use the same repository for geocoding, route estimates, and report submission.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\AppViewModel.kt",
+          "line": 112,
+          "_anchor": {
+            "lineText": "                    val servicesRequest = async { repo.all() }"
+          }
+        },
+        {
+          "from": "repository",
+          "to": "api",
+          "label": "public /api/* requests",
+          "tooltip": "Builds HTTP requests to the configured API origin.",
+          "detail": "The repository handles response errors and preserves local snapshots for offline fallback.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 105,
+          "_anchor": {
+            "lineText": "    suspend fun request(path: String, method: String = \"GET\", body: JSONObject? = null): String = withContext(Dispatchers.IO) {"
+          }
+        },
+        {
+          "from": "repository",
+          "to": "localdata",
+          "label": "snapshots and preferences",
+          "tooltip": "Stores bookmarks in Android preferences and service snapshots on device.",
+          "detail": "Saved listings remain device-local and do not imply a new information verification.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 131,
+          "_anchor": {
+            "lineText": "    suspend fun saveBookmarks(ids: Set<String>) { context.store.edit { it[bookmarksKey] = ids } }"
+          }
+        },
+        {
+          "from": "portal",
+          "to": "moderation",
+          "label": "authenticated /api/admin/*",
+          "tooltip": "Sends the administrator token with staff requests.",
+          "detail": "The backend remains responsible for authorization, validation, stale-version checks, and audit recording.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\staff-portal\\portal.js",
+          "line": 19,
+          "_anchor": {
+            "lineText": "  try {response=await fetch('/api/admin/'+path,{method,headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store'});}"
+          }
+        },
+        {
+          "from": "api",
+          "to": "portal",
+          "label": "serves /staff/",
+          "tooltip": "FastAPI serves the staff portal from the same origin as its API.",
+          "detail": "Same-origin serving keeps browser requests on the configured Content Security Policy.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 52,
+          "_anchor": {
+            "lineText": "app.mount('/staff', StaticFiles(directory=portal_dir, html=True), name='staff')"
+          }
+        },
+        {
+          "from": "api",
+          "to": "discovery",
+          "label": "/api/search and public listing rules",
+          "tooltip": "The search endpoint applies validated search and suitability rules.",
+          "detail": "Public listings and address-based matching are separate behaviours with different result limits.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "from": "discovery",
+          "to": "database",
+          "label": "approved service records",
+          "tooltip": "Search reads service records through the shared database session.",
+          "detail": "Only approved records are visible to public discovery.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "from": "moderation",
+          "to": "database",
+          "label": "versioned update and audit transaction",
+          "tooltip": "Publishes reviewed proposals against the expected record version.",
+          "detail": "The approved change and audit entry are committed atomically so an audit failure rolls back the update.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 313,
+          "_anchor": {
+            "lineText": "def publish(db, target, proposal, expected_version):"
+          }
+        },
+        {
+          "from": "api",
+          "to": "onemap",
+          "label": "geocode / route calls",
+          "tooltip": "The geocode endpoint calls the OneMap adapter.",
+          "detail": "The API also uses OneMap for route lookups when configured for that routing path.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 196,
+          "_anchor": {
+            "lineText": "        candidates = await asyncio.wait_for(adapter.geocode(query), timeout=4)"
+          }
+        },
+        {
+          "from": "api",
+          "to": "google",
+          "label": "optional route calculation",
+          "tooltip": "The route endpoint calls the configured Google Routes adapter.",
+          "detail": "External routing results stay in memory and are returned as route guidance.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 220,
+          "_anchor": {
+            "lineText": "        return await asyncio.wait_for(routes_adapter.route(body.model_dump(), destination, body.mode), timeout=4)"
+          }
+        },
+        {
+          "from": "maintenance",
+          "to": "database",
+          "label": "expiry and status records",
+          "tooltip": "Maintenance helpers update expired observations and record backup health.",
+          "detail": "The scheduler waits for readiness before running its recurring maintenance work.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\scheduler.py",
+          "line": 8,
+          "_anchor": {
+            "lineText": "from .db import Record, Session, iso, now"
+          }
+        },
+        {
+          "from": "maintenance",
+          "to": "backups",
+          "label": "scheduled database dumps",
+          "tooltip": "Creates the backup file in the configured backup directory.",
+          "detail": "Backup health and completion time are recorded for staff to inspect.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\maintenance.py",
+          "line": 34,
+          "_anchor": {
+            "lineText": "def backup(directory):"
+          }
+        }
+      ],
+      "_layout": {
+        "v": 2,
+        "nodes": {
+          "ui": {
+            "x": 412.5851126357184,
+            "y": 1036.6538807541945
+          },
+          "state": {
+            "x": 302.58511263571853,
+            "y": 806.653880754195
+          },
+          "repository": {
+            "x": 242.58511263571853,
+            "y": 576.653880754195
+          },
+          "localdata": {
+            "x": 352.58511263571853,
+            "y": 706.653880754195
+          },
+          "portal": {
+            "x": -270.8386284944859,
+            "y": 947.4964151647276
+          },
+          "api": {
+            "x": -145.03893092245937,
+            "y": 205.46681890072824
+          },
+          "discovery": {
+            "x": 18.74759505156672,
+            "y": 343.197473662633
+          },
+          "moderation": {
+            "x": 148.7475950515665,
+            "y": 408.19747366263294
+          },
+          "database": {
+            "x": 748.453395198458,
+            "y": 73.52720297356747
+          },
+          "onemap": {
+            "x": 1076.25618505522,
+            "y": 226.4868114007476
+          },
+          "google": {
+            "x": 1087.207483756519,
+            "y": 335.6272334786697
+          },
+          "maintenance": {
+            "x": -191.58195040297895,
+            "y": 120.96681890072821
+          },
+          "backups": {
+            "x": 966.6257737998087,
+            "y": 174.09963607607227
+          }
+        },
+        "edgeLabels": {}
+      }
+    },
+    {
+      "type": "graph",
+      "title": "FoodBridge System Architecture",
+      "layout": "layered",
+      "direction": "LR",
+      "groups": [
+        {
+          "id": "android",
+          "label": "Android public app",
+          "color": "#dceeff"
+        },
+        {
+          "id": "staff",
+          "label": "Staff browser portal",
+          "color": "#f0e7ff"
+        },
+        {
+          "id": "backend",
+          "label": "Shared backend",
+          "color": "#e7f4e8"
+        },
+        {
+          "id": "data",
+          "label": "Data stores",
+          "color": "#fff0d8"
+        },
+        {
+          "id": "external",
+          "label": "External services",
+          "color": "#ffe8cf"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "ui",
+          "label": "Compose screens",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Jetpack Compose screens for finding, saving, and reporting food support.",
+          "detail": "The Android app is public-facing. People can browse services, save listings, and submit correction reports without an account.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\MainActivity.kt",
+          "line": 147,
+          "_anchor": {
+            "lineText": "@Composable fun FoodBridge(model: AppViewModel) {"
+          }
+        },
+        {
+          "id": "state",
+          "label": "AppViewModel",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Coordinates screen state, discovery, routes, bookmarks, and report submission.",
+          "detail": "Address search applies suitability rules before ranking. Empty Find support browsing follows a separate path without the nearest-ten cap.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\AppViewModel.kt",
+          "line": 41,
+          "_anchor": {
+            "lineText": "class AppViewModel(application: Application) : AndroidViewModel(application) {"
+          }
+        },
+        {
+          "id": "repository",
+          "label": "Repository",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Makes API calls and stores approved snapshots and device preferences.",
+          "detail": "The repository loads services and providers through the API, falls back to approved snapshots offline, and keeps bookmarks and diet preferences locally.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 88,
+          "_anchor": {
+            "lineText": "class Repository(private val context: Context) {"
+          }
+        },
+        {
+          "id": "localdata",
+          "label": "Device cache and saves",
+          "shape": "cylinder",
+          "color": "#3b82f6",
+          "group": "data",
+          "tooltip": "Local approved-data snapshots and bookmark preferences.",
+          "detail": "This device data supports offline viewing and private saves. It does not update provider verification.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 117,
+          "_anchor": {
+            "lineText": "    suspend fun all(): Pair<List<Service>, Boolean> {"
+          }
+        },
+        {
+          "id": "portal",
+          "label": "Staff portal",
+          "color": "#8b5cf6",
+          "group": "staff",
+          "tooltip": "Same-origin browser application for staff review and publishing.",
+          "detail": "Staff sign in with a User ID. The portal keeps drafts available across recoverable request errors and calls protected admin endpoints.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\staff-portal\\portal.js",
+          "line": 18,
+          "_anchor": {
+            "lineText": "  let response;"
+          }
+        },
+        {
+          "id": "api",
+          "label": "FastAPI routes",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Serves public discovery and reporting plus protected staff operations.",
+          "detail": "The same API origin serves /staff/ and /api/. Administrator routes enforce server-side authorization.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 50,
+          "_anchor": {
+            "lineText": "app = FastAPI(title='FoodBridge Navigator', version='1.0.0', lifespan=lifespan)"
+          }
+        },
+        {
+          "id": "discovery",
+          "label": "Search and service rules",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Validates search requests and ranks suitable food-support services.",
+          "detail": "Address search filters for suitability before distance ranking. Public records retain explicit unknowns for hours, diets, access, stock, and delivery.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "id": "moderation",
+          "label": "Review, publish, audit",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Staff workflow for assessing reports and publishing reviewed changes.",
+          "detail": "The server checks record versions and commits approved record updates with audit entries in one transaction.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 377,
+          "_anchor": {
+            "lineText": "@app.post('/api/admin/{collection}/{id_}/decision')"
+          }
+        },
+        {
+          "id": "database",
+          "label": "PostgreSQL",
+          "shape": "cylinder",
+          "color": "#f59e0b",
+          "group": "data",
+          "tooltip": "Shared records, reports, sessions, staff accounts, and audit history.",
+          "detail": "Production uses PostgreSQL. Local Python runs can default to SQLite. Record versions support stale-edit detection.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\db.py",
+          "line": 32,
+          "_anchor": {
+            "lineText": "class Record(Base):"
+          }
+        },
+        {
+          "id": "onemap",
+          "label": "OneMap",
+          "color": "#f59e0b",
+          "group": "external",
+          "tooltip": "Singapore address geocoding and route lookups.",
+          "detail": "The adapter sends geocoding and route requests to OneMap and returns provider results to the API.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\onemap.py",
+          "line": 27,
+          "_anchor": {
+            "lineText": "    async def geocode(self, query):"
+          }
+        },
+        {
+          "id": "google",
+          "label": "Google Routes",
+          "color": "#f59e0b",
+          "group": "external",
+          "tooltip": "Optional route adapter for supported travel modes.",
+          "detail": "If routing is not configured, the API receives an explicit unavailable result; route responses are not persisted.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\google_routes.py",
+          "line": 10,
+          "_anchor": {
+            "lineText": "    async def route(self, origin, destination, mode):"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Maintenance worker",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Scheduled expiry and backup process.",
+          "detail": "Waits for API readiness, expires observations hourly, and attempts a database backup every 20 hours.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\scheduler.py",
+          "line": 27,
+          "_anchor": {
+            "lineText": "def run():"
+          }
+        },
+        {
+          "id": "backups",
+          "label": "Backup files",
+          "shape": "cylinder",
+          "color": "#f59e0b",
+          "group": "data",
+          "tooltip": "Database backup artifacts written to the configured backup directory.",
+          "detail": "The worker writes a SQLite backup or PostgreSQL dump and records backup health for staff operations.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\maintenance.py",
+          "line": 34,
+          "_anchor": {
+            "lineText": "def backup(directory):"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "ui",
+          "to": "state",
+          "label": "user actions and state",
+          "tooltip": "The activity owns the AppViewModel used by the Compose application.",
+          "detail": "Screens render model state and call model actions for discovery, saved listings, and reports.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\MainActivity.kt",
+          "line": 74,
+          "_anchor": {
+            "lineText": "    private val model: AppViewModel by viewModels()"
+          }
+        },
+        {
+          "from": "state",
+          "to": "repository",
+          "label": "load and submit",
+          "tooltip": "The view model loads approved services and providers through the repository.",
+          "detail": "Other calls use the same repository for geocoding, route estimates, and report submission.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\AppViewModel.kt",
+          "line": 112,
+          "_anchor": {
+            "lineText": "                    val servicesRequest = async { repo.all() }"
+          }
+        },
+        {
+          "from": "repository",
+          "to": "api",
+          "label": "public /api/* requests",
+          "tooltip": "Builds HTTP requests to the configured API origin.",
+          "detail": "The repository handles response errors and preserves local snapshots for offline fallback.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 105,
+          "_anchor": {
+            "lineText": "    suspend fun request(path: String, method: String = \"GET\", body: JSONObject? = null): String = withContext(Dispatchers.IO) {"
+          }
+        },
+        {
+          "from": "repository",
+          "to": "localdata",
+          "label": "snapshots and preferences",
+          "tooltip": "Stores bookmarks in Android preferences and service snapshots on device.",
+          "detail": "Saved listings remain device-local and do not imply a new information verification.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 131,
+          "_anchor": {
+            "lineText": "    suspend fun saveBookmarks(ids: Set<String>) { context.store.edit { it[bookmarksKey] = ids } }"
+          }
+        },
+        {
+          "from": "portal",
+          "to": "moderation",
+          "label": "authenticated /api/admin/*",
+          "tooltip": "Sends the administrator token with staff requests.",
+          "detail": "The backend remains responsible for authorization, validation, stale-version checks, and audit recording.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\staff-portal\\portal.js",
+          "line": 19,
+          "_anchor": {
+            "lineText": "  try {response=await fetch('/api/admin/'+path,{method,headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store'});}"
+          }
+        },
+        {
+          "from": "api",
+          "to": "portal",
+          "label": "serves /staff/",
+          "tooltip": "FastAPI serves the staff portal from the same origin as its API.",
+          "detail": "Same-origin serving keeps browser requests on the configured Content Security Policy.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 52,
+          "_anchor": {
+            "lineText": "app.mount('/staff', StaticFiles(directory=portal_dir, html=True), name='staff')"
+          }
+        },
+        {
+          "from": "api",
+          "to": "discovery",
+          "label": "/api/search and public listing rules",
+          "tooltip": "The search endpoint applies validated search and suitability rules.",
+          "detail": "Public listings and address-based matching are separate behaviours with different result limits.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "from": "discovery",
+          "to": "database",
+          "label": "approved service records",
+          "tooltip": "Search reads service records through the shared database session.",
+          "detail": "Only approved records are visible to public discovery.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "from": "moderation",
+          "to": "database",
+          "label": "versioned update and audit transaction",
+          "tooltip": "Publishes reviewed proposals against the expected record version.",
+          "detail": "The approved change and audit entry are committed atomically so an audit failure rolls back the update.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 313,
+          "_anchor": {
+            "lineText": "def publish(db, target, proposal, expected_version):"
+          }
+        },
+        {
+          "from": "api",
+          "to": "onemap",
+          "label": "geocode / route calls",
+          "tooltip": "The geocode endpoint calls the OneMap adapter.",
+          "detail": "The API also uses OneMap for route lookups when configured for that routing path.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 196,
+          "_anchor": {
+            "lineText": "        candidates = await asyncio.wait_for(adapter.geocode(query), timeout=4)"
+          }
+        },
+        {
+          "from": "api",
+          "to": "google",
+          "label": "optional route calculation",
+          "tooltip": "The route endpoint calls the configured Google Routes adapter.",
+          "detail": "External routing results stay in memory and are returned as route guidance.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 220,
+          "_anchor": {
+            "lineText": "        return await asyncio.wait_for(routes_adapter.route(body.model_dump(), destination, body.mode), timeout=4)"
+          }
+        },
+        {
+          "from": "maintenance",
+          "to": "database",
+          "label": "expiry and status records",
+          "tooltip": "Maintenance helpers update expired observations and record backup health.",
+          "detail": "The scheduler waits for readiness before running its recurring maintenance work.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\scheduler.py",
+          "line": 8,
+          "_anchor": {
+            "lineText": "from .db import Record, Session, iso, now"
+          }
+        },
+        {
+          "from": "maintenance",
+          "to": "backups",
+          "label": "scheduled database dumps",
+          "tooltip": "Creates the backup file in the configured backup directory.",
+          "detail": "Backup health and completion time are recorded for staff to inspect.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\maintenance.py",
+          "line": 34,
+          "_anchor": {
+            "lineText": "def backup(directory):"
+          }
+        }
+      ],
+      "_layout": {
+        "v": 2,
+        "nodes": {
+          "ui": {
+            "x": 412.5851126357184,
+            "y": 1036.6538807541945
+          },
+          "state": {
+            "x": 302.58511263571853,
+            "y": 806.653880754195
+          },
+          "repository": {
+            "x": 242.58511263571853,
+            "y": 576.653880754195
+          },
+          "localdata": {
+            "x": 612.0070669429439,
+            "y": 742.8232878451059
+          },
+          "portal": {
+            "x": -270.8386284944859,
+            "y": 947.4964151647276
+          },
+          "api": {
+            "x": -145.03893092245937,
+            "y": 205.46681890072824
+          },
+          "discovery": {
+            "x": -34.88290511771544,
+            "y": 359.4113458068346
+          },
+          "moderation": {
+            "x": 148.7475950515665,
+            "y": 408.19747366263294
+          },
+          "database": {
+            "x": 1007.8753495056834,
+            "y": 109.69661006447853
+          },
+          "onemap": {
+            "x": 1076.25618505522,
+            "y": 226.4868114007476
+          },
+          "google": {
+            "x": 1087.207483756519,
+            "y": 335.6272334786697
+          },
+          "maintenance": {
+            "x": -191.58195040297895,
+            "y": 120.96681890072821
+          },
+          "backups": {
+            "x": 1226.0477281070343,
+            "y": 210.26904316698335
+          }
+        },
+        "edgeLabels": {}
+      }
+    },
+    {
+      "type": "graph",
+      "title": "FoodBridge System Architecture",
+      "layout": "layered",
+      "direction": "LR",
+      "groups": [
+        {
+          "id": "android",
+          "label": "Android public app",
+          "color": "#dceeff"
+        },
+        {
+          "id": "staff",
+          "label": "Staff browser portal",
+          "color": "#f0e7ff"
+        },
+        {
+          "id": "backend",
+          "label": "Shared backend",
+          "color": "#e7f4e8"
+        },
+        {
+          "id": "data",
+          "label": "Data stores",
+          "color": "#fff0d8"
+        },
+        {
+          "id": "external",
+          "label": "External services",
+          "color": "#ffe8cf"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "ui",
+          "label": "Compose screens",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Jetpack Compose screens for finding, saving, and reporting food support.",
+          "detail": "The Android app is public-facing. People can browse services, save listings, and submit correction reports without an account.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\MainActivity.kt",
+          "line": 147,
+          "_anchor": {
+            "lineText": "@Composable fun FoodBridge(model: AppViewModel) {"
+          }
+        },
+        {
+          "id": "state",
+          "label": "AppViewModel",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Coordinates screen state, discovery, routes, bookmarks, and report submission.",
+          "detail": "Address search applies suitability rules before ranking. Empty Find support browsing follows a separate path without the nearest-ten cap.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\AppViewModel.kt",
+          "line": 41,
+          "_anchor": {
+            "lineText": "class AppViewModel(application: Application) : AndroidViewModel(application) {"
+          }
+        },
+        {
+          "id": "repository",
+          "label": "Repository",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Makes API calls and stores approved snapshots and device preferences.",
+          "detail": "The repository loads services and providers through the API, falls back to approved snapshots offline, and keeps bookmarks and diet preferences locally.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 88,
+          "_anchor": {
+            "lineText": "class Repository(private val context: Context) {"
+          }
+        },
+        {
+          "id": "localdata",
+          "label": "Device cache and saves",
+          "shape": "cylinder",
+          "color": "#3b82f6",
+          "group": "android",
+          "tooltip": "Local approved-data snapshots and bookmark preferences.",
+          "detail": "This device data supports offline viewing and private saves. It does not update provider verification.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 117,
+          "_anchor": {
+            "lineText": "    suspend fun all(): Pair<List<Service>, Boolean> {"
+          }
+        },
+        {
+          "id": "portal",
+          "label": "Staff portal",
+          "color": "#8b5cf6",
+          "group": "staff",
+          "tooltip": "Same-origin browser application for staff review and publishing.",
+          "detail": "Staff sign in with a User ID. The portal keeps drafts available across recoverable request errors and calls protected admin endpoints.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\staff-portal\\portal.js",
+          "line": 18,
+          "_anchor": {
+            "lineText": "  let response;"
+          }
+        },
+        {
+          "id": "api",
+          "label": "FastAPI routes",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Serves public discovery and reporting plus protected staff operations.",
+          "detail": "The same API origin serves /staff/ and /api/. Administrator routes enforce server-side authorization.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 50,
+          "_anchor": {
+            "lineText": "app = FastAPI(title='FoodBridge Navigator', version='1.0.0', lifespan=lifespan)"
+          }
+        },
+        {
+          "id": "discovery",
+          "label": "Search and service rules",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Validates search requests and ranks suitable food-support services.",
+          "detail": "Address search filters for suitability before distance ranking. Public records retain explicit unknowns for hours, diets, access, stock, and delivery.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "id": "moderation",
+          "label": "Review, publish, audit",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Staff workflow for assessing reports and publishing reviewed changes.",
+          "detail": "The server checks record versions and commits approved record updates with audit entries in one transaction.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 377,
+          "_anchor": {
+            "lineText": "@app.post('/api/admin/{collection}/{id_}/decision')"
+          }
+        },
+        {
+          "id": "database",
+          "label": "PostgreSQL",
+          "shape": "cylinder",
+          "color": "#f59e0b",
+          "group": "data",
+          "tooltip": "Shared records, reports, sessions, staff accounts, and audit history.",
+          "detail": "Production uses PostgreSQL. Local Python runs can default to SQLite. Record versions support stale-edit detection.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\db.py",
+          "line": 32,
+          "_anchor": {
+            "lineText": "class Record(Base):"
+          }
+        },
+        {
+          "id": "onemap",
+          "label": "OneMap",
+          "color": "#f59e0b",
+          "group": "external",
+          "tooltip": "Singapore address geocoding and route lookups.",
+          "detail": "The adapter sends geocoding and route requests to OneMap and returns provider results to the API.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\onemap.py",
+          "line": 27,
+          "_anchor": {
+            "lineText": "    async def geocode(self, query):"
+          }
+        },
+        {
+          "id": "google",
+          "label": "Google Routes",
+          "color": "#f59e0b",
+          "group": "external",
+          "tooltip": "Optional route adapter for supported travel modes.",
+          "detail": "If routing is not configured, the API receives an explicit unavailable result; route responses are not persisted.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\google_routes.py",
+          "line": 10,
+          "_anchor": {
+            "lineText": "    async def route(self, origin, destination, mode):"
+          }
+        },
+        {
+          "id": "maintenance",
+          "label": "Maintenance worker",
+          "color": "#16a34a",
+          "group": "backend",
+          "tooltip": "Scheduled expiry and backup process.",
+          "detail": "Waits for API readiness, expires observations hourly, and attempts a database backup every 20 hours.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\scheduler.py",
+          "line": 27,
+          "_anchor": {
+            "lineText": "def run():"
+          }
+        },
+        {
+          "id": "backups",
+          "label": "Backup files",
+          "shape": "cylinder",
+          "color": "#f59e0b",
+          "group": "data",
+          "tooltip": "Database backup artifacts written to the configured backup directory.",
+          "detail": "The worker writes a SQLite backup or PostgreSQL dump and records backup health for staff operations.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\maintenance.py",
+          "line": 34,
+          "_anchor": {
+            "lineText": "def backup(directory):"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "ui",
+          "to": "state",
+          "label": "user actions and state",
+          "tooltip": "The activity owns the AppViewModel used by the Compose application.",
+          "detail": "Screens render model state and call model actions for discovery, saved listings, and reports.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\MainActivity.kt",
+          "line": 74,
+          "_anchor": {
+            "lineText": "    private val model: AppViewModel by viewModels()"
+          }
+        },
+        {
+          "from": "state",
+          "to": "repository",
+          "label": "load and submit",
+          "tooltip": "The view model loads approved services and providers through the repository.",
+          "detail": "Other calls use the same repository for geocoding, route estimates, and report submission.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\AppViewModel.kt",
+          "line": 112,
+          "_anchor": {
+            "lineText": "                    val servicesRequest = async { repo.all() }"
+          }
+        },
+        {
+          "from": "repository",
+          "to": "api",
+          "label": "public /api/* requests",
+          "tooltip": "Builds HTTP requests to the configured API origin.",
+          "detail": "The repository handles response errors and preserves local snapshots for offline fallback.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 105,
+          "_anchor": {
+            "lineText": "    suspend fun request(path: String, method: String = \"GET\", body: JSONObject? = null): String = withContext(Dispatchers.IO) {"
+          }
+        },
+        {
+          "from": "repository",
+          "to": "localdata",
+          "label": "snapshots and preferences",
+          "tooltip": "Stores bookmarks in Android preferences and service snapshots on device.",
+          "detail": "Saved listings remain device-local and do not imply a new information verification.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\android\\app\\src\\main\\java\\sg\\foodbridge\\navigator\\Repository.kt",
+          "line": 131,
+          "_anchor": {
+            "lineText": "    suspend fun saveBookmarks(ids: Set<String>) { context.store.edit { it[bookmarksKey] = ids } }"
+          }
+        },
+        {
+          "from": "portal",
+          "to": "moderation",
+          "label": "authenticated /api/admin/*",
+          "tooltip": "Sends the administrator token with staff requests.",
+          "detail": "The backend remains responsible for authorization, validation, stale-version checks, and audit recording.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\staff-portal\\portal.js",
+          "line": 19,
+          "_anchor": {
+            "lineText": "  try {response=await fetch('/api/admin/'+path,{method,headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store'});}"
+          }
+        },
+        {
+          "from": "api",
+          "to": "portal",
+          "label": "serves /staff/",
+          "tooltip": "FastAPI serves the staff portal from the same origin as its API.",
+          "detail": "Same-origin serving keeps browser requests on the configured Content Security Policy.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 52,
+          "_anchor": {
+            "lineText": "app.mount('/staff', StaticFiles(directory=portal_dir, html=True), name='staff')"
+          }
+        },
+        {
+          "from": "api",
+          "to": "discovery",
+          "label": "/api/search and public listing rules",
+          "tooltip": "The search endpoint applies validated search and suitability rules.",
+          "detail": "Public listings and address-based matching are separate behaviours with different result limits.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "from": "discovery",
+          "to": "database",
+          "label": "approved service records",
+          "tooltip": "Search reads service records through the shared database session.",
+          "detail": "Only approved records are visible to public discovery.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 149,
+          "_anchor": {
+            "lineText": "def search(criteria: Search):"
+          }
+        },
+        {
+          "from": "moderation",
+          "to": "database",
+          "label": "versioned update and audit transaction",
+          "tooltip": "Publishes reviewed proposals against the expected record version.",
+          "detail": "The approved change and audit entry are committed atomically so an audit failure rolls back the update.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 313,
+          "_anchor": {
+            "lineText": "def publish(db, target, proposal, expected_version):"
+          }
+        },
+        {
+          "from": "api",
+          "to": "onemap",
+          "label": "geocode / route calls",
+          "tooltip": "The geocode endpoint calls the OneMap adapter.",
+          "detail": "The API also uses OneMap for route lookups when configured for that routing path.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 196,
+          "_anchor": {
+            "lineText": "        candidates = await asyncio.wait_for(adapter.geocode(query), timeout=4)"
+          }
+        },
+        {
+          "from": "api",
+          "to": "google",
+          "label": "optional route calculation",
+          "tooltip": "The route endpoint calls the configured Google Routes adapter.",
+          "detail": "External routing results stay in memory and are returned as route guidance.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\main.py",
+          "line": 220,
+          "_anchor": {
+            "lineText": "        return await asyncio.wait_for(routes_adapter.route(body.model_dump(), destination, body.mode), timeout=4)"
+          }
+        },
+        {
+          "from": "maintenance",
+          "to": "database",
+          "label": "expiry and status records",
+          "tooltip": "Maintenance helpers update expired observations and record backup health.",
+          "detail": "The scheduler waits for readiness before running its recurring maintenance work.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\scheduler.py",
+          "line": 8,
+          "_anchor": {
+            "lineText": "from .db import Record, Session, iso, now"
+          }
+        },
+        {
+          "from": "maintenance",
+          "to": "backups",
+          "label": "scheduled database dumps",
+          "tooltip": "Creates the backup file in the configured backup directory.",
+          "detail": "Backup health and completion time are recorded for staff to inspect.",
+          "file": "C:\\Users\\Mingchen\\foodapp\\backend\\app\\maintenance.py",
+          "line": 34,
+          "_anchor": {
+            "lineText": "def backup(directory):"
+          }
+        }
+      ],
+      "_layout": {
+        "v": 2,
+        "nodes": {
+          "ui": {
+            "x": 586.6561433324125,
+            "y": 1011.7749388400821
+          },
+          "state": {
+            "x": 476.6561433324126,
+            "y": 781.7749388400824
+          },
+          "repository": {
+            "x": 416.6561433324127,
+            "y": 551.7749388400824
+          },
+          "localdata": {
+            "x": 707.7616777393666,
+            "y": 610.7110940675452
+          },
+          "portal": {
+            "x": -253.25408473304063,
+            "y": 766.7010252329985
+          },
+          "api": {
+            "x": -109.67735865001825,
+            "y": 286.53815399983876
+          },
+          "discovery": {
+            "x": 0.47866715472568444,
+            "y": 440.48268090594496
+          },
+          "moderation": {
+            "x": 184.10916732400764,
+            "y": 489.2688087617434
+          },
+          "database": {
+            "x": 628.9114689082782,
+            "y": 338.621729772299
+          },
+          "onemap": {
+            "x": -580.144407105209,
+            "y": 352.6558278894
+          },
+          "google": {
+            "x": -569.1931084039098,
+            "y": 461.7962499673224
+          },
+          "maintenance": {
+            "x": -156.2203781305378,
+            "y": 202.03815399983876
+          },
+          "backups": {
+            "x": 731.7061689305107,
+            "y": 242.66699661020107
+          }
+        },
+        "edgeLabels": {}
+      }
+    }
+  ]
+}

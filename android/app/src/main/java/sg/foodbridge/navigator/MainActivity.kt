@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.CancellationSignal
 import android.os.Handler
 import android.os.Looper
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
     private val model: AppViewModel by viewModels()
     private var locationRequest: CancellationSignal? = null
     fun requestCurrentLocation() {
+        if (model.state.value.account == null) return
         locationRequest?.cancel()
         val signal = CancellationSignal()
         locationRequest = signal
@@ -117,6 +119,11 @@ class MainActivity : ComponentActivity() {
         // A session ends when the app leaves the foreground; no location enters saved state.
         model.clearLocation()
     }
+    override fun onResume() { super.onResume(); model.checkSession() }
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_UP) model.touchSession()
+        return super.dispatchTouchEvent(event)
+    }
 }
 
 @Composable fun FoodBridgeTheme(content: @Composable () -> Unit) {
@@ -146,6 +153,11 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun FoodBridge(model: AppViewModel) {
     val s by model.state.collectAsStateWithLifecycle()
+    if (s.authChecking) {
+        Box(Modifier.fillMaxSize().background(Canvas), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Teal) }
+        return
+    }
+    if (s.account == null) { AccountEntryScreen(s, model); return }
     var showDemoInfo by remember { mutableStateOf(false) }
     BackHandler((s.page != "home" && s.page != "results") || (s.tab == "Map" && s.routeDestination != null)) { model.back() }
     Scaffold(containerColor = Canvas, topBar = {
@@ -158,8 +170,8 @@ class MainActivity : ComponentActivity() {
         }
     }, bottomBar = {
         NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
-            listOf("Find" to Icons.Outlined.Search, "Map" to Icons.Outlined.Map, "Saved" to Icons.Outlined.BookmarkBorder, "Preferences" to Icons.Outlined.Tune).forEach { (name, icon) ->
-                NavigationBarItem(selected = s.tab == name, onClick = { model.tab(name) }, icon = { Icon(icon, null, Modifier.size(23.dp)) }, label = { Text(if (name == "Preferences") "Settings" else name, fontSize = 11.sp) },
+            listOf("Find" to Icons.Outlined.Search, "Map" to Icons.Outlined.Map, "Saved" to Icons.Outlined.BookmarkBorder, "Preferences" to Icons.Outlined.PersonOutline).forEach { (name, icon) ->
+                NavigationBarItem(selected = s.tab == name, onClick = { model.tab(name) }, icon = { Icon(icon, null, Modifier.size(23.dp)) }, label = { Text(if (name == "Preferences") "Profile" else name, fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = Mint, selectedIconColor = Teal, selectedTextColor = Teal))
             }
         }
@@ -179,6 +191,7 @@ class MainActivity : ComponentActivity() {
                 "privacy" -> PrivacyScreen()
                 "providers" -> ProvidersScreen(s, model)
                 "providerDetail" -> s.selectedProvider?.let { ProviderDetailScreen(it, model) }
+                "password" -> ChangePasswordScreen(s, model)
                 else -> when (s.tab) {
                     "Map" -> MapScreen(s, model)
                     "Saved" -> SavedScreen(s, model)
@@ -431,13 +444,19 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
 @Composable fun SavedScreen(s: UiState, model: AppViewModel) { Page {
     Text("Saved", style = MaterialTheme.typography.headlineMedium); Text("Your bookmarked services, kept on this device.", color = Muted)
     val services = s.services.filter { it.id in s.saved }
-    if (services.isEmpty()) Empty("No saved services yet", "Tap a service’s bookmark to keep it here.", Icons.Outlined.BookmarkBorder) { Primary("Find food support", Icons.Outlined.Search) { model.tab("Find") } }
+    if (s.saved.isEmpty()) Empty("No saved services", "Tap a service’s bookmark to keep it here.", Icons.Outlined.BookmarkBorder) { Primary("Find food support", Icons.Outlined.Search) { model.tab("Find") } }
     services.forEach { ServiceCard(it, s, model) }
-    if ((s.saved - s.services.map { it.id }.toSet()).isNotEmpty()) Text("Some saved services are no longer listed. They may be awaiting review.", color = Muted)
+    (s.saved - s.services.map { it.id }.toSet()).forEach { id ->
+        Panel { Text("Service no longer listed", fontWeight = FontWeight.Bold)
+            Text("This saved service is no longer in the latest approved information available to this device.", color = Muted)
+            OutlinedButton(onClick = { model.removeOrSave(id) }) { Text("Remove bookmark") }
+        }
+    }
 } }
 
 @Composable fun PreferencesScreen(s: UiState, model: AppViewModel) { Page {
-    Text("Settings", style = MaterialTheme.typography.headlineMedium)
+    Text("Your profile", style = MaterialTheme.typography.headlineMedium)
+    ProfilePanel(s, model)
     Column { Text("Dietary preferences", style = MaterialTheme.typography.titleLarge); Text("Used for your searches. Change them at any time.", color = Muted)
         listOf("Halal", "Vegetarian", "Vegan", "Gluten-free", "Nut-free").forEach { diet -> Toggle(diet, diet in s.diets) { model.toggleDiet(diet) } }
     }
@@ -450,10 +469,12 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
 } }
 
 @Composable fun ReportScreen(s: UiState, model: AppViewModel) {
-    var category by remember { mutableStateOf("") }
+    var category by remember(s.reportCategory) { mutableStateOf(s.reportCategory) }
     var categoryMenu by remember { mutableStateOf(false) }
-    var description by remember { mutableStateOf("") }
-    var evidence by remember { mutableStateOf("") }
+    var description by remember(s.reportDescription) { mutableStateOf(s.reportDescription) }
+    var evidence by remember(s.reportEvidence) { mutableStateOf(s.reportEvidence) }
+    SideEffect { if (s.reportCategory != category || s.reportDescription != description || s.reportEvidence != evidence)
+        model.update { it.copy(reportCategory = category, reportDescription = description, reportEvidence = evidence) } }
     Page {
         Text("Report incorrect information", style = MaterialTheme.typography.headlineMedium); Text("For ${s.selected?.name ?: s.selectedProvider?.optString("name").orEmpty()}", color = Teal)
         Panel {
@@ -494,5 +515,5 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
 } }
 @Composable fun PrivacyScreen() { Page {
     Text("Privacy & data use", style = MaterialTheme.typography.headlineMedium)
-    Panel { Text("You can browse, save and report without an account."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground. It is not saved in bookmarks or app backups."); Text("OneMap receives address searches. Google Maps receives map requests and the start/destination coordinates for walking, public transport and driving routes. Route origins and results are held only for the current session."); Text("Saved IDs, dietary preferences and approved service snapshots are kept locally. Clear them from Settings."); Text("Submitted correction text and evidence links are stored for staff review. Avoid sending personal details."); Text("Short-lived request metadata supports abuse prevention. A production operator must publish its contact and retention policy before release.", color = Muted) }
+    Panel { Text("An active account and valid session are required to find support, view details, plan routes, save services and report errors."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground, the search is replaced, or you sign out. It is not saved in profiles, bookmarks or app backups."); Text("OneMap receives address and route requests. Google Maps receives map requests. Route origins and results are held only for the current session."); Text("Saved service IDs and dietary preferences stay on this device and are separated by account. Signing out hides them. Session credentials are encrypted using Android Keystore."); Text("Your account identifier is stored with correction reports for staff review. Avoid sending sensitive personal details."); Text("A production operator must publish its contact and retention policy before release.", color = Muted) }
 } }

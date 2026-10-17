@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +38,11 @@ data class UiState(
     val hasSearched: Boolean = false, val originLatitude: Double? = null, val originLongitude: Double? = null,
     val providers: List<JSONObject> = emptyList(), val providerOffline: Boolean = false,
     val providerLoading: Boolean = false, val providerError: String? = null, val selectedProvider: JSONObject? = null,
-    val totalMatches: Int = 0, val informationReturnPage: String = "home"
+    val totalMatches: Int = 0, val informationReturnPage: String = "home",
+    val account: JSONObject? = null, val authChecking: Boolean = true, val authBusy: Boolean = false,
+    val authPage: String = "signin", val authError: String? = null, val authMessage: String? = null,
+    val reportCategory: String = "", val reportDescription: String = "", val reportEvidence: String = "",
+    val profileNameDraft: String? = null
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -46,10 +53,136 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var etaJob: Job? = null
     private var searchJob: Job? = null
     private var routeJob: Job? = null
+    private var userScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]))
+    private var interrupted: UiState? = null
+    private var interruptedAccount: String? = null
+    private var lastServerActivity = 0L
     init {
-        refresh()
-        loadProviders()
-        viewModelScope.launch { while (true) { delay(30_000); update { it.copy(clock = System.currentTimeMillis()) } } }
+        repo.onSessionExpired = { viewModelScope.launch { if (!repo.sessionValid()) endSession(expired = true) } }
+        viewModelScope.launch {
+            repo.retryRevocations()
+            if (repo.sessionValid()) {
+                val stored = repo.sessionStore.read().optJSONObject("account")
+                repo.accountId = stored?.optString("id")
+                try {
+                    val account = JSONObject(repo.request("/api/auth/me"))
+                    signedIn(account)
+                } catch (_: SessionExpired) { endSession(expired = true) }
+                catch (_: Exception) { if (repo.sessionValid() && stored != null) signedIn(stored) else endSession(expired = true) }
+            } else {
+                val hadSession = repo.sessionStore.read().has("token")
+                endSession(expired = hadSession)
+            }
+        }
+        viewModelScope.launch { while (true) {
+            delay(5_000)
+            if (state.value.account != null && !repo.sessionValid()) endSession(expired = true)
+            update { it.copy(clock = System.currentTimeMillis()) }
+        } }
+    }
+    fun authPage(page: String) { update { it.copy(authPage = page, authError = null, authMessage = null) } }
+    fun authError(message: String?) { update { it.copy(authError = message, authBusy = false) } }
+    fun touchSession() {
+        if (state.value.account == null) return
+        if (!repo.sessionValid()) { endSession(expired = true); return }
+        val data = repo.sessionStore.read()
+        // Avoid a disk write for every tap while preserving the inactivity deadline.
+        if (System.currentTimeMillis() - data.optLong("last_activity") > 1_000) {
+            repo.sessionStore.update { it.put("last_activity", System.currentTimeMillis()) }
+        }
+        if (System.currentTimeMillis() - lastServerActivity > 60_000) {
+            lastServerActivity = System.currentTimeMillis()
+            userScope.launch { try { repo.request("/api/auth/me") } catch (_: Exception) { } }
+        }
+    }
+    fun checkSession() {
+        if (state.value.account == null) return
+        if (!repo.sessionValid()) { endSession(expired = true); return }
+        viewModelScope.launch {
+            repo.retryRevocations()
+            try { repo.request("/api/auth/me") } catch (_: SessionExpired) { endSession(expired = true) } catch (_: Exception) { }
+        }
+    }
+    private fun signedIn(account: JSONObject) {
+        repo.accountId = account.getString("id")
+        repo.sessionStore.update { it.put("account", account) }
+        val resume = interrupted?.takeIf { interruptedAccount == account.getString("id") }
+        mutable.value = (resume ?: UiState()).copy(account = account, authChecking = false, authBusy = false,
+            authMessage = null, authError = null, loading = false, routeLoading = false,
+            notice = if (resume != null) "Signed in again. Review your input before submitting." else null)
+        interrupted = null; interruptedAccount = null
+        refresh(); loadProviders()
+    }
+    private fun endSession(expired: Boolean = false, message: String? = null) {
+        val current = state.value
+        if (expired && current.account != null) {
+            clearLocation()
+            interrupted = state.value.copy(page = if (current.page == "results") "home" else current.page)
+            interruptedAccount = current.account.optString("id")
+        } else if (!expired) { interrupted = null; interruptedAccount = null }
+        userScope.cancel()
+        userScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]))
+        coordinates = null; etaJob?.cancel(); searchJob?.cancel(); routeJob?.cancel()
+        repo.accountId = null
+        repo.sessionStore.endSession()
+        mutable.value = UiState(authChecking = false, authMessage = message,
+            authError = if (expired) "Your session has expired. Sign in again." else null)
+    }
+    fun authenticate(email: String, password: String) = authAction {
+        val response = JSONObject(repo.request("/api/auth/login", "POST", JSONObject().put("email", email).put("password", password)))
+        acceptSession(response)
+    }
+    private fun acceptSession(response: JSONObject) {
+        repo.sessionStore.update { data -> data.put("token", response.getString("token"))
+            .put("account", response.getJSONObject("account")).put("expires_at", response.getString("expires_at"))
+            .put("last_activity", System.currentTimeMillis()) }
+        signedIn(response.getJSONObject("account"))
+    }
+    private fun authAction(action: suspend () -> Unit) {
+        if (state.value.authBusy) return
+        update { it.copy(authBusy = true, authError = null, authMessage = null) }
+        viewModelScope.launch {
+            try { action() } catch (e: Exception) { authError(e.message ?: "Could not complete this request. Please retry.") }
+            finally { update { it.copy(authBusy = false) } }
+        }
+    }
+    fun register(name: String, email: String, password: String, confirmation: String) = authAction {
+        val response = JSONObject(repo.request("/api/auth/register", "POST", JSONObject().put("display_name", name)
+            .put("email", email).put("password", password).put("confirmation", confirmation)))
+        update { it.copy(authPage = "signin", authMessage = response.getString("message")) }
+    }
+    fun requestEmail(email: String, verification: Boolean) = authAction {
+        val response = JSONObject(repo.request("/api/auth/" + if (verification) "resend-verification" else "forgot-password",
+            "POST", JSONObject().put("email", email)))
+        update { it.copy(authMessage = response.getString("message")) }
+    }
+    fun googleSignIn(context: android.content.Context) = authAction {
+        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) throw IllegalStateException("Google sign-in is not configured yet. Use email and password.")
+        val challenge = JSONObject(repo.request("/api/auth/google/challenge", "POST"))
+        val nonce = challenge.getString("nonce")
+        val option = com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).setNonce(nonce).build()
+        val manager = androidx.credentials.CredentialManager.create(context)
+        val credential = try {
+            manager.getCredential(context, androidx.credentials.GetCredentialRequest.Builder().addCredentialOption(option).build()).credential
+        } catch (_: androidx.credentials.exceptions.GetCredentialCancellationException) { return@authAction }
+        catch (_: androidx.credentials.exceptions.GetCredentialException) { throw IllegalStateException("Google sign-in could not start. Try again or use email and password.") }
+        val google = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credential.data)
+        acceptSession(JSONObject(repo.request("/api/auth/google", "POST", JSONObject().put("id_token", google.idToken).put("nonce", nonce))))
+    }
+    fun signOut() {
+        repo.sessionStore.endSession(queueRevocation = true)
+        endSession(message = "You have signed out.")
+        viewModelScope.launch { repo.retryRevocations() }
+    }
+    fun updateName(name: String) = authAction {
+        val account = JSONObject(repo.request("/api/auth/me", "PATCH", JSONObject().put("display_name", name)))
+        repo.sessionStore.update { it.put("account", account) }
+        update { it.copy(account = account, profileNameDraft = null, authMessage = "Display name updated.") }
+    }
+    fun changePassword(current: String, password: String, confirmation: String) = authAction {
+        repo.request("/api/auth/change-password", "POST", JSONObject().put("current_password", current)
+            .put("password", password).put("confirmation", confirmation))
+        endSession(message = "Password changed. Sign in with your new password.")
     }
     fun update(transform: (UiState) -> UiState) {
         val old = mutable.value
@@ -59,7 +192,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutable.value = if (changed) next.copy(results = emptyList(), totalMatches = 0, hasSearched = false, eta = emptyMap()) else next
     }
     fun error(message: String?) = update { it.copy(error = message, loading = false) }
-    fun loadProviders() { viewModelScope.launch {
+    fun loadProviders() { userScope.launch {
         update { it.copy(providerLoading = true, providerError = null) }
         try {
             val (providers, offline) = repo.providers()
@@ -68,7 +201,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     } }
     fun browseProviders() { update { it.copy(page = "providers", selectedProvider = null) }; loadProviders() }
     fun providerDetail(provider: JSONObject) { update { it.copy(informationReturnPage = it.page, page = "providerDetail", selectedProvider = provider, selected = null) } }
-    fun refresh() { viewModelScope.launch {
+    fun refresh() { userScope.launch {
         try {
             val (services, offline) = repo.all()
             val saved = repo.bookmarks()
@@ -85,9 +218,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (state.value.page in listOf("report", "confirmation")) { returnToInformation(); return }
         update { it.copy(page = if (it.page in listOf("detail", "providerDetail") && it.informationReturnPage in listOf("allSupport", "nameResults", "providers")) it.informationReturnPage else if (it.page == "providerDetail") "providers" else if (it.results.isNotEmpty() && it.tab == "Find") "results" else "home", selected = null, selectedProvider = null, reference = null, route = if (it.tab == "Map" && it.routeDestination != null) it.route else null, error = null) }
     }
-    fun openReport() { update { it.copy(page = "report", reference = null, error = null) } }
+    fun openReport() { update { it.copy(page = "report", reference = null, error = null, reportCategory = "", reportDescription = "", reportEvidence = "") } }
     fun returnToInformation() { update { it.copy(page = if (it.selectedProvider != null) "providerDetail" else "detail", reference = null, error = null) } }
-    fun origin(text: String) { searchJob?.cancel(); routeJob?.cancel(); coordinates = null; update { it.copy(origin = text, originLatitude = null, originLongitude = null, candidates = emptyList(), loading = false, error = null, locationLoading = false, locationError = null, route = null, routeLoading = false) } }
+    fun origin(text: String) { searchJob?.cancel(); routeJob?.cancel(); coordinates = null; update { it.copy(origin = text, originLatitude = null, originLongitude = null, deviceLatitude = null, deviceLongitude = null, startingAddress = null, startingLatitude = null, startingLongitude = null, candidates = emptyList(), loading = false, error = null, locationLoading = false, locationError = null, route = null, routeLoading = false) } }
     fun openOrganisation(match: OrganisationMatch) {
         searchJob?.cancel()
         update { it.copy(loading = false, candidates = emptyList(), error = null) }
@@ -105,8 +238,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         coordinates = null
         update { it.copy(page = "allSupport", loading = true, error = null, selected = null, selectedProvider = null,
             candidates = emptyList(), route = null, eta = emptyMap(), results = emptyList(), hasSearched = false,
-            totalMatches = 0, originLatitude = null, originLongitude = null) }
-        searchJob = viewModelScope.launch {
+            totalMatches = 0, originLatitude = null, originLongitude = null, deviceLatitude = null, deviceLongitude = null,
+            startingAddress = null, startingLatitude = null, startingLongitude = null, routeDestination = null) }
+        searchJob = userScope.launch {
             try {
                 val fetched = coroutineScope {
                     val servicesRequest = async { repo.all() }
@@ -132,13 +266,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         searchJob?.cancel(); routeJob?.cancel()
         coordinates = lat to lon
         update { it.copy(origin = "Your location", originLatitude = lat, originLongitude = lon,
-            deviceLatitude = lat, deviceLongitude = lon, locationLoading = false, locationError = null, error = null) }
+            deviceLatitude = lat, deviceLongitude = lon, startingAddress = null, startingLatitude = null, startingLongitude = null, locationLoading = false, locationError = null, error = null) }
         if (state.value.tab == "Map") search()
     }
     fun searchMapArea(lat: Double, lon: Double) {
         if (lat !in 1.13..1.48 || lon !in 103.59..104.1) { error("Move the map to Singapore to search this area."); return }
         coordinates = lat to lon
-        update { it.copy(origin = "Selected map area", originLatitude = lat, originLongitude = lon, hasSearched = false, results = emptyList()) }
+        update { it.copy(origin = "Selected map area", originLatitude = lat, originLongitude = lon, deviceLatitude = null,
+            deviceLongitude = null, startingAddress = null, startingLatitude = null, startingLongitude = null, hasSearched = false, results = emptyList()) }
         search()
     }
     fun clearLocation() {
@@ -149,19 +284,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         update { it.copy(origin = "", originLatitude = null, originLongitude = null, deviceLatitude = null, deviceLongitude = null, startingAddress = null, startingLatitude = null, startingLongitude = null, locationLoading = false, locationError = null, hasSearched = false, results = emptyList(), totalMatches = 0, route = null, routeDestination = null, routeLoading = false, candidates = emptyList(), eta = emptyMap(), loading = false) }
     }
     fun toggleDiet(diet: String) {
+        val account = state.value.account?.optString("id") ?: return
         val diets = state.value.diets.let { if (diet in it) it - diet else it + diet }
         update { it.copy(diets = diets) }
-        viewModelScope.launch { repo.saveDiets(diets) }
+        userScope.launch { repo.saveDiets(diets, account) }
     }
     fun save(service: Service) {
-        val ids = state.value.saved.let { if (service.id in it) it - service.id else it + service.id }
-        update { it.copy(saved = ids) }
-        viewModelScope.launch { repo.saveBookmarks(ids) }
+        removeOrSave(service.id)
     }
-    fun clearLocal() { viewModelScope.launch { repo.clearLocal(); clearLocation(); update { it.copy(saved = emptySet(), diets = emptySet(), notice = "Local saves and preferences cleared") } } }
+    fun removeOrSave(serviceId: String) {
+        val account = state.value.account?.optString("id") ?: return
+        val ids = state.value.saved.let { if (serviceId in it) it - serviceId else it + serviceId }
+        update { it.copy(saved = ids) }
+        userScope.launch { repo.saveBookmarks(ids, account) }
+    }
+    fun clearLocal() { userScope.launch { repo.clearLocal(); clearLocation(); update { it.copy(saved = emptySet(), diets = emptySet(), notice = "Local saves and preferences cleared") } } }
     fun searchAddress() {
         searchJob?.cancel()
-        searchJob = viewModelScope.launch {
+        searchJob = userScope.launch {
         update { it.copy(loading = true, error = null, eta = emptyMap()) }
         try {
             if (coordinates == null) {
@@ -195,12 +335,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     } }
     fun chooseOrigin(candidate: JSONObject, submit: Boolean = true) {
         coordinates = candidate.getDouble("latitude") to candidate.getDouble("longitude")
-        update { it.copy(origin = candidate.getString("address"), originLatitude = coordinates?.first, originLongitude = coordinates?.second, startingAddress = candidate.getString("address"), startingLatitude = coordinates?.first, startingLongitude = coordinates?.second, locationLoading = false, candidates = emptyList(), error = null) }
+        update { it.copy(origin = candidate.getString("address"), originLatitude = coordinates?.first, originLongitude = coordinates?.second, startingAddress = candidate.getString("address"), startingLatitude = coordinates?.first, startingLongitude = coordinates?.second, deviceLatitude = null, deviceLongitude = null, locationLoading = false, candidates = emptyList(), error = null) }
         if (submit) { if (state.value.routeDestination != null && state.value.tab == "Map") route(state.value.routeMode) else searchAddress() }
     }
     private fun estimate(services: List<Service>) {
         etaJob?.cancel()
-        etaJob = viewModelScope.launch {
+        etaJob = userScope.launch {
             val semaphore = Semaphore(3)
             services.map { service -> async {
                 semaphore.withPermit {
@@ -215,7 +355,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val keepRoute = state.value.routeDestination?.id == service.id
         if (!keepRoute) routeJob?.cancel()
         update { it.copy(informationReturnPage = it.page, selected = service, selectedProvider = null, page = "detail", route = if (keepRoute) it.route else null, routeDestination = if (keepRoute) it.routeDestination else null, routeLoading = keepRoute && it.routeLoading, error = null) }
-        viewModelScope.launch {
+        userScope.launch {
             runCatching { Service(JSONObject(repo.request("/api/services/${service.id}"))) }.onSuccess { fresh ->
                 if (!service.distance.isNaN()) fresh.json.put("distance_km", service.distance)
                 fresh.json.put("explanations", service.json.optJSONArray("explanations") ?: JSONArray())
@@ -234,7 +374,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val destination = state.value.routeDestination ?: return
         val mode = state.value.routeMode
         if (coordinates != null) { route(mode); return }
-        routeJob = viewModelScope.launch {
+        routeJob = userScope.launch {
             update { it.copy(routeLoading = true, route = null, error = null) }
             try {
                 val query = state.value.origin.trim()
@@ -265,7 +405,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             route = null, routeLoading = coordinates != null, loading = false, error = null, candidates = emptyList()) }
         if (coordinates == null) return
         val requestOrigin = coordinates
-        routeJob = viewModelScope.launch {
+        routeJob = userScope.launch {
             try {
                 val route = getRoute(service, mode)
                 if (coordinates == requestOrigin && state.value.routeDestination?.id == service.id && state.value.routeMode == mode)
@@ -274,7 +414,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             catch (_: Exception) { update { it.copy(routeLoading = false, route = JSONObject().put("available", false).put("message", "Route unavailable. Check your connection and try again.")) } }
         }
     }
-    fun report(category: String, description: String, evidence: String) { viewModelScope.launch {
+    fun report(category: String, description: String, evidence: String) { userScope.launch {
         update { it.copy(loading = true, error = null) }
         try {
             val snapshot = state.value

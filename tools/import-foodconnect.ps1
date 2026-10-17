@@ -5,8 +5,9 @@ $passwordPath = Join-Path $PSScriptRoot '../backend/data/local-staff-password.tx
 if (!(Test-Path -LiteralPath $seedPath)) { throw 'FoodConnect reviewed provider seed is not prepared yet.' }
 if (!(Test-Path -LiteralPath $passwordPath)) { throw 'Start the local stack first.' }
 $seed = Get-Content -LiteralPath $seedPath -Raw -Encoding UTF8 | ConvertFrom-Json
-$staffId = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../backend/data/local-staff-user-id.txt') -Raw).Trim()
-$loginBody = @{username=$staffId; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
+$emailPath = Join-Path $PSScriptRoot '../backend/data/local-staff-email.txt'
+$staffEmail = if ($env:ADMIN_EMAIL) { $env:ADMIN_EMAIL } elseif (Test-Path -LiteralPath $emailPath) { (Get-Content -LiteralPath $emailPath -Raw).Trim() } else { throw 'Configure ADMIN_EMAIL or local-staff-email.txt. See docs/setup/ACCOUNTS.md.' }
+$loginBody = @{email=$staffEmail; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
 $login = Invoke-RestMethod "$ApiUrl/api/admin/login" -Method Post -ContentType 'application/json' -Body $loginBody
 $headers = @{Authorization="Bearer $($login.token)"}
 try {

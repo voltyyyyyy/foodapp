@@ -15,13 +15,16 @@ from argon2.exceptions import VerificationError
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy import func, select, text, update
 
 from .db import Admin, Audit, Base, Record, Session, Token, engine, iso, now
 from .domain import Origin, Provider, Report, Search, Service, distance, public_service
 from .onemap import adapter
-from .google_routes import adapter as routes_adapter
+from .auth import router as auth_router, session_account, administrator, login as account_login, Login as AccountLogin
+from .db import Account
 
 hasher = PasswordHasher()
 security = HTTPBearer(auto_error=False)
@@ -42,26 +45,48 @@ async def lifespan(_):
                 if len(password) < 12:
                     raise RuntimeError('New bootstrap accounts require ADMIN_PASSWORD of at least 12 characters')
                 db.add(Admin(username=username, password_hash=hasher.hash(password)))
+    # Email administrators are provisioned explicitly; legacy user IDs are never guessed.
+    admin_email = os.getenv('ADMIN_EMAIL', '').strip().lower()
+    if admin_email and password:
+        from .auth import EmailInput
+        admin_email = str(EmailInput(email=admin_email).email)
+        with Session.begin() as db:
+            if not db.scalar(select(Account).where(Account.email == admin_email)):
+                if not 12 <= len(password) <= 128:
+                    raise RuntimeError('Administrator passwords require 12 to 128 characters')
+                db.add(Account(id=str(uuid4()), email=admin_email, display_name='FoodBridge administrator',
+                               password_hash=hasher.hash(password), role='ADMINISTRATOR', state='ACTIVE'))
     if os.getenv('DEMO_DATA', 'false').lower() == 'true':
         from .seed import seed
         seed()
     yield
 
 app = FastAPI(title='FoodBridge Navigator', version='1.0.0', lifespan=lifespan)
+app.include_router(auth_router)
+
+@app.exception_handler(RequestValidationError)
+async def safe_validation_error(request, exception):
+    # Validation output must never echo passwords, bearer credentials, or link tokens.
+    return JSONResponse(status_code=422, content={'detail': [
+        {'loc': list(error['loc']), 'msg': error['msg'], 'type': error['type']} for error in exception.errors()]})
 portal_dir = Path(os.getenv('STAFF_PORTAL_DIR', str(Path(__file__).resolve().parents[2] / 'staff-portal')))
 app.mount('/staff', StaticFiles(directory=portal_dir, html=True), name='staff')
+app.mount('/account', StaticFiles(directory=portal_dir / 'account', html=True), name='account')
 
 @app.middleware('http')
 async def limits(request: Request, call_next):
     from starlette.responses import JSONResponse
     length = request.headers.get('content-length', '0')
+    if (os.getenv('ENVIRONMENT') == 'production' and request.url.path.startswith('/api/')
+            and request.url.scheme != 'https'):
+        return JSONResponse({'detail': 'HTTPS is required.'}, status_code=426)
     if length.isdigit() and int(length) > 2_000_000:
         return JSONResponse({'detail': 'Request is too large'}, status_code=413)
     started = time.monotonic()
     response = await call_next(request)
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Cache-Control'] = 'no-store'
-    if request.url.path.startswith('/staff'):
+    if request.url.path.startswith(('/staff', '/account')):
         response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         response.headers['Referrer-Policy'] = 'no-referrer'
         response.headers['X-Frame-Options'] = 'DENY'
@@ -81,16 +106,6 @@ def throttle(request, action, limit):
     if len(history) >= limit:
         raise HTTPException(429, 'Too many attempts. Please try again in a few minutes.')
     history.append(instant)
-
-def administrator(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
-    if not credentials:
-        raise HTTPException(401, 'Staff sign-in required')
-    digest = hashlib.sha256(credentials.credentials.encode()).hexdigest()
-    with Session() as db:
-        session = db.get(Token, digest)
-        if not session or datetime.fromisoformat(iso(session.expires_at)) <= now():
-            raise HTTPException(401, 'Your staff session has expired')
-        return session.username
 
 def item(db, id_, kind=None, approved=False):
     record = db.get(Record, id_)
@@ -127,18 +142,21 @@ def ready():
     return {'status': 'ok'}
 
 @app.get('/api/services')
-def services():
+def services(account=Depends(session_account)):
     with Session() as db:
         records = db.scalars(select(Record).where(Record.kind == 'service', Record.state == 'APPROVED')).all()
-        return {'services': with_organisation_names(db, [public_service(r) for r in records]), 'last_update': latest_update(db)}
+        return {'services': with_organisation_names(db, [public_service(r) for r in records if r.data.get('active', True)]), 'last_update': latest_update(db)}
 
 @app.get('/api/services/{service_id}')
-def details(service_id: str):
+def details(service_id: str, account=Depends(session_account)):
     with Session() as db:
-        return with_organisation_names(db, [public_service(item(db, service_id, 'service', True))])[0]
+        record = item(db, service_id, 'service', True)
+        if not record.data.get('active', True):
+            raise HTTPException(404, 'Service no longer listed')
+        return with_organisation_names(db, [public_service(record)])[0]
 
 @app.get('/api/providers')
-def providers():
+def providers(account=Depends(session_account)):
     with Session() as db:
         records = db.scalars(select(Record).where(Record.kind == 'provider', Record.state == 'APPROVED')).all()
         values = [serial(r) for r in records if r.data.get('active', True)]
@@ -146,7 +164,7 @@ def providers():
             'last_update': max((iso(r.updated_at) for r in records), default=None)}
 
 @app.post('/api/search')
-def search(criteria: Search):
+def search(criteria: Search, account=Depends(session_account)):
     instant = criteria.preferred_time or now()
     matches = []
     distances = {}
@@ -179,8 +197,14 @@ def search(criteria: Search):
             service.update(distance_km=round(km, 2), explanations=reasons, travel_time=None)
             distances[service['id']] = km
             matches.append(service)
-        # Filter first, then rank by unrounded geographic distance with deterministic ties.
-        matches.sort(key=lambda s: (distances[s['id']], s['id']))
+        # Mandatory criteria have already matched; prefer richer evidence, then proximity,
+        # known operating status and recently verified information, with deterministic ties.
+        def rank(service):
+            known_diets = len(set(service.get('diets', [])) & set(criteria.diets))
+            return (-known_diets, distances[service['id']],
+                    {'OPEN': 0, 'UNKNOWN': 1, 'CLOSED': 2}.get(service['operating_status'], 1),
+                    -datetime.fromisoformat(service['verified_at']).timestamp(), service['id'])
+        matches.sort(key=rank)
         return {'services': with_organisation_names(db, matches[criteria.offset:criteria.offset + criteria.limit]), 'total': len(matches),
             'last_update': latest_update(db), 'criteria': {'radius_km': criteria.radius_km, 'diets': criteria.diets}}
 
@@ -188,7 +212,7 @@ class Geocode(BaseModel):
     query: str = Field(min_length=3, max_length=200)
 
 @app.post('/api/geocode')
-async def geocode(body: Geocode):
+async def geocode(body: Geocode, account=Depends(session_account)):
     query = body.query.strip()
     if query.isdigit() and len(query) != 6:
         raise HTTPException(422, 'Singapore postal codes contain exactly six digits')
@@ -211,52 +235,40 @@ class Route(Origin):
     mode: str = 'walk'
 
 @app.post('/api/routes')
-async def route(body: Route):
+async def route(body: Route, account=Depends(session_account)):
     if body.mode not in ('walk', 'pt', 'drive'):
         raise HTTPException(422, 'Select walking, public transport or driving')
     with Session() as db:
         destination = dict(item(db, body.service_id, 'service', True).data)
     try:
-        return await asyncio.wait_for(routes_adapter.route(body.model_dump(), destination, body.mode), timeout=4)
+        return await asyncio.wait_for(adapter.route(body.model_dump(), destination, body.mode), timeout=4)
     except Exception:
         return {'available': False, 'message': 'Route unavailable. Service details are still available. Try again or contact the provider.'}
 
 @app.post('/api/reports', status_code=201)
-def report(body: Report, request: Request):
+def report(body: Report, request: Request, account=Depends(session_account)):
     throttle(request, 'report', 15)
     with Session.begin() as db:
         service = item(db, body.service_id, body.target_kind, True)
         reference = 'FB-' + secrets.token_hex(8).upper()
         db.add(Record(id=reference, kind='report', state='PENDING', data={**body.model_dump(),
-            'service_name': service.data['name'], 'base_version': service.version}))
+            'service_name': service.data['name'], 'base_version': service.version, 'reporter_account_id': account['id']}))
     return {'reference': reference, 'state': 'PENDING'}
 
-class Login(BaseModel):
-    username: str = Field(min_length=1, max_length=200)
-    password: str = Field(max_length=200)
-
 @app.post('/api/admin/login')
-def login(body: Login, request: Request):
-    throttle(request, 'login', 8)
-    with Session.begin() as db:
-        admin = db.get(Admin, body.username.lower().strip())
-        try:
-            hasher.verify(admin.password_hash if admin else dummy_hash, body.password)
-        except VerificationError:
-            raise HTTPException(401, 'User ID or password is incorrect')
-        if not admin:
-            raise HTTPException(401, 'User ID or password is incorrect')
-        token = secrets.token_urlsafe(32)
-        db.add(Token(digest=hashlib.sha256(token.encode()).hexdigest(), username=admin.username, expires_at=now() + timedelta(hours=8)))
-        return {'token': token, 'username': admin.username}
+def login(body: AccountLogin, request: Request):
+    result = account_login(body, request)
+    if result['account']['role'] != 'ADMINISTRATOR':
+        from .db import AccountSession
+        with Session.begin() as db:
+            db.delete(db.get(AccountSession, hashlib.sha256(result['token'].encode()).hexdigest()))
+        raise HTTPException(403, 'Administrator access required.')
+    return {**result, 'username': result['account']['email']}
 
 @app.post('/api/admin/logout')
 def logout(actor=Depends(administrator), credentials: HTTPAuthorizationCredentials = Depends(security)):
-    with Session.begin() as db:
-        token = db.get(Token, hashlib.sha256(credentials.credentials.encode()).hexdigest())
-        if token:
-            db.delete(token)
-    return {'status': 'signed_out'}
+    from .auth import logout as end_session
+    return end_session(credentials)
 
 @app.get('/api/admin/audit')
 def audit_entries(actor=Depends(administrator)):

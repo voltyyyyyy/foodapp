@@ -5,16 +5,17 @@ $seed = Get-Content -LiteralPath $seedPath -Raw -Encoding UTF8 | ConvertFrom-Jso
 $serviceIds = @($seed.records | Where-Object { $_.kind -ne 'organisation' } | ForEach-Object { $_.id })
 $passwordPath = Join-Path $PSScriptRoot '../backend/data/local-staff-password.txt'
 if (!(Test-Path -LiteralPath $passwordPath)) { throw 'Start the local stack first.' }
-$public = Invoke-RestMethod "$ApiUrl/api/services"
-if (@($serviceIds | Where-Object { $_ -notin $public.services.id }).Count -eq 0) {
-    Write-Output 'Reviewed seed already published.'
-    exit 0
-}
-$staffId = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../backend/data/local-staff-user-id.txt') -Raw).Trim()
-$loginBody = @{username=$staffId; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
+$emailPath = Join-Path $PSScriptRoot '../backend/data/local-staff-email.txt'
+$staffEmail = if ($env:ADMIN_EMAIL) { $env:ADMIN_EMAIL } elseif (Test-Path -LiteralPath $emailPath) { (Get-Content -LiteralPath $emailPath -Raw).Trim() } else { throw 'Configure ADMIN_EMAIL or local-staff-email.txt. See docs/setup/ACCOUNTS.md.' }
+$loginBody = @{email=$staffEmail; password=(Get-Content -LiteralPath $passwordPath -Raw).Trim()} | ConvertTo-Json
 $login = Invoke-RestMethod "$ApiUrl/api/admin/login" -Method Post -ContentType 'application/json' -Body $loginBody
 $headers = @{Authorization="Bearer $($login.token)"}
 try {
+    $public = Invoke-RestMethod "$ApiUrl/api/services" -Headers $headers
+    if (@($serviceIds | Where-Object { $_ -notin $public.services.id }).Count -eq 0) {
+        Write-Output 'Reviewed seed already published.'
+        return
+    }
     $existingOrgs = Invoke-RestMethod "$ApiUrl/api/admin/organisations" -Headers $headers
     $existingServices = Invoke-RestMethod "$ApiUrl/api/admin/services" -Headers $headers
     $existingIds = @($existingOrgs.id) + @($existingServices.id)

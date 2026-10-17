@@ -15,6 +15,9 @@ $staffPassword = Get-LocalSecret 'local-staff-password.txt'
 $staffIdPath = Join-Path $localData 'local-staff-user-id.txt'
 if (!(Test-Path -LiteralPath $staffIdPath)) { 'admin' | Set-Content -LiteralPath $staffIdPath }
 $staffId = (Get-Content -LiteralPath $staffIdPath -Raw).Trim()
+$staffEmailPath = Join-Path $localData 'local-staff-email.txt'
+if (!$env:ADMIN_EMAIL -and (Test-Path -LiteralPath $staffEmailPath)) { $env:ADMIN_EMAIL = (Get-Content -LiteralPath $staffEmailPath -Raw).Trim() }
+if ($env:ADMIN_EMAIL) { $env:ADMIN_EMAIL.Trim().ToLowerInvariant() | Set-Content -LiteralPath $staffEmailPath }
 docker info --format '{{.ServerVersion}}' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Start Docker Desktop, then run this script again.' }
 docker build -q -t foodbridge-api:local -f "$repoRoot/backend/Dockerfile" "$repoRoot"
@@ -32,12 +35,13 @@ $databaseUrl = "postgresql+psycopg://foodbridge:$dbPassword@foodbridge-postgres:
 foreach ($name in @('foodbridge-api', 'foodbridge-maintenance')) {
     if (docker ps -a --filter "name=^/$name`$" --format '{{.ID}}') { docker rm -f $name | Out-Null }
 }
-docker run -d --name foodbridge-api --network foodbridge-development --restart unless-stopped -p 127.0.0.1:8000:8000 -e "DATABASE_URL=$databaseUrl" -e "ADMIN_USERNAME=$staffId" -e "ADMIN_PASSWORD=$staffPassword" -e DEMO_DATA=false -e GOOGLE_ROUTES_API_KEY -e ENVIRONMENT=production foodbridge-api:local | Out-Null
+docker run -d --name foodbridge-api --network foodbridge-development --restart unless-stopped -p 127.0.0.1:8000:8000 -e "DATABASE_URL=$databaseUrl" -e "ADMIN_USERNAME=$staffId" -e "ADMIN_PASSWORD=$staffPassword" -e DEMO_DATA=false -e GOOGLE_ROUTES_API_KEY -e GOOGLE_WEB_CLIENT_ID -e ADMIN_EMAIL -e SMTP_HOST -e SMTP_PORT -e SMTP_FROM -e SMTP_USERNAME -e SMTP_PASSWORD -e SMTP_SSL -e AUTH_PUBLIC_URL -e ONEMAP_EMAIL -e ONEMAP_PASSWORD -e ENVIRONMENT=development foodbridge-api:local | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'API startup failed' }
 docker run -d --name foodbridge-maintenance --network foodbridge-development --restart unless-stopped -e "DATABASE_URL=$databaseUrl" -e API_READY_URL=http://foodbridge-api:8000/health/ready -e BACKUP_DIR=/backups -v foodbridge-local-backups:/backups foodbridge-api:local python -m app.scheduler | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Maintenance startup failed' }
 Write-Output 'Local PostgreSQL, API and scheduled backups started.'
 Write-Output 'API: http://localhost:8000/docs'
 Write-Output 'Staff portal: http://localhost:8000/staff/'
-Write-Output "Staff User ID: $staffId (password in backend/data/local-staff-password.txt)"
+if ($env:ADMIN_EMAIL) { Write-Output 'Staff sign-in uses the email in backend/data/local-staff-email.txt and the existing local password file.' }
+else { Write-Output 'Configure ADMIN_EMAIL or migrate a legacy administrator before using staff sign-in. See docs/setup/ACCOUNTS.md.' }
 Write-Output 'Demo seeding is disabled. Import reviewed actual listings through the staff API.'

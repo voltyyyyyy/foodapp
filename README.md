@@ -19,6 +19,8 @@ compose.yaml      PostgreSQL, API and maintenance deployment
 
 See the [documentation index](docs/README.md), [test instructions](backend/tests/README.md), and [tool guide](tools/README.md). Local databases, credentials, downloaded SDKs and build outputs are ignored rather than mixed into application source.
 
+Coding agents should read the repository [agent guide](AGENTS.md) before making changes.
+
 ## Run locally
 
 The complete local service stack uses Docker Desktop:

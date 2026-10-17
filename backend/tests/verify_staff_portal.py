@@ -12,7 +12,8 @@ test_root = root / 'backend' / 'data' / 'acceptance'
 test_root.mkdir(parents=True, exist_ok=True)
 temporary = tempfile.TemporaryDirectory(prefix='staff-', dir=test_root)
 os.environ['DATABASE_URL'] = 'sqlite:///' + (Path(temporary.name) / 'test.db').as_posix()
-os.environ['ADMIN_USERNAME'] = 'staff-test'
+os.environ['ADMIN_EMAIL'] = 'staff-test@example.com'
+os.environ['ENVIRONMENT'] = 'development'
 os.environ['ADMIN_PASSWORD'] = 'isolated-staff-acceptance-2026'
 os.environ['DEMO_DATA'] = 'true'
 sys.path.insert(0, str(root / 'backend'))
@@ -39,9 +40,10 @@ with TestClient(app, raise_server_exceptions=False) as client:
         check('unauthorised read denied: ' + path, client.get('/api/admin/' + path).status_code == 401)
     check('unauthorised write denied', client.patch('/api/admin/services/harmony', json={
         'version': 1, 'proposed': {'name': 'Unauthorised'}}).status_code == 401)
-    login = client.post('/api/admin/login', json={'username': os.environ['ADMIN_USERNAME'],
+    login = client.post('/api/admin/login', json={'email': os.environ['ADMIN_EMAIL'],
         'password': os.environ['ADMIN_PASSWORD']}).json()
     headers = {'Authorization': 'Bearer ' + login['token']}
+    client.headers.update(headers)
     check('empty report queue', client.get('/api/admin/reports', headers=headers).json() == [])
     report = client.post('/api/reports', json={'service_id': 'harmony', 'category': 'Hours',
         'description': 'Please check the evening collection.', 'evidence': 'https://example.org/notice'}).json()
@@ -105,17 +107,17 @@ with TestClient(app, raise_server_exceptions=False) as client:
         headers=headers).json() if r['id'] == 'test-backup')['status'] == operation['status'])
     check('logout revokes session', client.post('/api/admin/logout', headers=headers).status_code == 200 and
         client.get(report_path, headers=headers).status_code == 401)
-    with patch('sys.argv', ['manage_admin', '--user-id', 'test-user', '--password-stdin']), patch('sys.stdin', io.StringIO('1\n')):
+    with patch('sys.argv', ['manage_admin', '--email', 'test-user@example.com', '--password-stdin']), patch('sys.stdin', io.StringIO('first-acceptance-password\n')):
         provision_admin()
-    user_auth = client.post('/api/admin/login', json={'username': 'TEST-USER', 'password': '1'}).json()
-    check('user ID sign-in without email', user_auth.get('username') == 'test-user' and 'email' not in user_auth)
+    user_auth = client.post('/api/admin/login', json={'email': 'TEST-USER@EXAMPLE.COM', 'password': 'first-acceptance-password'}).json()
+    check('email administrator sign-in', user_auth.get('username') == 'test-user@example.com')
     user_headers = {'Authorization': 'Bearer ' + user_auth['token']}
     check('provisioned user is authorised', client.get('/api/admin/reports', headers=user_headers).status_code == 200)
-    with patch('sys.argv', ['manage_admin', '--user-id', 'test-user', '--password-stdin']), patch('sys.stdin', io.StringIO('2\n')):
+    with patch('sys.argv', ['manage_admin', '--email', 'test-user@example.com', '--password-stdin']), patch('sys.stdin', io.StringIO('second-acceptance-password\n')):
         provision_admin()
     check('password reset revokes existing sessions', client.get('/api/admin/reports', headers=user_headers).status_code == 401)
-    check('password reset replaces old credential', client.post('/api/admin/login', json={'username': 'test-user',
-        'password': '1'}).status_code == 401 and client.post('/api/admin/login', json={'username': 'test-user', 'password': '2'}).status_code == 200)
+    check('password reset replaces old credential', client.post('/api/admin/login', json={'email': 'test-user@example.com',
+        'password': 'first-acceptance-password'}).status_code == 401 and client.post('/api/admin/login', json={'email': 'test-user@example.com', 'password': 'second-acceptance-password'}).status_code == 200)
 
 engine.dispose()
 temporary.cleanup()

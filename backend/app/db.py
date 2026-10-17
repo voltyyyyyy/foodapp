@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, create_engine, event
+from sqlalchemy import JSON, DateTime, Integer, String, Text, ForeignKey, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 def now():
@@ -59,3 +59,37 @@ class Audit(Base):
     target: Mapped[str] = mapped_column(String(64), index=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     detail: Mapped[dict] = mapped_column(JSON)
+
+# Additive account schema. Existing listing/admin tables and their physical columns stay intact.
+class Account(Base):
+    __tablename__ = 'accounts'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(100))
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    google_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    role: Mapped[str] = mapped_column(String(30), default='REGISTERED_USER')
+    state: Mapped[str] = mapped_column(String(30), default='PENDING_VERIFICATION')
+    failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    blocked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+class AccountSession(Base):
+    __tablename__ = 'account_sessions'
+    digest: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'), index=True)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_activity: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+class AccountLink(Base):
+    __tablename__ = 'account_links'
+    digest: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'), index=True)
+    purpose: Mapped[str] = mapped_column(String(20))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+class GoogleChallenge(Base):
+    __tablename__ = 'google_challenges'
+    digest: Mapped[str] = mapped_column(String(64), primary_key=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

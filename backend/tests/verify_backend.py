@@ -13,7 +13,8 @@ root = Path(__file__).resolve().parents[2]
 temporary = tempfile.TemporaryDirectory(prefix='foodbridge-verify-')
 verification_database = os.getenv('TEST_DATABASE_URL')
 os.environ['DATABASE_URL'] = verification_database or ('sqlite:///' + (Path(temporary.name) / 'verification.db').as_posix())
-os.environ['ADMIN_USERNAME'] = 'verify'
+os.environ['ADMIN_EMAIL'] = 'verify@example.com'
+os.environ['ENVIRONMENT'] = 'development'
 os.environ['ADMIN_PASSWORD'] = 'isolated-verification-only-2026'
 os.environ['DEMO_DATA'] = 'true'
 sys.path.insert(0, str(root / 'backend'))
@@ -31,6 +32,8 @@ def check(name, condition):
         raise AssertionError(name)
 
 with TestClient(app) as client:
+    auth = client.post('/api/admin/login', json={'email': os.environ['ADMIN_EMAIL'], 'password': os.environ['ADMIN_PASSWORD']}).json()
+    client.headers['Authorization'] = 'Bearer ' + auth['token']
     origin = {'latitude': 1.3691, 'longitude': 103.8494, 'radius_km': 5}
     response = client.post('/api/search', json=origin)
     check('approved local search', response.status_code == 200 and response.json()['total'] == 5)
@@ -38,11 +41,11 @@ with TestClient(app) as client:
     diets = client.post('/api/search', json={**origin, 'diets': ['Halal', 'Vegetarian']}).json()['services']
     check('all selected diets must match', len(diets) == 1 and diets[0]['id'] == 'harmony')
     check('no silent filter relaxation', client.post('/api/search', json={**origin, 'diets': ['Nut-free']}).json()['total'] == 0)
-    check('anonymous admin denied', client.get('/api/admin/reports').status_code == 401)
+    check('anonymous admin denied', client.get('/api/admin/reports', headers={'Authorization': ''}).status_code == 401)
     check('blank correction rejected', client.post('/api/reports', json={'service_id': 'harmony', 'category': 'Hours', 'description': ' '}).status_code == 422)
     report = client.post('/api/reports', json={'service_id': 'harmony', 'category': 'Hours', 'description': 'Please confirm hours'}).json()
     check('unique pending correction reference', report['state'] == 'PENDING' and report['reference'].startswith('FB-'))
-    auth = client.post('/api/admin/login', json={'username': 'verify', 'password': os.environ['ADMIN_PASSWORD']}).json()
+    auth = client.post('/api/admin/login', json={'email': 'verify@example.com', 'password': os.environ['ADMIN_PASSWORD']}).json()
     headers = {'Authorization': 'Bearer ' + auth['token']}
     queue = client.get('/api/admin/reports', headers=headers).json()
     check('pending moderation and current comparison', queue[0]['current']['name'] == 'Harmony Community Kitchen')
