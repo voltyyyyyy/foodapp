@@ -1,5 +1,7 @@
 # Connect Google Maps
 
+**Revised SRS:** Google Maps SDK still renders the Android map. The API now uses OneMap for routing as well as address lookup; set `ONEMAP_EMAIL` and `ONEMAP_PASSWORD` on the API. The old Google Routes configuration below is retained as historical reference and is not required by the current route endpoint. Google sign-in uses separate OAuth client configuration in [Accounts](ACCOUNTS.md), not a Maps API key.
+
 ## 1. Create a Google Cloud project
 
 Open https://console.cloud.google.com/ and create/select a project. Link a billing account. Enable **Maps SDK for Android** and **Routes API** under APIs & Services ? Library. Geocoding API and Places API are not required: address resolution continues through OneMap and organisation search uses our approved directory.

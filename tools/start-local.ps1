@@ -10,6 +10,11 @@ function Get-LocalSecret([string]$Name) {
 # Optional routing key stays in ignored local data; never include it in console output.
 $routesKeyPath = Join-Path $localData 'google-routes-api-key.txt'
 if (Test-Path $routesKeyPath) { $env:GOOGLE_ROUTES_API_KEY = (Get-Content -LiteralPath $routesKeyPath -Raw).Trim() }
+# Persist the public Google sign-in audience across local container recreations.
+$googleClientPath = Join-Path $localData 'google-web-client-id.txt'
+if (!$env:GOOGLE_WEB_CLIENT_ID -and (Test-Path -LiteralPath $googleClientPath)) {
+    $env:GOOGLE_WEB_CLIENT_ID = (Get-Content -LiteralPath $googleClientPath -Raw).Trim()
+}
 $dbPassword = Get-LocalSecret 'local-postgres-password.txt'
 $staffPassword = Get-LocalSecret 'local-staff-password.txt'
 $staffIdPath = Join-Path $localData 'local-staff-user-id.txt'

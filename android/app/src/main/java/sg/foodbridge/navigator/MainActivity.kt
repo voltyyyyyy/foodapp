@@ -43,6 +43,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
@@ -116,10 +119,10 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         locationRequest?.cancel()
         locationRequest = null
-        // A session ends when the app leaves the foreground; no location enters saved state.
+        // Location context ends when the app leaves the foreground; no location enters saved state.
         model.clearLocation()
     }
-    override fun onResume() { super.onResume(); model.checkSession() }
+    override fun onResume() { super.onResume(); model.checkSession(); model.notificationState() }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_UP) model.touchSession()
         return super.dispatchTouchEvent(event)
@@ -158,6 +161,13 @@ class MainActivity : ComponentActivity() {
         return
     }
     if (s.account == null) { AccountEntryScreen(s, model); return }
+    val context = LocalContext.current
+    LaunchedEffect(s.authChecking) {
+        (context as? MainActivity)?.intent?.getStringExtra("service_id")?.let { id ->
+            (context as MainActivity).intent.removeExtra("service_id")
+            model.openReminder(id)
+        }
+    }
     var showDemoInfo by remember { mutableStateOf(false) }
     BackHandler((s.page != "home" && s.page != "results") || (s.tab == "Map" && s.routeDestination != null)) { model.back() }
     Scaffold(containerColor = Canvas, topBar = {
@@ -171,16 +181,27 @@ class MainActivity : ComponentActivity() {
     }, bottomBar = {
         NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
             listOf("Find" to Icons.Outlined.Search, "Map" to Icons.Outlined.Map, "Saved" to Icons.Outlined.BookmarkBorder, "Preferences" to Icons.Outlined.PersonOutline).forEach { (name, icon) ->
-                NavigationBarItem(selected = s.tab == name, onClick = { model.tab(name) }, icon = { Icon(icon, null, Modifier.size(23.dp)) }, label = { Text(if (name == "Preferences") "Profile" else name, fontSize = 11.sp) },
+                NavigationBarItem(selected = s.tab == name, onClick = { model.tab(name) }, icon = { Icon(icon, null, Modifier.size(23.dp)) }, label = { Text(if (name == "Preferences") "Profile" else name, fontSize = 12.sp) },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = Mint, selectedIconColor = Teal, selectedTextColor = Teal))
             }
         }
     }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             if (s.loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Teal)
+            if (s.loading) Banner("Loading information…", Icons.Outlined.Schedule, Mint)
+            if (s.account?.optString("role") == "ADMINISTRATOR" && s.page == "home" && s.tab == "Find") {
+                Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+                    Text("Staff moderation is available in the browser portal.")
+                    TextButton(onClick = {
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(BuildConfig.API_URL.trimEnd('/') + "/staff/"))) }
+                            .onFailure { model.error("No browser is available to open the staff portal.") }
+                    }) { Text("Open staff portal") }
+                }
+            }
             if (s.offline) Banner("Offline · last local update ${formatTime(s.lastUpdate.orEmpty())}", Icons.Outlined.CloudOff, Peach)
             s.error?.let { Banner(it, Icons.Outlined.Info, Color(0xFFFFE9E6), onClose = { model.error(null) }) }
             s.notice?.let { Banner(it, Icons.Outlined.CheckCircle, Mint, onClose = { model.update { it.copy(notice = null) } }) }
+            if (model.hasReportDraft() && s.page !in listOf("report", "confirmation")) TextButton(onClick = model::openReport, modifier = Modifier.padding(horizontal = 24.dp)) { Text("Resume unfinished report") }
             when (s.page) {
                 "detail" -> s.selected?.let { DetailScreen(it, s, model) }
                 "nameResults" -> OrganisationResultsScreen(s, model)
@@ -207,11 +228,18 @@ class MainActivity : ComponentActivity() {
         if (showDemoInfo) AlertDialog(onDismissRequest = { showDemoInfo = false }, title = { Text("About this preview") },
             text = { Text("This workspace includes fictional listings marked Demo. Do not travel to those locations for support. Other listings retain their reviewed source information.") },
             confirmButton = { TextButton(onClick = { showDemoInfo = false }) { Text("Got it") } })
+        if (s.reportLeavePrompt) AlertDialog(onDismissRequest = { model.update { it.copy(reportLeavePrompt = false) } },
+            title = { Text("Leave this report?") }, text = { Text("Keep your draft to finish later, or discard the category, description and evidence link.") },
+            confirmButton = { TextButton(onClick = { model.leaveReport(false) }) { Text("Keep draft and leave") } },
+            dismissButton = { Column {
+                TextButton(onClick = { model.leaveReport(true) }) { Text("Discard draft and leave") }
+                TextButton(onClick = { model.update { it.copy(reportLeavePrompt = false) } }) { Text("Continue editing") }
+            } })
     }
 }
 
 @Composable fun Banner(text: String, icon: ImageVector, color: Color, onClose: (() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().background(color).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }.background(color).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, Modifier.size(18.dp), tint = Teal); Spacer(Modifier.width(10.dp)); Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         if (onClose != null) IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) { Icon(Icons.Outlined.Close, "Dismiss") }
     }
@@ -243,7 +271,7 @@ fun SearchSummary(s: UiState): String = buildList {
     add(if (s.radius >= 80) "Across Singapore" else "Within ${s.radius} km")
     add(if (s.type == "All") "Any support" else s.type)
     if (s.diets.isNotEmpty()) add(s.diets.joinToString())
-    if (s.openOnly) add("Open now")
+    if (s.openOnly) add(if (s.preferred.isBlank()) "Within operating hours now" else "Open at selected time")
     if (s.wheelchair) add("Wheelchair access")
     if (s.preferred.isNotBlank()) add(s.preferred.replace("T", " at "))
 }.joinToString(" · ")
@@ -253,7 +281,7 @@ fun SearchSummary(s: UiState): String = buildList {
         Icon(Icons.Outlined.Tune, null, Modifier.size(20.dp), tint = Teal)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("Search filters", fontWeight = FontWeight.Medium)
+            Text(if (s.origin.isBlank()) "Search filters (inactive for browsing)" else "Search filters", fontWeight = FontWeight.Medium)
             Text(SearchSummary(s), color = Muted, fontSize = 13.sp)
         }
         Icon(Icons.Outlined.ChevronRight, "Edit search filters", tint = Muted)
@@ -294,8 +322,9 @@ fun SearchSummary(s: UiState): String = buildList {
             HorizontalDivider(color = Color(0xFFE4E8E5))
         }
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Primary(if (s.loading) "Finding support…" else "Find support", Icons.Outlined.Search, !s.loading) { search() }
-            if (s.origin.isBlank()) Text("Leave this blank to browse all food support.", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Primary(if (s.loading) "Finding support…" else "Find matching services", Icons.Outlined.Search, !s.loading && s.origin.isNotBlank()) { search() }
+            if (s.origin.isBlank()) Text("Enter an address to match your needs and distance. Browsing A–Z does not apply these filters or confirm suitability.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick = model::browseAllSupport, enabled = !s.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Browse all listings (A–Z)") }
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TextButton(onClick = model::browseProviders, contentPadding = PaddingValues(0.dp)) {
@@ -338,7 +367,8 @@ fun SearchSummary(s: UiState): String = buildList {
                 }
                 Column {
                     HorizontalDivider(color = Color(0xFFE4E8E5))
-                    Toggle("Scheduled open now", s.openOnly) { value -> model.update { it.copy(openOnly = value) } }
+                    Toggle(if (s.preferred.isBlank()) "Within operating hours now" else "Open at selected time", s.openOnly) { value -> model.update { it.copy(openOnly = value) } }
+                    Text("Operating hours do not confirm a food distribution session or food availability.", color = Muted, style = MaterialTheme.typography.bodyMedium)
                     Toggle("Wheelchair accessible", s.wheelchair) { value -> model.update { it.copy(wheelchair = value) } }
                     HorizontalDivider(color = Color(0xFFE4E8E5))
                 }
@@ -350,9 +380,13 @@ fun SearchSummary(s: UiState): String = buildList {
                             val date = LocalDate.of(year, month + 1, day)
                             val time = LocalTime.now(ZoneId.of("Asia/Singapore"))
                             TimePickerDialog(context, { _, hour, minute ->
-                                model.update { it.copy(preferred = LocalDateTime.of(date, LocalTime.of(hour, minute)).toString()) }
+                                val chosen = LocalDateTime.of(date, LocalTime.of(hour, minute))
+                                if (chosen.isAfter(LocalDateTime.now(ZoneId.of("Asia/Singapore")))) model.update { it.copy(preferred = chosen.toString()) }
+                                else model.error("Choose a future preferred time, or use current time.")
                             }, time.hour, time.minute, false).show()
-                        }, today.year, today.monthValue - 1, today.dayOfMonth).show()
+                        }, today.year, today.monthValue - 1, today.dayOfMonth).apply {
+                            datePicker.minDate = today.atStartOfDay(ZoneId.of("Asia/Singapore")).toInstant().toEpochMilli()
+                        }.show()
                     }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                         Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
                         Text(if (s.preferred.isBlank()) "Now · change time" else s.preferred.replace("T", " at "))
@@ -391,7 +425,7 @@ fun SearchSummary(s: UiState): String = buildList {
         items(s.results, key = { it.id }) { ServiceCard(it, s, model) }
         item { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Contact the provider before travelling. Opening hours do not guarantee food availability.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-            Text("Updated ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, fontSize = 11.sp)
+            Text("Updated ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, fontSize = 14.sp)
             if (s.results.any { it.demo }) DemoNotice()
         } }
     }
@@ -405,7 +439,7 @@ fun SearchSummary(s: UiState): String = buildList {
     val label = when(status) { "AVAILABLE" -> "Reported available"; "LIMITED" -> "Limited availability"; "UNAVAILABLE" -> "Reported unavailable"; else -> "Availability unknown" }
     val color = when(status) { "AVAILABLE" -> Mint; "LIMITED" -> Peach; "UNAVAILABLE" -> Color(0xFFFFE9E6); else -> Color(0xFFEEF1F3) }
     Surface(color = color, shape = RoundedCornerShape(8.dp)) { Row(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(if (status == "AVAILABLE") Icons.Outlined.CheckCircle else if (status == "LIMITED") Icons.Outlined.Schedule else Icons.Outlined.Info, null, Modifier.size(14.dp)); Spacer(Modifier.width(5.dp)); Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Icon(if (status == "AVAILABLE") Icons.Outlined.CheckCircle else if (status == "LIMITED") Icons.Outlined.Schedule else Icons.Outlined.Info, null, Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     } }
 }
 @Composable fun ServiceCard(service: Service, s: UiState, model: AppViewModel) {
@@ -417,7 +451,7 @@ fun SearchSummary(s: UiState): String = buildList {
                     add(service.type)
                     if (!service.distance.isNaN()) add("%.1f km".format(service.distance))
                 }.joinToString(" · "), color = Muted, fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.weight(1f))
-                if (service.demo) Text("Demo", color = Color(0xFF8A6035), fontSize = 11.sp, lineHeight = 16.sp)
+                if (service.demo) Text("Demo", color = Color(0xFF8A6035), fontSize = 14.sp, lineHeight = 21.sp)
                 IconButton(onClick = { model.save(service) }, modifier = Modifier.size(48.dp)) {
                     Icon(if (service.id in s.saved) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
                         if (service.id in s.saved) "Remove saved service" else "Save service", tint = Teal, modifier = Modifier.size(22.dp))
@@ -427,9 +461,9 @@ fun SearchSummary(s: UiState): String = buildList {
             if (service.organisationName != service.name) Text(service.name, fontSize = 13.sp, color = Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text("${accessMethodLabel(service.json.optString("access_method", "contact_to_confirm"))} · ${collectionLocationLabel(service.json.optString("location_role"))}", color = Teal, fontSize = 12.sp, lineHeight = 18.sp)
             Availability(service.availability)
+            AvailabilityEvidence(service)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(when(service.operating) { "OPEN" -> "Scheduled open now"; "CLOSED" -> "Outside scheduled hours"; else -> "Hours not confirmed" }, color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-                service.evidence?.let { Text("Checked ${formatTime(it.optString("observed_at"))}", color = Muted, fontSize = 11.sp, lineHeight = 16.sp) }
+                Text(operatingLabel(service), color = Muted, fontSize = 14.sp, lineHeight = 21.sp)
                 service.strings("explanations").firstOrNull()?.let { Text(it, color = Teal, fontSize = 12.sp, lineHeight = 18.sp) }
                 s.eta[service.id]?.let { Text(it, color = Muted, fontSize = 12.sp, lineHeight = 18.sp) }
             }
@@ -437,15 +471,34 @@ fun SearchSummary(s: UiState): String = buildList {
     }
 }
 fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPattern("d MMM, h:mm a").withZone(ZoneId.of("Asia/Singapore")).format(OffsetDateTime.parse(value).toInstant()) }.getOrDefault("Not confirmed")
+fun operatingLabel(service: Service): String {
+    val at = service.json.optString("status_at").takeIf { it.isNotBlank() }
+    return when (service.operating) {
+        "OPEN" -> if (at == null) "Within operating hours now" else "Open at selected time: ${at.replace("T", " at ")}"
+        "CLOSED" -> if (at == null) "Outside operating hours now" else "Closed at selected time: ${at.replace("T", " at ")}"
+        else -> "Operating hours not confirmed"
+    }
+}
+
+@Composable fun AvailabilityEvidence(service: Service) {
+    val evidence = service.evidence
+    Text(if (evidence == null) "Source, observation time, validity and confidence not confirmed."
+        else "Source: ${evidence.optString("source").ifBlank { "Not confirmed" }}\nObserved ${formatTime(evidence.optString("observed_at"))} · Valid until ${formatTime(evidence.optString("valid_until"))}\nConfidence: ${evidence.optString("confidence").takeUnless { it.isBlank() || it == "null" } ?: "Not confirmed"}",
+        color = Muted, style = MaterialTheme.typography.bodyMedium)
+    Text("Contact the provider before travelling. Food availability is not guaranteed.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+}
 
 @Composable fun Empty(title: String, detail: String, icon: ImageVector, action: @Composable () -> Unit = {}) {
     Panel { Icon(icon, null, Modifier.size(32.dp), tint = Teal); Text(title, style = MaterialTheme.typography.titleLarge); Text(detail, color = Muted); action() }
 }
 @Composable fun SavedScreen(s: UiState, model: AppViewModel) { Page {
     Text("Saved", style = MaterialTheme.typography.headlineMedium); Text("Your bookmarked services, kept on this device.", color = Muted)
+    Text("Last local update: ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, style = MaterialTheme.typography.bodyMedium)
+    Text("Reminders use the last approved session schedule saved on this device. They pause when you sign out or your session expires. Sign in and open Saved to resume. Settings are separate for each account.", color = Muted)
+    if (!s.notificationsAllowed) NotificationSettings(model)
     val services = s.services.filter { it.id in s.saved }
     if (s.saved.isEmpty()) Empty("No saved services", "Tap a service’s bookmark to keep it here.", Icons.Outlined.BookmarkBorder) { Primary("Find food support", Icons.Outlined.Search) { model.tab("Find") } }
-    services.forEach { ServiceCard(it, s, model) }
+    services.forEach { service -> ServiceCard(service, s, model); ReminderControls(service, s, model) }
     (s.saved - s.services.map { it.id }.toSet()).forEach { id ->
         Panel { Text("Service no longer listed", fontWeight = FontWeight.Bold)
             Text("This saved service is no longer in the latest approved information available to this device.", color = Muted)
@@ -454,7 +507,62 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
     }
 } }
 
-@Composable fun PreferencesScreen(s: UiState, model: AppViewModel) { Page {
+@Composable fun NotificationSettings(model: AppViewModel) {
+    val context = LocalContext.current
+    Panel(Peach) {
+        Text("Notifications are blocked", fontWeight = FontWeight.Bold)
+        Text("Allow FoodBridge notifications and the Saved support reminders channel, then enable your reminder.")
+        OutlinedButton(onClick = {
+            runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)) }
+                .onFailure { model.error("Open Android Settings, then Apps, FoodBridge, Notifications to allow reminders.") }
+        }) { Text("Open notification settings") }
+    }
+}
+
+@Composable fun ReminderControls(service: Service, s: UiState, model: AppViewModel) {
+    val context = LocalContext.current
+    val enabled = service.id in s.reminders
+    var chosenTime by remember(service.id) { mutableStateOf(s.reminders[service.id] ?: "09:00") }
+    val hasSessions = service.json.optJSONArray("distribution_schedules")?.length()?.let { it > 0 } == true ||
+        service.json.optJSONObject("distribution_exceptions")?.let { dates -> dates.keys().asSequence().any { dates.optJSONArray(it)?.length()?.let { length -> length > 0 } == true } } == true
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        model.notificationState()
+        if (granted) model.reminder(service, true, chosenTime)
+        else model.error("Notification permission was declined. Your reminder is off. You can allow notifications in Android settings.")
+    }
+    Panel {
+        Text("Reminder for ${service.name}", style = MaterialTheme.typography.titleMedium)
+        if (!hasSessions) Text("Schedule not confirmed. A reminder can be enabled after staff verify a collection or meal session. Operating hours alone are insufficient.", color = Muted)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Session-day reminder", Modifier.weight(1f))
+            Switch(checked = enabled, enabled = hasSessions || enabled, onCheckedChange = { value ->
+                if (value && android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                    permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                else model.reminder(service, value, chosenTime)
+            })
+        }
+        OutlinedButton(onClick = {
+            val time = LocalTime.parse(chosenTime)
+            TimePickerDialog(context, { _, hour, minute ->
+                chosenTime = "%02d:%02d".format(java.util.Locale.ROOT, hour, minute)
+                if (enabled) model.reminder(service, true, chosenTime)
+            }, time.hour, time.minute, false).show()
+        }, enabled = hasSessions) { Text("Daily time: $chosenTime (Singapore)") }
+        Text(if (enabled && !s.notificationsAllowed) "Paused: notifications are blocked. Your time is kept."
+            else if (enabled) "Enabled around $chosenTime on recorded session days, while a session is still upcoming or in progress. Android may delay delivery."
+            else "Reminder off. No notification will be sent.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+        Text("A reminder does not reserve food or confirm availability. Check the listing and contact the provider before travelling.", color = Muted)
+    }
+}
+
+@Composable fun PreferencesScreen(s: UiState, model: AppViewModel) {
+    var clearConfirmation by remember { mutableStateOf(false) }
+    if (clearConfirmation) AlertDialog(onDismissRequest = { clearConfirmation = false },
+        title = { Text("Clear this account’s local settings?") },
+        text = { Text("This removes all bookmarked service IDs, reminder settings and dietary preferences for this account on this device. This cannot be undone.") },
+        confirmButton = { TextButton(onClick = { clearConfirmation = false; model.clearLocal() }) { Text("Clear local settings") } },
+        dismissButton = { TextButton(onClick = { clearConfirmation = false }) { Text("Cancel") } })
+    Page {
     Text("Your profile", style = MaterialTheme.typography.headlineMedium)
     ProfilePanel(s, model)
     Column { Text("Dietary preferences", style = MaterialTheme.typography.titleLarge); Text("Used for your searches. Change them at any time.", color = Muted)
@@ -463,18 +571,16 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
     HorizontalDivider(color = Color(0xFFE4E8E5))
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("Privacy", style = MaterialTheme.typography.titleLarge); Text("Bookmarks and preferences stay on this device. Search location is cleared when you leave the app.", color = Muted)
         TextButton(onClick = { model.update { it.copy(page = "privacy") } }) { Icon(Icons.Outlined.Shield, null); Text("  Privacy & data use") }
-        OutlinedButton(onClick = model::clearLocal, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Clear local saves & preferences") }
+        OutlinedButton(onClick = { clearConfirmation = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Clear local saves & preferences") }
     }
     Text("FoodBridge Navigator · 1.0.0", color = Muted, fontSize = 12.sp)
 } }
 
 @Composable fun ReportScreen(s: UiState, model: AppViewModel) {
-    var category by remember(s.reportCategory) { mutableStateOf(s.reportCategory) }
+    val category = s.reportCategory
     var categoryMenu by remember { mutableStateOf(false) }
-    var description by remember(s.reportDescription) { mutableStateOf(s.reportDescription) }
-    var evidence by remember(s.reportEvidence) { mutableStateOf(s.reportEvidence) }
-    SideEffect { if (s.reportCategory != category || s.reportDescription != description || s.reportEvidence != evidence)
-        model.update { it.copy(reportCategory = category, reportDescription = description, reportEvidence = evidence) } }
+    val description = s.reportDescription
+    val evidence = s.reportEvidence
     Page {
         Text("Report incorrect information", style = MaterialTheme.typography.headlineMedium); Text("For ${s.selected?.name ?: s.selectedProvider?.optString("name").orEmpty()}", color = Teal)
         Panel {
@@ -485,15 +591,16 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
                 }
                 DropdownMenu(expanded = categoryMenu, onDismissRequest = { categoryMenu = false }) {
                     listOf("Address", "Contact", "Hours", "Service details", "Permanently closed", "Food unavailable", "Other").forEach { value ->
-                        DropdownMenuItem(text = { Text(reportCategoryLabel(value)) }, onClick = { category = value; categoryMenu = false })
+                        DropdownMenuItem(text = { Text(reportCategoryLabel(value)) }, onClick = { model.update { it.copy(reportCategory = value) }; categoryMenu = false })
                     }
                 }
             }
-            OutlinedTextField(description, { if (it.length <= 1000) description = it }, label = { Text("Describe the issue") }, supportingText = { Text("${description.length} / 1000 characters") }, modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp), minLines = 4)
-            OutlinedTextField(evidence, { evidence = it }, label = { Text("Evidence link (optional)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-            Text("No account required. Please avoid including names, phone numbers or other personal details in your report.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+            OutlinedTextField(description, { value -> if (value.length <= 1000) model.update { it.copy(reportDescription = value) } }, label = { Text("Describe the issue") }, supportingText = { Text("${description.length} / 1000 characters") }, modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp), minLines = 4)
+            OutlinedTextField(evidence, { value -> model.update { it.copy(reportEvidence = value) } }, label = { Text("Evidence link (optional)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+            Text("Your report is linked to your account. Please avoid including names, phone numbers or other personal details.", color = Muted, style = MaterialTheme.typography.bodyMedium)
             Text("An official website or public announcement helps staff verify your report. Reports are reviewed before a listing changes.", color = Muted, style = MaterialTheme.typography.bodySmall)
             Primary("Submit report", Icons.Outlined.Send, !s.loading && category.isNotBlank() && description.isNotBlank()) { model.report(category, description, evidence) }
+            OutlinedButton(onClick = model::cancelReport, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Cancel report") }
         }
     }
 }
@@ -515,5 +622,5 @@ fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPatter
 } }
 @Composable fun PrivacyScreen() { Page {
     Text("Privacy & data use", style = MaterialTheme.typography.headlineMedium)
-    Panel { Text("An active account and valid session are required to find support, view details, plan routes, save services and report errors."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground, the search is replaced, or you sign out. It is not saved in profiles, bookmarks or app backups."); Text("OneMap receives address and route requests. Google Maps receives map requests. Route origins and results are held only for the current session."); Text("Saved service IDs and dietary preferences stay on this device and are separated by account. Signing out hides them. Session credentials are encrypted using Android Keystore."); Text("Your account identifier is stored with correction reports for staff review. Avoid sending sensitive personal details."); Text("A production operator must publish its contact and retention policy before release.", color = Muted) }
+    Panel { Text("An active account and valid session are required to search, view details, plan routes, save services, set reminders and report corrections."); Text("Device location is used for your current search and route request, then cleared when the app leaves the foreground, the search is replaced, or you sign out. It is not saved in profiles, bookmarks or app backups."); Text("OneMap receives address and route requests. Google Maps receives map requests. Route origins and results are held only for the current session."); Text("Saved service IDs, reminder settings and dietary preferences stay on this device and are separated by account. Reminders store approved session details locally and pause at sign-out or session expiry. Session credentials are encrypted using Android Keystore."); Text("Your account identifier is stored with correction reports for staff review. Unfinished report drafts are encrypted on this device per account until submission or explicit discard. Avoid sending sensitive personal details."); Text("A production operator must publish its contact and retention policy before release.", color = Muted) }
 } }

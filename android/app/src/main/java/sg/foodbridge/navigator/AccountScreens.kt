@@ -2,6 +2,8 @@ package sg.foodbridge.navigator
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -13,7 +15,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -48,10 +54,11 @@ import androidx.compose.ui.unit.dp
             }
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(when (s.authPage) { "register" -> "A little closer\nto support."; "forgot" -> "Reset your password"; "resend" -> "Verify your email"; else -> "Welcome to\nFoodBridge." }, style = MaterialTheme.typography.headlineLarge)
-                Text(when (s.authPage) { "register" -> "Create your account to find food support across Singapore."; "forgot" -> "We’ll email you a link to choose a new password."; "resend" -> "Request a new activation link, then return here to sign in."; else -> "Sign in to find food support, save services and plan your journey." }, color = Muted)
+                Text(when (s.authPage) { "register" -> "FoodBridge requires an account to search and view support, save listings and send corrections. After registering, verify your email in your browser, then return here to sign in."; "forgot" -> "We’ll email you a link to choose a new password."; "resend" -> "Open the activation link in your email, then return to FoodBridge and sign in with the same email and password."; else -> "An account is required to search and view support, save services and report corrections. New accounts verify their email before signing in." }, color = Muted)
             }
             s.authError?.let { Banner(it, Icons.Outlined.Info, Peach) }
             s.authMessage?.let { Banner(it, Icons.Outlined.MarkEmailRead, Mint) }
+            if (s.authMessage != null && s.account == null) Text("After verifying your email or resetting your password in the browser, return to this screen and sign in. Your email stays in the form.", color = Muted)
             if (s.authBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (registration) OutlinedTextField(name, { name = it }, label = { Text("Display name") }, enabled = !s.authBusy,
@@ -79,8 +86,12 @@ import androidx.compose.ui.unit.dp
                         HorizontalDivider(Modifier.weight(1f)); Text("or", color = Muted); HorizontalDivider(Modifier.weight(1f))
                     }
                     OutlinedButton(onClick = { model.googleSignIn(context) }, enabled = !s.authBusy,
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White, contentColor = Color(0xFF1F1F1F)),
+                        border = BorderStroke(1.dp, Color(0xFF747775)),
                         modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(14.dp)) {
-                        Text("Sign in with Google", fontWeight = FontWeight.Medium)
+                        Image(painterResource(R.drawable.google_g), null, Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Sign in with Google", fontFamily = FontFamily(Font(R.font.google_sans, FontWeight.Medium)), fontWeight = FontWeight.Medium)
                     }
                     TextButton(onClick = { model.authPage("register") }, enabled = !s.authBusy, modifier = Modifier.fillMaxWidth()) { Text("New to FoodBridge? Create an account") }
                     TextButton(onClick = { model.authPage("resend") }, enabled = !s.authBusy, modifier = Modifier.fillMaxWidth()) { Text("Resend verification email") }
@@ -92,6 +103,7 @@ import androidx.compose.ui.unit.dp
 }
 
 @Composable fun ProfilePanel(s: UiState, model: AppViewModel) {
+    val context = LocalContext.current
     val account = s.account ?: return
     var editing by remember { mutableStateOf(s.profileNameDraft != null) }
     val name = s.profileNameDraft ?: account.optString("display_name")
@@ -100,6 +112,13 @@ import androidx.compose.ui.unit.dp
         Text(account.optString("display_name"), style = MaterialTheme.typography.titleLarge)
         Text(account.optString("email"))
         Text(if (account.optString("role") == "ADMINISTRATOR") "Administrator" else "Registered user", color = Muted)
+        if (account.optString("role") == "ADMINISTRATOR") {
+            Text("Moderate listings and correction reports in the browser staff portal. Sign in there with your administrator email.")
+            OutlinedButton(onClick = {
+                runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(BuildConfig.API_URL.trimEnd('/') + "/staff/"))) }
+                    .onFailure { model.error("No browser is available. Open the FoodBridge staff portal in your browser.") }
+            }) { Text("Open staff portal") }
+        }
         if (editing) {
             OutlinedTextField(name, { value -> model.update { it.copy(profileNameDraft = value) } }, label = { Text("Display name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Primary("Save name", Icons.Outlined.Check, !s.authBusy) { model.updateName(name) }

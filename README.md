@@ -1,6 +1,6 @@
 # FoodBridge Navigator
 
-Native Android 12+ food-support discovery with an anonymous user experience and a separate authenticated browser staff portal. The implementation plan, requirement mapping and reference contradictions are in [docs/architecture/BUILD_PLAN.md](docs/architecture/BUILD_PLAN.md).
+Native Android 12+ food-support discovery with registered-user sign-in and a separate browser staff portal. The revised SRS account setup, Google sign-in and email/staff migration instructions are in [Accounts](docs/setup/ACCOUNTS.md). The implementation plan, requirement mapping and reference contradictions are in [docs/architecture/BUILD_PLAN.md](docs/architecture/BUILD_PLAN.md).
 
 ## Repository layout
 
@@ -38,12 +38,12 @@ The Android APK uses `http://10.0.2.2:8000` for an Android emulator. A physical 
 uv venv backend/.venv
 uv pip install --python backend/.venv/Scripts/python.exe -r backend/requirements.txt
 cd backend
-$env:ADMIN_USERNAME = 'admin'
+$env:ADMIN_EMAIL = 'admin@example.org'
 $env:ADMIN_PASSWORD = '<a unique password of at least 12 characters>'
 .venv/Scripts/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
 ```
 
-The staff portal is at **http://localhost:8000/staff/** and signs in with a **User ID**, without requiring an email. Android is user-facing only and contains no staff sign-in or administrative screens. The current local installation has a staff password in ignored `backend/data/local-staff-password.txt`. It is not committed. The local User ID is stored in ignored `backend/data/local-staff-user-id.txt` (defaults to `admin` on a new setup). Accounts are provisioned only on first startup; changing the environment password does not silently reset an existing account. See [staff portal deployment and acceptance](docs/operations/STAFF_PORTAL.md).
+The staff portal is at **http://localhost:8000/staff/** and signs in with an **email address**. Android provides registered-user sign-in, registration, password recovery, Google sign-in and profile management; staff moderation remains in the browser portal. Configure SMTP and Google OAuth before using external account services. Existing User ID administrators need an explicit email mapping using the migration command in [Accounts](docs/setup/ACCOUNTS.md). Local passwords and email configuration stay in ignored `backend/data` files; bootstrap settings never reset existing credentials.
 
 ```powershell
 # Install the repo-local JDK, Gradle and Android SDK
@@ -60,7 +60,7 @@ Find and Map accept **an address or organisation name**. Name suggestions search
 
 ### Google Maps
 
-Map opens directly to Singapore with the existing floating address/organisation search, saved suggestions, filters, current-location action, service pins and preview. Google Maps SDK for Android supplies the custom styled map; backend Google Routes supplies **Walk, Public transport, Drive** routes. OneMap continues Singapore address lookup. See [Google Maps setup](docs/setup/GOOGLE_MAPS_SETUP.md) for the two restricted keys and exact local file paths.
+Map opens directly to Singapore with the existing floating address/organisation search, saved suggestions, filters, current-location action, service pins and preview. Google Maps SDK for Android supplies the custom styled map; OneMap supplies address lookup and **Walk, Public transport, Drive** routes. Configure `ONEMAP_EMAIL` and `ONEMAP_PASSWORD` on the API. The Google Routes adapter is retained as historical code but is no longer used by the route endpoint. See [Google Maps setup](docs/setup/GOOGLE_MAPS_SETUP.md) for the two restricted keys and exact local file paths.
 
 The manually reviewed seed in `backend/seeds/verified-services.json` contains public contact/application facts from the [Willing Hearts provider page](https://willinghearts.org.sg/contact), with coordinates resolved through OneMap. It identifies a meal-delivery coordination site, not a confirmed walk-in collection point. Hours, diets, accessibility and live availability remain unknown. After starting the local stack, run `./tools/import-reviewed-seed.ps1` to import and publish it through the audited staff APIs. This is a small project seed, not a complete verified Singapore directory or a partner feed. The current workspace already has it published.
 
@@ -76,11 +76,17 @@ The current local directory contains22 published providers (18 with provider sou
 
 ### Service details and corrections
 
-Each service page separates availability, contact, eligibility, confirmed diets/accessibility, schedule, directions and sources. Directory distribution details show programme frequency, listed days/dates, recipients, dietary options, delivery/collection and areas, with source age and missing-data guidance. Real service locations are explicitly linked to their provider records. The week calendar supports previous/next week, Today and date selection; it applies recurring hours and date-specific overrides, including overnight sessions. Recorded hours do not prove food availability. Unknown schedules remain explicit; the calendar is expandable when only directory frequency is available, and exact sessions are never inferred from old frequency text. Provider listings retain programme frequency without inventing calendar appointments.
+Each service page separates availability, contact, eligibility, confirmed diets/accessibility, schedule, directions and sources. Directory distribution details show programme frequency, listed days/dates, recipients, dietary options, delivery/collection and areas, with source age and missing-data guidance. Real service locations are explicitly linked to their provider records. The week calendar supports previous/next week, Today and date selection; it applies separately verified collection / meal sessions and date-specific session overrides, including overnight sessions. Operating hours remain separate and do not prove that distribution is happening or food is available. Unknown schedules remain explicit; the calendar is expandable when only directory frequency is available, and exact sessions are never inferred from old frequency text. Provider listings retain programme frequency without inventing calendar appointments.
 
-**Report incorrect information** opens a named-listing form from either a service or provider page. Choose a category, describe the issue (up to1000 characters), and optionally link evidence. Reports receive a reference and remain pending until staff review. Back returns to the original listing. The API accepts `target_kind` (`service` by default, or `provider`) alongside the backward-compatible `service_id` target field.
+**Report incorrect information** opens a named-listing form from either a service or provider page. Choose a category, describe the issue (up to1000 characters), and optionally link evidence. Reports receive a reference and remain pending until staff review. Drafts are encrypted on this device per account, can be resumed after leaving, and are cleared after successful submission or explicit discard. Leaving a non-empty form offers keep/discard/cancel choices. Back returns to the original listing. The API accepts `target_kind` (`service` by default, or `provider`) alongside the backward-compatible `service_id` target field.
 
 The local dataset has22 actual provider records and2 confirmed service locations. Fictional fixtures were withdrawn with an audit trail. To clean an older local database, run `docker exec foodbridge-api python -m app.retire_demo` after rebuilding; it preserves actual records and staff history.
+
+### Saved reminders
+
+Saved listings have optional local reminders at a chosen daily Singapore time, on recorded collection / meal session days while a session is upcoming or in progress. Unknown sessions are labelled "Schedule not confirmed"; office hours alone never enable a reminder. Android notification permission and the reminder channel must be allowed. Delivery is approximate and may be delayed by Android. Saved shows the last local cache update and warns that a reminder does not reserve food or confirm availability.
+
+Reminder settings are separate by account and pause at sign-out or session expiry. Sign in and open Saved to resume them. Removing a bookmark or clearing that account?s local settings cancels its reminder. Local reminders use approved cached information; they do not establish current availability.
 
 ## Data and operations
 

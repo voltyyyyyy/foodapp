@@ -3,7 +3,7 @@
 The browser application lives here, separate from Android and the Python backend. FastAPI serves it at `/staff/`; its administrator API calls stay on the same origin.
 
 - `index.html`: document shell.
-- `portal.js`: User ID sign-in, record lists, editing, reports and administration workflows.
+- `portal.js`: Email sign-in, record lists, editing, reports and administration workflows.
 - `portal.css`: responsive layout, typography and accessible focus states.
 - `atkinson.ttf` / `FONT-LICENSE.txt`: bundled font and license.
 

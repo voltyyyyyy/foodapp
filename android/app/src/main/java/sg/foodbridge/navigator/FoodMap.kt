@@ -167,6 +167,8 @@ import org.json.JSONObject
                         colors = AssistChipDefaults.assistChipColors(containerColor = Color.White), border = null)
                     AssistChip(onClick = model::browseProviders, label = { Text("Providers") }, leadingIcon = { Icon(Icons.Outlined.Groups, null, Modifier.size(18.dp)) },
                         colors = AssistChipDefaults.assistChipColors(containerColor = Color.White), border = null)
+                    AssistChip(onClick = { if (s.hasSearched) model.tab("Find") else model.browseAllSupport() }, label = { Text("View list") },
+                        leadingIcon = { Icon(Icons.Outlined.List, null, Modifier.size(18.dp)) }, colors = AssistChipDefaults.assistChipColors(containerColor = Color.White), border = null)
                 }
             }
             if (showSaved && !routing) Surface(shape = RoundedCornerShape(20.dp), color = Color.White, shadowElevation = 3.dp) {
@@ -248,9 +250,22 @@ import org.json.JSONObject
 
 @Composable private fun MapRouteSummary(s: UiState, model: AppViewModel, onChooseStart: () -> Unit) {
     val destination = s.routeDestination ?: return
+    val context = LocalContext.current
     var stepsExpanded by remember(destination.id, s.routeMode) { mutableStateOf(s.routeMode == "pt") }
     val route = s.route
     Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(destination.name, style = MaterialTheme.typography.titleLarge)
+        Text(destination.json.optString("eligibility").ifBlank { "Eligibility not confirmed. Contact the provider." }, style = MaterialTheme.typography.bodyMedium)
+        Availability(destination.availability)
+        AvailabilityEvidence(destination)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            destination.json.optString("phone").takeUnless { it.isBlank() || it == "null" }?.let { phone ->
+                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone"))) }.onFailure { model.error("No phone app is available. Call $phone using another phone.") } }) { Text("Call provider") }
+            }
+            destination.json.optString("website").takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { site ->
+                TextButton(onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(site))) }.onFailure { model.error("No browser is available. Provider website: $site") } }) { Text("Provider website") }
+            }
+        }
         Text("${collectionLocationLabel(destination.json.optString("location_role"))} · ${destination.address}", color = Teal, style = MaterialTheme.typography.bodySmall)
         if (destination.json.optString("location_role") == "coordination_site") Text("${accessMethodLabel(destination.json.optString("access_method", "contact_to_confirm"))}. This is a meal-delivery coordination site, not a confirmed walk-in collection point.", color = Muted, style = MaterialTheme.typography.bodySmall)
         when {

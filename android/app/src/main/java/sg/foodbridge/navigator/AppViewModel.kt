@@ -42,23 +42,29 @@ data class UiState(
     val account: JSONObject? = null, val authChecking: Boolean = true, val authBusy: Boolean = false,
     val authPage: String = "signin", val authError: String? = null, val authMessage: String? = null,
     val reportCategory: String = "", val reportDescription: String = "", val reportEvidence: String = "",
-    val profileNameDraft: String? = null
+    val profileNameDraft: String? = null,
+    val reportService: Service? = null, val reportProvider: JSONObject? = null,
+    val reportLeavePrompt: Boolean = false, val reportNextTab: String? = null,
+    val reminders: Map<String, String> = emptyMap(), val notificationsAllowed: Boolean = false
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = Repository(application)
+    private val reminderStore = ReminderStore(application)
     private val mutable = MutableStateFlow(UiState())
     val state = mutable.asStateFlow()
     private var coordinates: Pair<Double, Double>? = null
     private var etaJob: Job? = null
     private var searchJob: Job? = null
     private var routeJob: Job? = null
+    private var draftSaveJob: Job? = null
     private var userScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]))
     private var interrupted: UiState? = null
     private var interruptedAccount: String? = null
     private var lastServerActivity = 0L
+    private var sessionGeneration = 0L
     init {
-        repo.onSessionExpired = { viewModelScope.launch { if (!repo.sessionValid()) endSession(expired = true) } }
+        repo.onSessionExpired = { viewModelScope.launch { if (state.value.account != null && !repo.sessionValid()) endSession(expired = true) } }
         viewModelScope.launch {
             repo.retryRevocations()
             if (repo.sessionValid()) {
@@ -89,6 +95,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         // Avoid a disk write for every tap while preserving the inactivity deadline.
         if (System.currentTimeMillis() - data.optLong("last_activity") > 1_000) {
             repo.sessionStore.update { it.put("last_activity", System.currentTimeMillis()) }
+            reminderStore.expiry()
         }
         if (System.currentTimeMillis() - lastServerActivity > 60_000) {
             lastServerActivity = System.currentTimeMillis()
@@ -98,9 +105,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun checkSession() {
         if (state.value.account == null) return
         if (!repo.sessionValid()) { endSession(expired = true); return }
-        viewModelScope.launch {
+        userScope.launch {
             repo.retryRevocations()
-            try { repo.request("/api/auth/me") } catch (_: SessionExpired) { endSession(expired = true) } catch (_: Exception) { }
+            try { repo.request("/api/auth/me") } catch (e: CancellationException) { throw e }
+            catch (_: SessionExpired) { if (state.value.account != null) endSession(expired = true) } catch (_: Exception) { }
         }
     }
     private fun signedIn(account: JSONObject) {
@@ -110,10 +118,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutable.value = (resume ?: UiState()).copy(account = account, authChecking = false, authBusy = false,
             authMessage = null, authError = null, loading = false, routeLoading = false,
             notice = if (resume != null) "Signed in again. Review your input before submitting." else null)
+        if (resume == null) repo.sessionStore.read().optJSONObject("report_drafts")?.optJSONObject(account.getString("id"))?.let { draft ->
+            mutable.value = mutable.value.copy(reportService = draft.optJSONObject("service")?.let(::Service),
+                reportProvider = draft.optJSONObject("provider"), reportCategory = draft.optString("category"),
+                reportDescription = draft.optString("description"), reportEvidence = draft.optString("evidence"))
+        }
         interrupted = null; interruptedAccount = null
+        reminderStore.resume()
         refresh(); loadProviders()
     }
     private fun endSession(expired: Boolean = false, message: String? = null) {
+        sessionGeneration += 1
         val current = state.value
         if (expired && current.account != null) {
             clearLocation()
@@ -124,9 +139,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         userScope = CoroutineScope(viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]))
         coordinates = null; etaJob?.cancel(); searchJob?.cancel(); routeJob?.cancel()
         repo.accountId = null
+        reminderStore.pause()
         repo.sessionStore.endSession()
         mutable.value = UiState(authChecking = false, authMessage = message,
             authError = if (expired) "Your session has expired. Sign in again." else null)
+    }
+    fun requestSignIn() { update { it.copy(authPage = "signin", authError = null) } }
+    private fun requireAccount(): Boolean {
+        if (state.value.account != null && repo.sessionValid()) return true
+        if (state.value.account != null) endSession(expired = true)
+        requestSignIn(); return false
     }
     fun authenticate(email: String, password: String) = authAction {
         val response = JSONObject(repo.request("/api/auth/login", "POST", JSONObject().put("email", email).put("password", password)))
@@ -140,10 +162,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     private fun authAction(action: suspend () -> Unit) {
         if (state.value.authBusy) return
+        val generation = sessionGeneration
+        val scope = if (state.value.account == null) viewModelScope else userScope
         update { it.copy(authBusy = true, authError = null, authMessage = null) }
-        viewModelScope.launch {
-            try { action() } catch (e: Exception) { authError(e.message ?: "Could not complete this request. Please retry.") }
-            finally { update { it.copy(authBusy = false) } }
+        scope.launch {
+            try { action() } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { if (generation == sessionGeneration) authError(e.message ?: "Could not complete this request. Please retry.") }
+            finally { if (generation == sessionGeneration) update { it.copy(authBusy = false) } }
         }
     }
     fun register(name: String, email: String, password: String, confirmation: String) = authAction {
@@ -190,6 +215,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val changed = old.origin != next.origin || old.radius != next.radius || old.diets != next.diets || old.type != next.type || old.openOnly != next.openOnly || old.wheelchair != next.wheelchair || old.preferred != next.preferred
         if (changed) etaJob?.cancel()
         mutable.value = if (changed) next.copy(results = emptyList(), totalMatches = 0, hasSearched = false, eta = emptyMap()) else next
+        if (old.reportCategory != next.reportCategory || old.reportDescription != next.reportDescription ||
+            old.reportEvidence != next.reportEvidence || old.reportService?.id != next.reportService?.id ||
+            old.reportProvider?.optString("id") != next.reportProvider?.optString("id")) {
+            val accountId = next.account?.optString("id")
+            if (accountId != null) {
+                draftSaveJob?.cancel()
+                draftSaveJob = viewModelScope.launch {
+                    if (next.reportCategory.isNotBlank() || next.reportDescription.isNotBlank() || next.reportEvidence.isNotBlank()) delay(300)
+                    repo.sessionStore.update { data ->
+                        val drafts = data.optJSONObject("report_drafts") ?: JSONObject()
+                        if (next.reportCategory.isBlank() && next.reportDescription.isBlank() && next.reportEvidence.isBlank()) drafts.remove(accountId)
+                        else drafts.put(accountId, JSONObject().put("service", next.reportService?.json?.let { source ->
+                            JSONObject(source.toString()).apply { listOf("distance_km", "travel_time", "explanations", "status_at").forEach(::remove) }
+                        }).put("provider", next.reportProvider)
+                            .put("category", next.reportCategory).put("description", next.reportDescription).put("evidence", next.reportEvidence))
+                        data.put("report_drafts", drafts)
+                    }
+                }
+            }
+        }
     }
     fun error(message: String?) = update { it.copy(error = message, loading = false) }
     fun loadProviders() { userScope.launch {
@@ -197,7 +242,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         try {
             val (providers, offline) = repo.providers()
             update { it.copy(providers = providers, providerOffline = offline, providerLoading = false) }
-        } catch (_: Exception) { update { it.copy(providerLoading = false, providerError = "Provider directory unavailable. Try again when connected.") } }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { update { it.copy(providerLoading = false, providerError = "Provider directory unavailable. Try again when connected.") } }
     } }
     fun browseProviders() { update { it.copy(page = "providers", selectedProvider = null) }; loadProviders() }
     fun providerDetail(provider: JSONObject) { update { it.copy(informationReturnPage = it.page, page = "providerDetail", selectedProvider = provider, selected = null) } }
@@ -206,19 +252,49 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val (services, offline) = repo.all()
             val saved = repo.bookmarks()
             val diets = repo.diets()
-            update { it.copy(services = services, offline = offline, saved = saved, diets = diets, lastUpdate = repo.lastUpdate) }
-        } catch (e: Exception) { error("Could not load services. Start the API or try again. ${e.message}") }
+            reminderStore.updateServices(services)
+            update { it.copy(services = services, offline = offline, saved = saved, diets = diets, lastUpdate = repo.lastUpdate,
+                reminders = reminderStore.times(), notificationsAllowed = reminderStore.allowed()) }
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { error("Could not load services. Start the API or try again. ${e.message}") }
     } }
     fun tab(name: String) {
+        if (state.value.page == "report" && state.value.loading) { update { it.copy(notice = "Submitting your report. Please wait…") }; return }
+        if (state.value.page == "report" && hasReportDraft()) { update { it.copy(reportLeavePrompt = true, reportNextTab = name) }; return }
+        if (name in listOf("Saved", "Preferences") && !requireAccount()) return
         update { it.copy(tab = name, page = if (name == "Find" && it.results.isNotEmpty()) "results" else "home", selected = null, error = null) }
         if (name == "Saved") refresh()
     }
     fun back() {
+        if (state.value.page == "report" && state.value.loading) { update { it.copy(notice = "Submitting your report. Please wait…") }; return }
+        if (state.value.page == "report" && hasReportDraft()) { update { it.copy(reportLeavePrompt = true, reportNextTab = null) }; return }
         if (state.value.tab == "Map" && state.value.page == "home" && state.value.routeDestination != null) { closeRoute(); return }
         if (state.value.page in listOf("report", "confirmation")) { returnToInformation(); return }
         update { it.copy(page = if (it.page in listOf("detail", "providerDetail") && it.informationReturnPage in listOf("allSupport", "nameResults", "providers")) it.informationReturnPage else if (it.page == "providerDetail") "providers" else if (it.results.isNotEmpty() && it.tab == "Find") "results" else "home", selected = null, selectedProvider = null, reference = null, route = if (it.tab == "Map" && it.routeDestination != null) it.route else null, error = null) }
     }
-    fun openReport() { update { it.copy(page = "report", reference = null, error = null, reportCategory = "", reportDescription = "", reportEvidence = "") } }
+    fun hasReportDraft() = state.value.let { it.reportCategory.isNotBlank() || it.reportDescription.isNotBlank() || it.reportEvidence.isNotBlank() }
+    fun openReport() {
+        if (!requireAccount()) return
+        update { it.copy(page = "report", reference = null, error = null,
+            selected = if (hasReportDraft()) it.reportService else it.selected,
+            selectedProvider = if (hasReportDraft()) it.reportProvider else it.selectedProvider,
+            reportService = if (hasReportDraft()) it.reportService else it.selected,
+            reportProvider = if (hasReportDraft()) it.reportProvider else it.selectedProvider,
+            notice = if (hasReportDraft()) "Your unfinished report has been restored." else null) }
+    }
+    fun cancelReport() { update { it.copy(reportLeavePrompt = true, reportNextTab = null) } }
+    fun leaveReport(discard: Boolean) {
+        val nextTab = state.value.reportNextTab
+        update { it.copy(reportLeavePrompt = false, reportNextTab = null,
+            reportCategory = if (discard) "" else it.reportCategory,
+            reportDescription = if (discard) "" else it.reportDescription,
+            reportEvidence = if (discard) "" else it.reportEvidence,
+            reportService = if (discard) null else it.reportService,
+            reportProvider = if (discard) null else it.reportProvider,
+            notice = if (discard) "Report draft discarded." else "Report draft kept until you submit or discard it.") }
+        returnToInformation()
+        if (nextTab != null) tab(nextTab)
+    }
     fun returnToInformation() { update { it.copy(page = if (it.selectedProvider != null) "providerDetail" else "detail", reference = null, error = null) } }
     fun origin(text: String) { searchJob?.cancel(); routeJob?.cancel(); coordinates = null; update { it.copy(origin = text, originLatitude = null, originLongitude = null, deviceLatitude = null, deviceLongitude = null, startingAddress = null, startingLatitude = null, startingLongitude = null, candidates = emptyList(), loading = false, error = null, locationLoading = false, locationError = null, route = null, routeLoading = false) } }
     fun openOrganisation(match: OrganisationMatch) {
@@ -293,12 +369,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         removeOrSave(service.id)
     }
     fun removeOrSave(serviceId: String) {
+        if (!requireAccount()) return
         val account = state.value.account?.optString("id") ?: return
         val ids = state.value.saved.let { if (serviceId in it) it - serviceId else it + serviceId }
         update { it.copy(saved = ids) }
+        if (serviceId !in ids) { reminderStore.remove(serviceId); update { it.copy(reminders = reminderStore.times()) } }
         userScope.launch { repo.saveBookmarks(ids, account) }
     }
-    fun clearLocal() { userScope.launch { repo.clearLocal(); clearLocation(); update { it.copy(saved = emptySet(), diets = emptySet(), notice = "Local saves and preferences cleared") } } }
+    fun clearLocal() { userScope.launch { repo.clearLocal(); reminderStore.clear(); clearLocation(); update { it.copy(saved = emptySet(), diets = emptySet(), reminders = emptyMap(), notice = "Local bookmarks, reminder settings and dietary preferences cleared.") } } }
+    fun notificationState() { reminderStore.resume(); update { it.copy(notificationsAllowed = reminderStore.allowed(), clock = System.currentTimeMillis()) } }
+    fun reminder(service: Service, enabled: Boolean, time: String = "09:00") {
+        if (!requireAccount()) return
+        if (enabled && !reminderStore.allowed()) { error("Notifications are blocked. Allow them in notification settings, then enable your reminder."); return }
+        reminderStore.set(service, enabled, time)
+        update { it.copy(reminders = reminderStore.times(), notificationsAllowed = reminderStore.allowed(),
+            notice = if (enabled) "Reminder enabled around $time Singapore time on recorded session days. Food availability is not guaranteed." else "Reminder disabled.") }
+    }
     fun searchAddress() {
         searchJob?.cancel()
         searchJob = userScope.launch {
@@ -319,6 +405,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val body = JSONObject().put("latitude", lat).put("longitude", lon).put("radius_km", s.radius).put("limit", 10)
                 .put("diets", JSONArray(s.diets.toList())).put("support_type", s.type).put("open_only", s.openOnly).put("wheelchair", s.wheelchair)
             if (s.preferred.isNotBlank()) {
+                if (!LocalDateTime.parse(s.preferred).isAfter(LocalDateTime.now(ZoneId.of("Asia/Singapore"))))
+                    throw IllegalArgumentException("Choose a future preferred time, or use current time.")
                 val parsed = runCatching { LocalDateTime.parse(s.preferred).atZone(ZoneId.of("Asia/Singapore")).toOffsetDateTime().toString() }
                     .getOrElse { throw IllegalArgumentException("Use YYYY-MM-DDTHH:MM for your preferred Singapore time.") }
                 body.put("preferred_time", parsed)
@@ -327,7 +415,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (coordinates != (lat to lon) || SearchSummary(state.value) != SearchSummary(s)) {
                 update { it.copy(loading = false) }; return@launch
             }
-            val results = response.getJSONArray("services").objects().map(::Service)
+            val results = response.getJSONArray("services").objects().map { row ->
+                if (s.preferred.isNotBlank()) row.put("status_at", s.preferred)
+                Service(row)
+            }
             update { it.copy(results = results, totalMatches = response.optInt("total", results.size), hasSearched = true, loading = false, page = if (it.tab == "Map") "home" else "results", offline = false, lastUpdate = response.optString("last_update")) }
             estimate(results)
         } catch (e: CancellationException) { throw e }
@@ -344,7 +435,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val semaphore = Semaphore(3)
             services.map { service -> async {
                 semaphore.withPermit {
-                    val result = runCatching { getRoute(service, "walk") }.getOrNull()
+                    val result = try { getRoute(service, "walk") } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
                     val label = if (result?.optBoolean("available") == true) "${kotlin.math.ceil(result.getDouble("duration_minutes")).toInt()} min walk" else "Travel time unavailable"
                     update { it.copy(eta = it.eta + (service.id to label)) }
                 }
@@ -363,6 +454,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    fun openReminder(serviceId: String) { userScope.launch {
+        try { detail(Service(JSONObject(repo.request("/api/services/$serviceId")))) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { error("This reminder’s service could not be loaded. Open Saved to check the latest approved information.") }
+    } }
     private suspend fun getRoute(service: Service, mode: String): JSONObject {
         val origin = coordinates ?: throw IllegalArgumentException("Search an address on Find or Map before requesting directions.")
         return JSONObject(repo.request("/api/routes", "POST", JSONObject().put("latitude", origin.first)
@@ -415,13 +511,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun report(category: String, description: String, evidence: String) { userScope.launch {
+        if (!requireAccount()) return@launch
         update { it.copy(loading = true, error = null) }
         try {
             val snapshot = state.value
             val targetId = snapshot.selected?.id ?: snapshot.selectedProvider?.getString("id") ?: throw IllegalStateException("Open a listing before reporting incorrect information.")
             val body = JSONObject().put("service_id", targetId).put("target_kind", if (snapshot.selectedProvider != null) "provider" else "service").put("category", category).put("description", description.trim()).put("evidence", evidence.trim())
             val response = JSONObject(repo.request("/api/reports", "POST", body))
-            update { it.copy(reference = response.getString("reference"), page = "confirmation", loading = false) }
-        } catch (e: Exception) { error(e.message ?: "Report could not be submitted. Your input has been kept.") }
+            update { it.copy(reference = response.getString("reference"), page = "confirmation", loading = false,
+                reportCategory = "", reportDescription = "", reportEvidence = "", reportService = null, reportProvider = null) }
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { error(e.message ?: "Report could not be submitted. Your input has been kept.") }
     } }
 }

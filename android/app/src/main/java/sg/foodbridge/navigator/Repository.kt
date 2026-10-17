@@ -146,7 +146,7 @@ class Repository(private val context: Context) {
         val data = sessionStore.read()
         val current = System.currentTimeMillis()
         return data.optString("token").isNotBlank() && data.optJSONObject("account") != null &&
-            runCatching { Instant.parse(data.getString("expires_at")).toEpochMilli() > current }.getOrDefault(false) &&
+            runCatching { OffsetDateTime.parse(data.getString("expires_at")).toInstant().toEpochMilli() > current }.getOrDefault(false) &&
             current >= data.optLong("last_activity") && current - data.optLong("last_activity") < 30 * 60_000
     }
     fun requireSession() { if (!sessionValid()) { expireSession(); throw SessionExpired() } }
@@ -170,7 +170,7 @@ class Repository(private val context: Context) {
         val pending = data.optJSONArray("pending_revocations") ?: return@withContext
         val remaining = JSONArray()
         pending.objects().forEach { entry ->
-            if (runCatching { Instant.parse(entry.getString("expires_at")) <= Instant.now() }.getOrDefault(false)) return@forEach
+            if (runCatching { OffsetDateTime.parse(entry.getString("expires_at")).toInstant() <= Instant.now() }.getOrDefault(false)) return@forEach
             try {
                 val request = Request.Builder().url(BuildConfig.API_URL.trimEnd('/') + "/api/auth/logout")
                     .header("Authorization", "Bearer ${entry.getString("token")}")

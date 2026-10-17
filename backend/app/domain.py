@@ -91,6 +91,9 @@ class Service(Origin):
     website: str | None = None
     schedules: list[Schedule] = []
     exceptions: dict[str, list[Schedule]] = {}
+    # Existing schedules describe operating hours. Never infer a food session from them.
+    distribution_schedules: list[Schedule] = []
+    distribution_exceptions: dict[str, list[Schedule]] = {}
     observations: list[Observation] = []
     source: str = Field(min_length=1, max_length=300)
     imported_at: datetime
@@ -99,6 +102,14 @@ class Service(Origin):
     active: bool = True
     access_method: AccessMethod = 'contact_to_confirm'
     location_role: ServiceLocationRole | None = None
+
+    @field_validator('exceptions', 'distribution_exceptions')
+    @classmethod
+    def exception_dates(cls, value):
+        for key in value:
+            if datetime.strptime(key, '%Y-%m-%d').strftime('%Y-%m-%d') != key:
+                raise ValueError('Date exceptions must use YYYY-MM-DD')
+        return value
 
     @field_validator('website')
     @classmethod
@@ -233,5 +244,7 @@ def public_service(record, instant=None):
     if evidence and datetime.fromisoformat(evidence['valid_until']) <= instant:
         status = 'EXPIRED'
     data.update(id=record.id, version=record.version, operating_status=operating(data, instant),
+        distribution_status=operating({'schedules': data.get('distribution_schedules', []),
+            'exceptions': data.get('distribution_exceptions', {})}, instant),
         availability='UNKNOWN' if status == 'EXPIRED' else status, evidence=evidence)
     return data

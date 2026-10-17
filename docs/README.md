@@ -10,3 +10,5 @@
 | [licenses](licenses/AtkinsonHyperlegible-OFL.txt) | Third-party asset licenses |
 
 Start with the root [README](../README.md). Run commands from the repository root unless instructed otherwise.
+
+The revised SRS account model, Google sign-in, email setup and legacy staff migration are documented in [Accounts](setup/ACCOUNTS.md).

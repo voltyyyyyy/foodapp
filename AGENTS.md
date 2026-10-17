@@ -6,8 +6,8 @@ This guide applies to the whole repository. Use it to find the right source file
 
 FoodBridge helps people in Singapore find food support, view provider information, save listings and submit correction reports.
 
-- **Android is user-facing only.** Browsing, bookmarks and reporting need no account. Do not reintroduce staff sign-in or administrator screens into Android.
-- **Staff use the separate browser portal at `/staff/`.** Sign-in uses a **User ID**, represented by `username` in the API, not an email address.
+- **Android is user-facing only.** The revised SRS requires registered-user sign-in for discovery, bookmarks and reporting. Keep staff moderation screens in the browser portal.
+- **Staff use the separate browser portal at `/staff/`.** Sign-in uses an **email address** and the ADMINISTRATOR role. See `docs/setup/ACCOUNTS.md` for explicit legacy User ID migration.
 - Public information and staff operations share the same backend and database. Maintain server-side authorisation for administrator endpoints.
 
 ## Where to work
@@ -54,7 +54,7 @@ Docker Desktop must be running. The script builds the API and portal, starts Pos
 
 Local container names are `foodbridge-api`, `foodbridge-postgres` and `foodbridge-maintenance`. Inspect with `docker ps` and `docker logs --tail 30 foodbridge-api`; do not dump container environment variables containing secrets.
 
-The local User ID and password are stored in ignored `backend/data/local-staff-user-id.txt` and `backend/data/local-staff-password.txt`. Do not copy credentials into source, guides, screenshots or test fixtures. Environment bootstrap settings create missing accounts; changing them does not reset existing passwords. The account-management CLI resets an existing account and revokes its sessions, so use it only when account creation/reset is part of the requested work.
+The current staff email and password are stored in ignored `backend/data/local-staff-email.txt` and `backend/data/local-staff-password.txt`. The legacy User ID file is retained for explicit migrations. Do not copy credentials into source, guides, screenshots or test fixtures. Environment bootstrap settings create missing accounts; changing them does not reset existing passwords. The account-management CLI resets an existing account and revokes its sessions, so use it only when account creation/reset is part of the requested work.
 
 For a Python-only setup, follow the root [README](README.md). Run Uvicorn from `backend/`: the default SQLite path is relative to the process working directory. Production requires PostgreSQL.
 

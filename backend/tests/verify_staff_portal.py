@@ -21,7 +21,8 @@ sys.path.insert(0, str(root / 'backend'))
 from fastapi.testclient import TestClient
 from app.main import app
 from app.manage_admin import main as provision_admin
-from app.db import Session, Record, engine, iso, now
+from app.db import Session, Record, Admin, Token, engine, iso, now
+from argon2 import PasswordHasher
 from sqlalchemy.exc import SQLAlchemyError
 
 passed = []
@@ -60,7 +61,7 @@ with TestClient(app, raise_server_exceptions=False) as client:
     org = client.get(org_path, headers=headers).json()
     check('existing organisation and provenance displayed', org['kind'] == 'organisation' and org.get('source') and org.get('verified_at'))
     service_path = '/api/admin/services/harmony'
-    body = {'version': target['version'], 'proposed': {'phone': 'bad-number'}}
+    body = {'version': target['version'], 'reason': 'Staff portal acceptance edit', 'proposed': {'phone': 'bad-number'}}
     check('invalid input rejected', client.patch(service_path, headers=headers, json=body).status_code == 422)
     check('invalid save preserves approved record and audit', client.get(service_path, headers=headers).json() == target and
         client.get('/api/admin/audit', headers=headers).json() == initial_audit)
@@ -78,15 +79,16 @@ with TestClient(app, raise_server_exceptions=False) as client:
     entries = client.get('/api/admin/audit', headers=headers).json()
     entry = next(a for a in entries if a['target'] == 'harmony')
     check('audit contains actor, action, target, timestamp and before/after', entry['actor'] == login['username'] and
-        entry['action'] == 'UPDATE_AND_PUBLISH' and entry['timestamp'] and set(entry['detail']) == {'before', 'after'})
+        entry['action'] == 'UPDATE_AND_PUBLISH' and entry['timestamp'] and
+        {'before', 'after', 'reason'} <= set(entry['detail']) and entry['detail']['reason'] == body['reason'])
     check('stale save blocked', client.patch(service_path, headers=headers, json=body).status_code == 409)
     latest = client.get(report_path, headers=headers).json()
     check('report retrieves latest related values', latest['current']['version'] == target['version'] + 1 and
         latest['current']['delivery_information'] == body['proposed']['delivery_information'])
     check('blank organisation rejected', client.patch(org_path, headers=headers, json={
-        'version': org['version'], 'proposed': {'name': ''}}).status_code == 422)
+        'version': org['version'], 'reason': 'Validate blank organisation name', 'proposed': {'name': ''}}).status_code == 422)
     check('organisation update publishes and audits', client.patch(org_path, headers=headers, json={
-        'version': org['version'], 'proposed': {'name': 'Reviewed organisation name'}}).status_code == 200 and
+        'version': org['version'], 'reason': 'Verified organisation name', 'proposed': {'name': 'Reviewed organisation name'}}).status_code == 200 and
         client.get('/api/services/harmony').json()['organisation_name'] == 'Reviewed organisation name')
     response = client.post(report_path + '/decision', headers=headers, json={'decision': 'APPROVED',
         'target_version': latest['current']['version'], 'proposed': {'eligibility': 'Contact us before collection'},
@@ -118,6 +120,15 @@ with TestClient(app, raise_server_exceptions=False) as client:
     check('password reset revokes existing sessions', client.get('/api/admin/reports', headers=user_headers).status_code == 401)
     check('password reset replaces old credential', client.post('/api/admin/login', json={'email': 'test-user@example.com',
         'password': 'first-acceptance-password'}).status_code == 401 and client.post('/api/admin/login', json={'email': 'test-user@example.com', 'password': 'second-acceptance-password'}).status_code == 200)
+    with Session.begin() as db:
+        db.add(Admin(username='legacy-operator', password_hash=PasswordHasher().hash('legacy-acceptance-password')))
+        db.add(Token(digest='a' * 64, username='legacy-operator', expires_at=now() + timedelta(hours=8)))
+    with patch('sys.argv', ['manage_admin', '--email', 'migrated@example.com', '--migrate-user-id', 'legacy-operator']):
+        provision_admin()
+    migrated = client.post('/api/admin/login', json={'email': 'migrated@example.com', 'password': 'legacy-acceptance-password'})
+    check('explicit legacy migration preserves password', migrated.status_code == 200 and migrated.json()['account']['role'] == 'ADMINISTRATOR')
+    with Session() as db:
+        check('legacy migration revokes old sessions without removing legacy credentials', db.get(Token, 'a' * 64) is None and db.get(Admin, 'legacy-operator') is not None)
 
 engine.dispose()
 temporary.cleanup()

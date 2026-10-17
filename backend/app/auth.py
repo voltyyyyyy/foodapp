@@ -5,6 +5,7 @@ import secrets
 import smtplib
 import ssl
 from datetime import datetime, timedelta
+from contextlib import contextmanager
 from email.message import EmailMessage
 from uuid import uuid4
 
@@ -25,6 +26,20 @@ dummy_hash = hasher.hash(secrets.token_urlsafe(32))
 INVALID = 'Email or password is incorrect, or the account is not active.'
 ACK = 'If an eligible account exists, an email will arrive with the next steps.'
 
+@contextmanager
+def transaction(serialize=True):
+    with Session() as db:
+        try:
+            # SQLite has no row locks. Serialize account writes before reading counters or
+            # one-use links; PostgreSQL uses the explicit FOR UPDATE account locks below.
+            if serialize and db.bind.dialect.name == 'sqlite':
+                db.connection().exec_driver_sql('BEGIN IMMEDIATE')
+            yield db
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
+
 def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
@@ -41,7 +56,7 @@ def locked(db, account_id):
 def session_account(credentials=Depends(security)):
     if not credentials:
         raise HTTPException(401, 'Sign in to continue.')
-    with Session.begin() as db:
+    with transaction(serialize=False) as db:
         # Serialize session use with password/reset/revocation on the account row.
         session = db.get(AccountSession, digest(credentials.credentials))
         account = locked(db, session.account_id) if session else None
@@ -162,7 +177,7 @@ def register(body: Registration, request: Request):
     throttle(request, 'register', 10)
     require_mail()
     try:
-        with Session.begin() as db:
+        with transaction() as db:
             if db.scalar(select(Account).where(Account.email == str(body.email))):
                 raise HTTPException(409, 'An account already uses this email. Sign in or reset your password.')
             account = Account(id=str(uuid4()), email=str(body.email), display_name=body.display_name,
@@ -179,7 +194,7 @@ def register(body: Registration, request: Request):
 def login(body: Login, request: Request):
     throttle(request, 'account-login', 40)
     result = None
-    with Session.begin() as db:
+    with transaction() as db:
         account = db.scalar(select(Account).where(Account.email == str(body.email)).with_for_update())
         blocked = account and account.blocked_until and timestamp(account.blocked_until) > now()
         if blocked:
@@ -217,7 +232,7 @@ def verify(body: LinkInput, request: Request):
     return {'message': 'Email verified. You can now sign in.'}
 
 def consume_link(token, purpose, password=None):
-    with Session.begin() as db:
+    with transaction() as db:
         link = db.get(AccountLink, digest(token))
         account = locked(db, link.account_id) if link else None
         if link:
@@ -238,7 +253,7 @@ def request_link(body, request, purpose):
     throttle(request, 'request-' + purpose, 10)
     require_mail()
     token = None
-    with Session.begin() as db:
+    with transaction() as db:
         account = db.scalar(select(Account).where(Account.email == str(body.email)).with_for_update())
         if account and account.state == ('PENDING_VERIFICATION' if purpose == 'verify' else 'ACTIVE'):
             token = issue_link(db, account, purpose)
@@ -271,7 +286,7 @@ def me(account=Depends(session_account)):
 
 @router.patch('/me')
 def edit_profile(body: NameInput, account=Depends(session_account)):
-    with Session.begin() as db:
+    with transaction() as db:
         stored = locked(db, account['id'])
         stored.display_name = body.display_name
         return public_account(stored)
@@ -279,7 +294,7 @@ def edit_profile(body: NameInput, account=Depends(session_account)):
 @router.post('/change-password')
 def change_password(body: PasswordChange, request: Request, account=Depends(session_account)):
     throttle(request, 'change-password', 10)
-    with Session.begin() as db:
+    with transaction() as db:
         stored = locked(db, account['id'])
         try:
             hasher.verify(stored.password_hash or dummy_hash, body.current_password)
@@ -295,7 +310,7 @@ def change_password(body: PasswordChange, request: Request, account=Depends(sess
 def logout(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
     # Idempotent, including revoked/expired tokens.
     if credentials:
-        with Session.begin() as db:
+        with transaction() as db:
             db.execute(delete(AccountSession).where(AccountSession.digest == digest(credentials.credentials)))
     return {'status': 'signed_out'}
 
@@ -305,7 +320,7 @@ def google_challenge(request: Request):
     if not os.getenv('GOOGLE_WEB_CLIENT_ID'):
         raise HTTPException(503, 'Google sign-in is not configured. Use email and password.')
     nonce = secrets.token_urlsafe(32)
-    with Session.begin() as db:
+    with transaction() as db:
         db.execute(delete(GoogleChallenge).where(GoogleChallenge.expires_at <= now()))
         db.add(GoogleChallenge(digest=digest(nonce), expires_at=now() + timedelta(minutes=5)))
     return {'nonce': nonce}
@@ -344,7 +359,7 @@ def google_login(body: GoogleInput, request: Request):
     except Exception:
         raise HTTPException(503, 'Google sign-in is unavailable. Please try again later.') from None
     try:
-        with Session.begin() as db:
+        with transaction() as db:
             challenge = db.execute(delete(GoogleChallenge).where(GoogleChallenge.digest == digest(body.nonce),
                                    GoogleChallenge.expires_at > now()))
             if challenge.rowcount != 1:

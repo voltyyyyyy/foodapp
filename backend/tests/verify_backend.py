@@ -54,7 +54,7 @@ with TestClient(app) as client:
     approved = client.post(decision_path, headers=headers, json={'decision': 'APPROVED', 'target_version': 1, 'proposed': {'eligibility': 'Verified acceptance probe'}})
     check('approval publishes values', approved.status_code == 200 and client.get('/api/services/harmony').json()['eligibility'] == 'Verified acceptance probe')
     check('second decision blocked', client.post(decision_path, headers=headers, json={'decision': 'REJECTED', 'reason': 'already decided'}).status_code == 409)
-    check('stale edit blocked', client.patch('/api/admin/services/harmony', headers=headers, json={'version': 1, 'proposed': {'name': 'stale'}}).status_code == 409)
+    check('stale edit blocked', client.patch('/api/admin/services/harmony', headers=headers, json={'version': 1, 'reason': 'Stale edit acceptance probe', 'proposed': {'name': 'stale'}}).status_code == 409)
     check('atomic audit recorded', any(a['target'] == report['reference'] for a in client.get('/api/admin/audit', headers=headers).json()))
     route = client.post('/api/routes', json={**origin, 'service_id': 'harmony'}).json()
     check('unconfigured routing gives honest failure', route['available'] is False)

@@ -5,6 +5,7 @@ import tempfile
 from datetime import timedelta
 from pathlib import Path
 from unittest.mock import patch
+from concurrent.futures import ThreadPoolExecutor
 
 temporary = tempfile.TemporaryDirectory(prefix='foodbridge-accounts-')
 os.environ.update(DATABASE_URL='sqlite:///' + (Path(temporary.name) / 'accounts.db').as_posix(),
@@ -145,6 +146,10 @@ with patch.object(auth, 'send_link', side_effect=send), TestClient(app) as clien
         def google_payload(**changes):
             return {'nonce': nonce, 'id_token': jwt.encode(signer, {**claims, 'nonce': nonce, **changes}).decode()}
         check('Google wrong audience rejected', client.post('/api/auth/google', json=google_payload(aud='other-client')).status_code == 401)
+        altered = google_payload()
+        segments = altered['id_token'].split('.')
+        segments[2] = ('A' if segments[2][0] != 'A' else 'B') + segments[2][1:]
+        check('Google altered signature rejected', client.post('/api/auth/google', json={**altered, 'id_token': '.'.join(segments)}).status_code == 401)
         check('Google wrong issuer rejected', client.post('/api/auth/google', json=google_payload(iss='https://attacker.example')).status_code == 401)
         check('Google expired ID token rejected', client.post('/api/auth/google', json=google_payload(exp=int((now() - timedelta(minutes=5)).timestamp()))).status_code == 401)
         check('Google unverified email rejected', client.post('/api/auth/google', json=google_payload(email_verified=False)).status_code == 401)
@@ -157,6 +162,19 @@ with patch.object(auth, 'send_link', side_effect=send), TestClient(app) as clien
         check('Google subject maps to stable account', repeated.json()['account']['id'] == google.json()['account']['id'])
         nonce = client.post('/api/auth/google/challenge').json()['nonce']
         check('email collision never links an account silently', client.post('/api/auth/google', json=google_payload(sub='different-subject', email='seeker@example.com')).status_code == 409)
+    with Session.begin() as db:
+        db.add(Account(id='concurrent-account', email='concurrent@example.com', display_name='Concurrent fixture',
+                       password_hash=auth.hasher.hash('concurrent-account-password'), role='REGISTERED_USER', state='ACTIVE'))
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        failures = list(pool.map(lambda _: login(client, 'concurrent@example.com', 'wrong-password').status_code, range(6)))
+    with Session() as db:
+        stored = db.get(Account, 'concurrent-account')
+        check('concurrent failed passwords cannot lose lockout counts', failures == [401] * 6 and stored.failed_attempts == 5 and auth.timestamp(stored.blocked_until) > now())
+    client.post('/api/auth/forgot-password', json={'email': 'seeker@example.com'})
+    concurrent_reset = {'token': last_token('reset'), 'password': 'concurrent-reset-password', 'confirmation': 'concurrent-reset-password'}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        resets = list(pool.map(lambda _: client.post('/api/auth/reset-password', json=concurrent_reset).status_code, range(2)))
+    check('concurrent reset consumes a link exactly once', sorted(resets) == [200, 400])
     with patch.dict(os.environ, {'ENVIRONMENT': 'production'}):
         check('production rejects HTTP credentials', login(client).status_code == 426)
     with patch.dict(os.environ, {'SMTP_HOST': ''}):

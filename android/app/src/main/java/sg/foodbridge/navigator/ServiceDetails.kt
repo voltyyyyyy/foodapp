@@ -70,19 +70,20 @@ fun reportCategoryLabel(category: String) = when (category) {
 
 // Date-specific overrides replace the recurring schedule, including an empty (closed) override.
 private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject> {
-    val exceptions = service.json.optJSONObject("exceptions")
-    val rows = if (exceptions?.has(date.toString()) == true) exceptions.optJSONArray(date.toString())
-        else service.json.optJSONArray("schedules")
-    return rows?.objects()?.flatMap { row ->
-        val days = row.optJSONArray("days")
-        val weekday = date.dayOfWeek.value - 1
-        val listedDays = days?.let { a -> (0 until a.length()).map(a::optInt) } ?: emptyList()
-        buildList {
-            if (weekday in listedDays) add(row)
-            if (row.optString("end") < row.optString("start") && (weekday + 6) % 7 in listedDays)
-                add(JSONObject(row.toString()).put("calendar_continuation", true))
+    val exceptions = service.json.optJSONObject("distribution_exceptions")
+    fun rows(day: LocalDate): List<JSONObject> {
+        val values = if (exceptions?.has(day.toString()) == true) exceptions.optJSONArray(day.toString())
+            else service.json.optJSONArray("distribution_schedules")
+        return values?.objects().orEmpty().filter { row ->
+            val days = row.optJSONArray("days")
+            days?.let { a -> (0 until a.length()).any { a.optInt(it) == day.dayOfWeek.value - 1 } } == true
         }
-    }?.sortedBy { if (it.optBoolean("calendar_continuation")) "00:00" else it.optString("start") } ?: emptyList()
+    }
+    val current = rows(date)
+    if (exceptions?.has(date.toString()) == true && current.isEmpty()) return emptyList()
+    val continuing = rows(date.minusDays(1)).filter { it.optString("end") < it.optString("start") }
+        .map { JSONObject(it.toString()).put("calendar_continuation", true) }
+    return (current + continuing).sortedBy { if (it.optBoolean("calendar_continuation")) "00:00" else it.optString("start") }
 }
 
 @Composable private fun DistributionCalendar(service: Service) {
@@ -90,11 +91,11 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
     var selected by remember(service.id) { mutableStateOf(today) }
     var weekStart by remember(service.id) { mutableStateOf(today.minusDays((today.dayOfWeek.value - 1).toLong())) }
     var weeklyExpanded by remember(service.id) { mutableStateOf(false) }
-    val recurring = service.json.optJSONArray("schedules")?.objects() ?: emptyList()
-    val exceptions = service.json.optJSONObject("exceptions")
+    val recurring = service.json.optJSONArray("distribution_schedules")?.objects() ?: emptyList()
+    val exceptions = service.json.optJSONObject("distribution_exceptions")
     val sessions = scheduleForDate(service, selected)
     val override = exceptions?.has(selected.toString()) == true
-    val unknown = recurring.isEmpty() && !override
+    val unknown = recurring.isEmpty() && !override && sessions.isEmpty()
     val days = (0L..6L).map { weekStart.plusDays(it) }
     val monthFormat = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -146,7 +147,7 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
         }
         if (recurring.isNotEmpty()) {
             TextButton(onClick = { weeklyExpanded = !weeklyExpanded }, contentPadding = PaddingValues(0.dp)) {
-                Text("Regular weekly hours"); Icon(if (weeklyExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
+                Text("Regular collection / meal sessions"); Icon(if (weeklyExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
             }
             if (weeklyExpanded) recurring.forEach { row ->
                 val dayLabels = row.optJSONArray("days")?.let { a -> (0 until a.length()).map { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")[a.getInt(it)] }.joinToString(", ") }.orEmpty()
@@ -183,7 +184,8 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             DetailHeading("Before you go", Icons.Outlined.Info)
             Availability(service.availability)
-            Text(when(service.operating) { "OPEN" -> "Within recorded opening hours now"; "CLOSED" -> "Outside recorded opening hours now"; else -> "Opening hours not confirmed" }, color = Muted)
+            AvailabilityEvidence(service)
+            Text(operatingLabel(service), color = Muted)
             Text("Contact the provider before travelling. Opening hours and available food can change.", color = Muted, style = MaterialTheme.typography.bodyMedium)
             service.evidence?.let { Text("Latest availability observation: ${formatTime(it.optString("observed_at"))}", color = Muted, style = MaterialTheme.typography.bodySmall) }
         }
@@ -211,12 +213,28 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
         HorizontalDivider()
         val directoryProvider = s.providers.firstOrNull { it.optString("id") == service.json.optString("provider_id") }
         if (directoryProvider != null) DirectoryDistributionInfo(directoryProvider)
-        val hasHours = (service.json.optJSONArray("schedules")?.length() ?: 0) > 0 || (service.json.optJSONObject("exceptions")?.length() ?: 0) > 0
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            DetailHeading("Operating hours", Icons.Outlined.Schedule)
+            Text("These hours do not confirm collection or meal sessions.", color = Muted)
+            val hours = service.json.optJSONArray("schedules")?.objects().orEmpty()
+            if (hours.isEmpty()) Text("Operating hours not confirmed", color = Muted)
+            hours.forEach { row ->
+                val days = row.optJSONArray("days")?.let { a -> (0 until a.length()).map { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")[a.getInt(it)] }.joinToString(", ") }.orEmpty()
+                Text("$days · ${clock(row.optString("start"))} – ${clock(row.optString("end"))}${if (row.optString("end") < row.optString("start")) " (next day)" else ""}")
+            }
+            service.json.optJSONObject("exceptions")?.let { overrides ->
+                overrides.keys().asSequence().sorted().forEach { date ->
+                    val rows = overrides.optJSONArray(date)?.objects().orEmpty()
+                    Text("$date: ${if (rows.isEmpty()) "Closed" else rows.joinToString { row -> "${clock(row.optString("start"))} – ${clock(row.optString("end"))}" }}", color = Muted)
+                }
+            }
+        }
+        val hasHours = (service.json.optJSONArray("distribution_schedules")?.length() ?: 0) > 0 || (service.json.optJSONObject("distribution_exceptions")?.length() ?: 0) > 0
         if (hasHours || directoryProvider == null) DistributionCalendar(service)
         else {
             TextButton(onClick = { calendarExpanded = !calendarExpanded }) {
                 Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp))
-                Text(if (calendarExpanded) "Hide calendar" else "View calendar (hours not confirmed)")
+                Text(if (calendarExpanded) "Hide calendar" else "View calendar (sessions not confirmed)")
             }
             if (calendarExpanded) DistributionCalendar(service)
         }

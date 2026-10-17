@@ -165,6 +165,8 @@ def providers(account=Depends(session_account)):
 
 @app.post('/api/search')
 def search(criteria: Search, account=Depends(session_account)):
+    if criteria.preferred_time is not None and criteria.preferred_time < now():
+        raise HTTPException(422, 'Choose a future preferred time, or use current time')
     instant = criteria.preferred_time or now()
     matches = []
     distances = {}
@@ -240,6 +242,8 @@ async def route(body: Route, account=Depends(session_account)):
         raise HTTPException(422, 'Select walking, public transport or driving')
     with Session() as db:
         destination = dict(item(db, body.service_id, 'service', True).data)
+        if not destination.get('active', True):
+            raise HTTPException(404, 'Service no longer listed')
     try:
         return await asyncio.wait_for(adapter.route(body.model_dump(), destination, body.mode), timeout=4)
     except Exception:
@@ -250,6 +254,8 @@ def report(body: Report, request: Request, account=Depends(session_account)):
     throttle(request, 'report', 15)
     with Session.begin() as db:
         service = item(db, body.service_id, body.target_kind, True)
+        if not service.data.get('active', True):
+            raise HTTPException(404, 'Service no longer listed')
         reference = 'FB-' + secrets.token_hex(8).upper()
         db.add(Record(id=reference, kind='report', state='PENDING', data={**body.model_dump(),
             'service_name': service.data['name'], 'base_version': service.version, 'reporter_account_id': account['id']}))
@@ -321,6 +327,7 @@ def admin_record(collection: str, id_: str, actor=Depends(administrator)):
 class Edit(BaseModel):
     version: int
     proposed: dict
+    reason: str = Field(default='', max_length=1000)
 
 def publish(db, target, proposal, expected_version):
     if target.version != expected_version:
@@ -357,8 +364,10 @@ def publish(db, target, proposal, expected_version):
 def edit_service(id_: str, body: Edit, actor=Depends(administrator)):
     with Session.begin() as db:
         target = item(db, id_, 'service')
+        if target.state == 'APPROVED' and not body.reason.strip():
+            raise HTTPException(422, 'A publication reason is required')
         before, after = publish(db, target, body.proposed, body.version)
-        audit(db, actor, 'UPDATE_AND_PUBLISH', id_, {'before': before, 'after': after})
+        audit(db, actor, 'UPDATE_AND_PUBLISH', id_, {'before': before, 'after': after, 'reason': body.reason})
     return {'status': 'published'}
 
 class Change(BaseModel):
@@ -507,8 +516,10 @@ def approve_provider(id_: str, actor=Depends(administrator)):
 def edit_provider(id_: str, body: Edit, actor=Depends(administrator)):
     with Session.begin() as db:
         target = item(db, id_, 'provider')
+        if target.state == 'APPROVED' and not body.reason.strip():
+            raise HTTPException(422, 'A publication reason is required')
         before, after = publish(db, target, body.proposed, body.version)
-        audit(db, actor, 'UPDATE_PROVIDER', id_, {'before': before, 'after': after})
+        audit(db, actor, 'UPDATE_PROVIDER', id_, {'before': before, 'after': after, 'reason': body.reason})
     return {'status': 'published'}
 
 @app.post('/api/admin/services/{id_}/publish')
@@ -543,8 +554,10 @@ def approve_organisation(id_: str, actor=Depends(administrator)):
 def edit_organisation(id_: str, body: Edit, actor=Depends(administrator)):
     with Session.begin() as db:
         target = item(db, id_, 'organisation')
+        if target.state == 'APPROVED' and not body.reason.strip():
+            raise HTTPException(422, 'A publication reason is required')
         before, after = publish(db, target, body.proposed, body.version)
-        audit(db, actor, 'UPDATE_AND_PUBLISH', id_, {'before': before, 'after': after})
+        audit(db, actor, 'UPDATE_AND_PUBLISH', id_, {'before': before, 'after': after, 'reason': body.reason})
     return {'status': 'published'}
 
 class Organisation(BaseModel):
