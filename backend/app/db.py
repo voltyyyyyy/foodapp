@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, ForeignKey, create_engine, event
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text, ForeignKey, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 def now():
@@ -93,3 +93,37 @@ class GoogleChallenge(Base):
     __tablename__ = 'google_challenges'
     digest: Mapped[str] = mapped_column(String(64), primary_key=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+# Additive push schema. Catalogue events are committed alongside the publication
+# and audit entry, so an API crash cannot lose the need to notify devices.
+class PushDevice(Base):
+    __tablename__ = 'push_devices'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[str] = mapped_column(ForeignKey('accounts.id', ondelete='CASCADE'), index=True)
+    token: Mapped[str] = mapped_column(Text)
+    token_digest: Mapped[str] = mapped_column(String(64), unique=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+class CatalogueEvent(Base):
+    __tablename__ = 'catalogue_events'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    entity_kind: Mapped[str] = mapped_column(String(30))
+    entity_id: Mapped[str] = mapped_column(String(64))
+    version: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    prepared: Mapped[bool] = mapped_column(Boolean, default=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    delivered_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+class PushDelivery(Base):
+    __tablename__ = 'push_deliveries'
+    event_id: Mapped[str] = mapped_column(ForeignKey('catalogue_events.id', ondelete='CASCADE'), primary_key=True)
+    device_id: Mapped[str] = mapped_column(ForeignKey('push_devices.id', ondelete='CASCADE'), primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    last_error: Mapped[str | None] = mapped_column(String(100), nullable=True)

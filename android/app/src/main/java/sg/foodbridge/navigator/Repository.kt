@@ -109,7 +109,7 @@ class Repository(private val context: Context) {
         }
     }
     suspend fun request(path: String, method: String = "GET", body: JSONObject? = null): String = withContext(Dispatchers.IO) {
-        val protected = !path.startsWith("/api/auth/") || path in listOf("/api/auth/me", "/api/auth/change-password")
+        val protected = path != "/api/privacy" && (!path.startsWith("/api/auth/") || path in listOf("/api/auth/me", "/api/auth/change-password"))
         if (protected) requireSession()
         val builder = Request.Builder().url(BuildConfig.API_URL.trimEnd('/') + path)
         val token = sessionStore.read().optString("token")
@@ -123,8 +123,7 @@ class Repository(private val context: Context) {
                     expireSession(token, revoked)
                     throw SessionExpired(revoked)
                 }
-                val detail = runCatching { JSONObject(content).opt("detail")?.toString() ?: "Request failed" }.getOrDefault("Request failed")
-                throw IOException(if (response.code == 422) "Check your input: $detail" else detail)
+                throw ApiError.from(response.code, content)
             }
             content
         }
@@ -173,6 +172,39 @@ class Repository(private val context: Context) {
     suspend fun saveBookmarks(ids: Set<String>, id: String) { requireSession(); context.store.edit { it[bookmarksKey(id)] = ids } }
     suspend fun saveDiets(diets: Set<String>, id: String) { requireSession(); context.store.edit { it[dietsKey(id)] = diets } }
     suspend fun clearLocal() { val id = accountId ?: return; context.store.edit { it.remove(bookmarksKey(id)); it.remove(dietsKey(id)) } }
+    suspend fun operatorPrivacy(): JSONObject = JSONObject(request("/api/privacy"))
+    suspend fun registerPushDevice(token: String) {
+        requireSession()
+        val id = sessionStore.pushInstallationId()
+        request("/api/push/device", "PUT", JSONObject().put("installation_id", id).put("token", token))
+        sessionStore.savePushToken(token)
+    }
+    suspend fun unregisterPushDevice() {
+        requireSession()
+        val id = sessionStore.pushInstallationId()
+        request("/api/push/device", "DELETE", JSONObject().put("installation_id", id))
+        sessionStore.clearPushToken()
+    }
+    fun reportReceipts(): List<JSONObject> {
+        requireSession()
+        val id = accountId ?: throw SessionExpired()
+        return sessionStore.read().optJSONObject("report_receipts")?.optJSONArray(id)?.objects().orEmpty()
+    }
+    fun saveReportReceipt(receipt: JSONObject) {
+        requireSession()
+        val id = accountId ?: throw SessionExpired()
+        sessionStore.update { data ->
+            val receipts = data.optJSONObject("report_receipts") ?: JSONObject()
+            val existing = receipts.optJSONArray(id)?.objects().orEmpty().filter { it.optString("reference") != receipt.optString("reference") }
+            receipts.put(id, JSONArray(listOf(JSONObject(receipt.toString())) + existing))
+            data.put("report_receipts", receipts)
+        }
+    }
+    fun clearReportReceipts() {
+        requireSession()
+        val id = accountId ?: throw SessionExpired()
+        sessionStore.update { it.optJSONObject("report_receipts")?.remove(id) }
+    }
     suspend fun retryRevocations() = withContext(Dispatchers.IO) {
         val data = sessionStore.read()
         val pending = data.optJSONArray("pending_revocations") ?: return@withContext
@@ -197,3 +229,39 @@ class Repository(private val context: Context) {
 }
 
 class SessionExpired(val revoked: Boolean = false) : IOException("Your session has expired. Sign in again.")
+
+class ApiError(message: String, val fieldErrors: Map<String, String> = emptyMap(), val statusCode: Int = 0) : IOException(message) {
+    companion object {
+        fun from(status: Int, content: String): ApiError {
+            val detail = runCatching { JSONObject(content).opt("detail") }.getOrNull()
+            if (detail is JSONArray) {
+                val errors = linkedMapOf<String, String>()
+                for (index in 0 until detail.length()) {
+                    val error = detail.optJSONObject(index) ?: continue
+                    val location = error.optJSONArray("loc")
+                    val field = location?.let { it.optString(it.length() - 1) }.orEmpty()
+                    val message = when (field) {
+                        "email" -> "Enter a valid email address."
+                        "display_name" -> "Enter a display name of 1 to 100 characters."
+                        "password" -> "Use a password of 12 to 128 characters."
+                        "confirmation" -> "Confirm the password exactly as entered."
+                        "current_password" -> "Enter your current password."
+                        "description" -> "Describe the correction in 1 to 1,000 characters."
+                        "evidence" -> "Use a complete http:// or https:// website link, up to 1,000 characters."
+                        "category" -> "Choose a report category."
+                        else -> error.optString("msg", "Check this field.").removePrefix("Value error, ")
+                    }
+                    errors.putIfAbsent(field, message)
+                }
+                return ApiError("Check the highlighted fields and try again.", errors, status)
+            }
+            val message = (detail as? String)?.takeIf { it.isNotBlank() } ?: "Could not complete the request. Please try again."
+            val fields = when {
+                message == "Current password is incorrect." -> mapOf("current_password" to message)
+                status == 409 && message.contains("email", ignoreCase = true) -> mapOf("email" to message)
+                else -> emptyMap()
+            }
+            return ApiError(message, fields, status)
+        }
+    }
+}

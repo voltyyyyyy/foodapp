@@ -1,6 +1,7 @@
 import math
 from datetime import datetime, timezone
 from typing import Literal
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -190,6 +191,7 @@ class Provider(BaseModel):
         return self
 
 class Report(BaseModel):
+    submission_id: UUID | None = None
     service_id: str
     target_kind: Literal['service', 'provider'] = 'service'
     category: Literal['Address', 'Contact', 'Hours', 'Service details', 'Permanently closed', 'Food unavailable', 'Other']
@@ -206,8 +208,15 @@ class Report(BaseModel):
     @field_validator('evidence')
     @classmethod
     def evidence_url(cls, value):
-        if value and not value.startswith(('https://', 'http://')):
-            raise ValueError('Evidence must be a website link')
+        from urllib.parse import urlparse
+        value = value.strip()
+        try:
+            parsed = urlparse(value)
+            valid = parsed.scheme in ('https', 'http') and bool(parsed.hostname) and not parsed.username and not parsed.password
+        except ValueError:
+            valid = False
+        if value and not valid:
+            raise ValueError('Use a complete http:// or https:// website link')
         return value
 
 def distance(a, b):
@@ -243,7 +252,7 @@ def public_service(record, instant=None):
     status = evidence['status'] if evidence else 'UNKNOWN'
     if evidence and datetime.fromisoformat(evidence['valid_until']) <= instant:
         status = 'EXPIRED'
-    data.update(id=record.id, version=record.version, operating_status=operating(data, instant),
+    data.update(id=record.id, version=record.version, status_at=instant.isoformat(), operating_status=operating(data, instant),
         distribution_status=operating({'schedules': data.get('distribution_schedules', []),
             'exceptions': data.get('distribution_exceptions', {})}, instant),
         availability='UNKNOWN' if status == 'EXPIRED' else status, evidence=evidence)

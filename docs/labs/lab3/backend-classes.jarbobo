@@ -153,7 +153,37 @@
             "lineText": "    target: Mapped[str] = mapped_column(String(64), index=True)"
           }
         }
-      ]
+      ],
+      "_layout": {
+        "v": 2,
+        "nodes": {
+          "origin": {
+            "x": 144.861328125,
+            "y": 63.5
+          },
+          "service": {
+            "x": 144.861328125,
+            "y": 221
+          },
+          "record": {
+            "x": 144.861328125,
+            "y": 387
+          },
+          "account": {
+            "x": 349.435546875,
+            "y": 387
+          },
+          "accountsession": {
+            "x": 349.435546875,
+            "y": 544.5
+          },
+          "audit": {
+            "x": 148.861328125,
+            "y": 557.5
+          }
+        },
+        "edgeLabels": {}
+      }
     }
   ]
 }

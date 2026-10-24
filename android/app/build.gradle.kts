@@ -5,6 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+// FCM is optional for local builds until a Firebase project config is supplied.
+if (file("google-services.json").exists()) apply(plugin = "com.google.gms.google-services")
 val localConfig = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
@@ -36,6 +38,10 @@ android {
     } }
 }
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.9.0")
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")

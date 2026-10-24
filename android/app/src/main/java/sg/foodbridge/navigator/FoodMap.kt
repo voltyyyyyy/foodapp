@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,30 +51,29 @@ import org.json.JSONObject
 @Composable fun MapScreen(s: UiState, model: AppViewModel) {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
-    val density = LocalDensity.current
+    var filters by remember { mutableStateOf(false) }
+    var permissionAsked by rememberSaveable { mutableStateOf(false) }
+    var permissionRevision by remember { mutableIntStateOf(0) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    var resumeGeneration by remember { mutableIntStateOf(0) }
     DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) resumeGeneration++ }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) permissionRevision++ }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    var filters by remember { mutableStateOf(false) }
     var selectedId by remember { mutableStateOf<String?>(null) }
     var mapProvider by remember { mutableStateOf<JSONObject?>(null) }
     var mapCenter by remember { mutableStateOf(LatLng(1.3521, 103.8198)) }
     var moved by remember { mutableStateOf(false) }
-    var showSaved by remember { mutableStateOf(false) }
+    var showSuggestions by remember { mutableStateOf(false) }
     var showStart by remember { mutableStateOf(false) }
+    var routeDetails by remember { mutableStateOf(false) }
     var savedFocus by remember { mutableStateOf<LatLng?>(null) }
-    var topHeight by remember { mutableIntStateOf(0) }
-    var bottomHeight by remember { mutableIntStateOf(0) }
     val routing = s.routeDestination != null
-    val savedServices = s.services.filter { it.id in s.saved }
     val selected = (s.results + s.services).find { it.id == selectedId }
     val savedSelection = selected != null && s.results.none { it.id == selected.id }
     val mapServices = when {
         routing -> listOfNotNull(s.routeDestination)
+        s.locationCleared -> emptyList()
         savedSelection -> s.results + listOfNotNull(selected)
         s.hasSearched -> s.results
         else -> s.services
@@ -80,185 +81,163 @@ import org.json.JSONObject
     fun hasPermission() = context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     fun locationEnabled() = context.getSystemService(LocationManager::class.java).isLocationEnabled
-    fun locate() { focus.clearFocus(); showSaved = false; showStart = false; savedFocus = null; moved = false; (context as? MainActivity)?.requestCurrentLocation() }
-    fun preview(match: OrganisationMatch) {
-        focus.clearFocus(); showSaved = false; showStart = false; moved = false
-        val service = match.service ?: s.services.firstOrNull { it.json.optString("provider_id") == match.id }
-            ?: s.services.firstOrNull { it.organisationName.equals(match.name, ignoreCase = true) || it.name.equals(match.name, ignoreCase = true) }
-        selectedId = service?.id
-        mapProvider = if (service == null) match.provider else null
-        savedFocus = service?.let { LatLng(it.latitude, it.longitude) }
+    fun openSettings(action: String, app: Boolean = false) {
+        runCatching { context.startActivity(android.content.Intent(action).apply { if (app) data = android.net.Uri.parse("package:${context.packageName}") }) }
+            .onFailure { model.error("Settings could not open. Enter an address to continue.") }
     }
-    fun search() {
-        focus.clearFocus(); showSaved = false; showStart = false; selectedId = null; mapProvider = null; savedFocus = null; moved = false
-        val matches = if (!routing) organisationMatches(s) else emptyList()
-        val exact = matches.firstOrNull { it.name.equals(s.origin.trim(), ignoreCase = true) }
-        if (exact != null) preview(exact)
-        else if (matches.isNotEmpty() && matches.map { it.name.lowercase() }.distinct().size == 1) preview(matches.first())
-        else model.search()
-    }
-    fun submitStart() {
-        focus.clearFocus(); showSaved = false; showStart = false; savedFocus = null; moved = false
-        if (routing) model.searchRouteOrigin() else model.searchAddress()
-    }
+    fun locate() { focus.clearFocus(); showSuggestions = false; showStart = false; savedFocus = null; moved = false; (context as? MainActivity)?.requestCurrentLocation() }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result.values.any { it }) locate()
-        else { model.locationFailed("Location access is off. Enter a starting address to continue."); showStart = true }
+        if (result.values.any { it }) { if (locationEnabled()) locate() else showStart = true }
+        else { model.locationFailed("Location access is off. Open app settings or enter a starting address."); showStart = true }
     }
     fun useDevice() {
-        if (hasPermission()) locate()
-        else permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+        if (!locationEnabled()) showStart = true
+        else if (hasPermission()) locate()
+        else if (permissionAsked && (context as? android.app.Activity)?.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) != true) {
+            model.locationFailed("Location permission is off. Open app location settings or enter an address."); showStart = true
+        } else { permissionAsked = true; permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)) }
     }
-    // Only request once on entry/new destination. Editing an address must not trigger GPS again.
-    LaunchedEffect(s.routeDestination?.id, resumeGeneration) {
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
-        if (s.origin.isBlank() && s.originLatitude == null && !s.locationLoading) {
-            if (hasPermission() && locationEnabled()) locate()
-            else showStart = true
-        }
+    fun preview(match: OrganisationMatch) {
+        focus.clearFocus(); showSuggestions = false; moved = false
+        // A provider can have several programmes/addresses. Never silently pick its first service.
+        selectedId = match.service?.id
+        mapProvider = match.provider
+        savedFocus = match.service?.let { LatLng(it.latitude, it.longitude) }
+    }
+    fun search() {
+        focus.clearFocus(); showSuggestions = false; selectedId = null; mapProvider = null; savedFocus = null; moved = false
+        model.search()
     }
     LaunchedEffect(s.locationError) { if (s.locationError != null) showStart = true }
-    Box(Modifier.fillMaxSize().imePadding()) {
-        FoodMap(mapServices, if (routing) s.route else null, Modifier.fillMaxSize(),
-            focusPoint = savedFocus, origin = s.originLatitude?.let { lat -> s.originLongitude?.let { LatLng(lat, it) } },
-            overlay = true, topInset = topHeight, bottomInset = bottomHeight,
-            onCenter = { mapCenter = it; moved = true }) { selectedId = it; mapProvider = null; savedFocus = null }
-        Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().onSizeChanged { topHeight = it.height }.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (routing) {
-                Surface(shape = RoundedCornerShape(20.dp), color = Color.White, shadowElevation = 3.dp) {
-                    Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = model::closeRoute) { Icon(Icons.Outlined.ArrowBack, "Back to map") }
-                            Column(Modifier.weight(1f)) {
-                                Row(Modifier.fillMaxWidth().clickable { showStart = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.RadioButtonChecked, null, Modifier.size(18.dp), tint = Color(0xFF4285F4))
-                                    Spacer(Modifier.width(12.dp))
-                                    Text(if (s.locationLoading) "Finding your location..." else s.origin.ifBlank { "Choose starting location" }, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                                    Icon(Icons.Outlined.Edit, "Change starting location", Modifier.size(18.dp), tint = Muted)
-                                }
-                                HorizontalDivider(color = Color(0xFFEDF0F0))
-                                Row(Modifier.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Outlined.LocationOn, null, Modifier.size(18.dp), tint = Teal)
-                                    Spacer(Modifier.width(12.dp)); Text(s.routeDestination!!.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                                }
-                            }
-                            Spacer(Modifier.width(12.dp))
+    LaunchedEffect(s.filtersRequested) { if (s.filtersRequested) { filters = true; model.update { it.copy(filtersRequested = false) } } }
+    Column(Modifier.fillMaxSize().imePadding()) {
+        Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (routing) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = model::closeRoute) { Icon(Icons.Outlined.ArrowBack, "Close route preview") }
+                        Column(Modifier.weight(1f)) {
+                            Text("Route preview · depart now", style = MaterialTheme.typography.titleSmall)
+                            Text(s.routeDestination!!.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                         }
-                        Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            listOf(Triple("drive", "Drive", Icons.Outlined.DirectionsCar), Triple("pt", "Public transport", Icons.Outlined.DirectionsTransit), Triple("walk", "Walk", Icons.Outlined.DirectionsWalk)).forEach { (value, label, icon) ->
-                                Surface(onClick = { model.route(value) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), color = if (s.routeMode == value) Mint else Color.White) {
-                                    Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Icon(icon, null, Modifier.size(22.dp), tint = if (s.routeMode == value) Teal else Muted)
-                                        Text(label, style = MaterialTheme.typography.labelSmall, color = if (s.routeMode == value) Teal else Muted, maxLines = 1)
-                                    }
-                                }
-                            }
+                        IconButton(onClick = { showStart = true }) { Icon(Icons.Outlined.EditLocationAlt, "Choose starting location") }
+                    }
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(Triple("drive", "Drive", Icons.Outlined.DirectionsCar), Triple("pt", "Public transport", Icons.Outlined.DirectionsTransit), Triple("walk", "Walk", Icons.Outlined.DirectionsWalk)).forEach { (value, label, icon) ->
+                            FilterChip(selected = s.routeMode == value, onClick = { model.route(value) }, label = { Text(label) }, leadingIcon = { Icon(icon, null, Modifier.size(20.dp)) }, modifier = Modifier.heightIn(min = 48.dp))
                         }
                     }
-                }
-            } else {
-                Surface(shape = RoundedCornerShape(32.dp), color = Color.White, shadowElevation = 3.dp) {
-                    TextField(if (s.origin in listOf("Your location", "Selected map area")) "" else s.origin,
-                        { savedFocus = null; selectedId = null; mapProvider = null; model.origin(it) }, modifier = Modifier.fillMaxWidth().onFocusChanged { showSaved = it.isFocused }, singleLine = true,
-                        placeholder = { Text("Search food support", style = MaterialTheme.typography.bodyLarge) },
-                        leadingIcon = { IconButton(onClick = ::search) { Icon(Icons.Outlined.Search, "Search food support", tint = Teal) } },
-                        trailingIcon = { if (showSaved || s.origin.isNotBlank() && s.origin != "Your location") IconButton(onClick = { focus.clearFocus(); showSaved = false; model.origin(""); selectedId = null; mapProvider = null; savedFocus = null }) { Icon(Icons.Outlined.Close, "Clear search") } },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }),
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
-                }
-                if (!showSaved) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(onClick = { focus.clearFocus(); filters = true }, label = { Text("Filters") }, leadingIcon = { Icon(Icons.Outlined.Tune, null, Modifier.size(18.dp)) },
-                        colors = AssistChipDefaults.assistChipColors(containerColor = Color.White), border = null)
-                    AssistChip(onClick = model::browseProviders, label = { Text("Providers") }, leadingIcon = { Icon(Icons.Outlined.Groups, null, Modifier.size(18.dp)) },
-                        colors = AssistChipDefaults.assistChipColors(containerColor = Color.White), border = null)
-                    AssistChip(onClick = { if (s.hasSearched) model.tab("Find") else model.browseAllSupport() }, label = { Text("View list") },
-                        leadingIcon = { Icon(Icons.Outlined.List, null, Modifier.size(18.dp)) }, colors = AssistChipDefaults.assistChipColors(containerColor = Color.White), border = null)
-                }
-            }
-            if (showSaved && !routing) Surface(shape = RoundedCornerShape(20.dp), color = Color.White, shadowElevation = 3.dp) {
-                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 300.dp), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    item { TextButton(onClick = { useDevice() }) { Icon(Icons.Outlined.MyLocation, null, Modifier.size(18.dp)); Spacer(Modifier.width(12.dp)); Text("Your location") } }
-                    item { SearchSuggestions(s, model, onMatch = ::preview) { focus.clearFocus(); showSaved = false } }
-                    item { Text("Saved places", style = MaterialTheme.typography.labelMedium, color = Muted, modifier = Modifier.padding(top = 8.dp)) }
-                    items(savedServices, key = { it.id }) { service ->
-                        Row(Modifier.fillMaxWidth().clickable { focus.clearFocus(); showSaved = false; mapProvider = null; selectedId = service.id; savedFocus = LatLng(service.latitude, service.longitude) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.BookmarkBorder, null, Modifier.size(22.dp), tint = Teal); Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) { Text(service.name, style = MaterialTheme.typography.bodyMedium, maxLines = 2); Text(service.type, color = Muted, style = MaterialTheme.typography.bodySmall) }
-                        }
+                } else {
+                    OutlinedTextField(if (s.origin in listOf("Your location", "Selected map area")) "" else s.origin,
+                        { savedFocus = null; selectedId = null; mapProvider = null; model.origin(it) },
+                        modifier = Modifier.fillMaxWidth().onFocusChanged { showSuggestions = it.isFocused }, singleLine = true,
+                        label = { Text("Address or name") },
+                        leadingIcon = { IconButton(onClick = ::search) { Icon(Icons.Outlined.Search, "Search as an address", tint = Teal) } },
+                        trailingIcon = { if (s.origin.isNotBlank()) IconButton(onClick = { focus.clearFocus(); showSuggestions = false; model.origin(""); selectedId = null; mapProvider = null; savedFocus = null }) { Icon(Icons.Outlined.Close, "Clear search") } },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }))
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val count = s.searchDiets.size + listOf(s.type != "All", s.openOnly, s.wheelchair, s.preferred.isNotBlank(), s.radius != 80).count { it }
+                        AssistChip(onClick = { focus.clearFocus(); showSuggestions = false; filters = true }, label = { Text("Filters ($count)") }, leadingIcon = { Icon(Icons.Outlined.Tune, null, Modifier.size(18.dp)) })
+                        AssistChip(onClick = model::browseProviders, label = { Text("Providers") })
+                        AssistChip(onClick = { if (s.hasSearched) model.tab("Find") else model.browseAllSupport() }, label = { Text("View list") }, leadingIcon = { Icon(Icons.Outlined.List, null, Modifier.size(18.dp)) })
                     }
-                    if (savedServices.isEmpty()) item { Text("Your saved services will appear here.", color = Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 12.dp)) }
                 }
             }
         }
-        if (moved && !routing && !showSaved) FilledTonalButton(onClick = { selectedId = null; savedFocus = null; moved = false; model.searchMapArea(mapCenter.latitude, mapCenter.longitude) }, modifier = Modifier.align(Alignment.TopCenter).padding(top = with(density) { topHeight.toDp() }), enabled = !s.loading,
-            colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color.White), elevation = ButtonDefaults.buttonElevation(2.dp)) { Icon(Icons.Outlined.Refresh, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Search this area") }
-        if (!showSaved || routing) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { bottomHeight = it.height }, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth().padding(end = 16.dp), horizontalArrangement = Arrangement.End) {
-                SmallFloatingActionButton(onClick = { useDevice() }, shape = CircleShape, containerColor = Color.White, contentColor = Teal) {
-                    if (s.locationLoading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.MyLocation, "Use current device location")
+        if (showSuggestions && !routing) {
+            LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(16.dp)) {
+                item { TextButton(onClick = ::useDevice) { Icon(Icons.Outlined.MyLocation, null); Spacer(Modifier.width(8.dp)); Text("Use device location") } }
+                item { Text("Search uses an address. For a provider or service name, choose a match below.", color = Muted, style = MaterialTheme.typography.bodySmall) }
+                item { SearchSuggestions(s, model, onMatch = ::preview) { focus.clearFocus(); showSuggestions = false } }
+                item { Text("Saved service locations", style = MaterialTheme.typography.titleSmall) }
+                items(s.services.filter { it.id in s.saved }, key = { it.id }) { service ->
+                    TextButton(onClick = { focus.clearFocus(); showSuggestions = false; mapProvider = null; selectedId = service.id; savedFocus = LatLng(service.latitude, service.longitude) }) { Text(service.name) }
+                }
+                item { TextButton(onClick = { focus.clearFocus(); showSuggestions = false }) { Text("Return to map") } }
+            }
+        } else {
+            Box(Modifier.fillMaxWidth().weight(1f)) {
+                FoodMap(mapServices, if (routing) s.route else null, Modifier.fillMaxSize(), focusPoint = savedFocus,
+                    origin = s.originLatitude?.let { lat -> s.originLongitude?.let { LatLng(lat, it) } },
+                    onCenter = { mapCenter = it; moved = true }) { selectedId = it; mapProvider = null; savedFocus = null }
+                if (moved && !routing) FilledTonalButton(onClick = { selectedId = null; mapProvider = null; savedFocus = null; moved = false; model.searchMapArea(mapCenter.latitude, mapCenter.longitude) }, modifier = Modifier.align(Alignment.TopCenter).padding(8.dp), enabled = !s.loading) { Text("Search this area") }
+                SmallFloatingActionButton(onClick = ::useDevice, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp), containerColor = MaterialTheme.colorScheme.surface) {
+                    if (s.locationLoading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.MyLocation, "Use device location")
                 }
             }
-            Surface(Modifier.fillMaxWidth(), color = Color.White, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), shadowElevation = 4.dp) {
-                Column(Modifier.padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.align(Alignment.CenterHorizontally).width(32.dp).height(4.dp).background(Color(0xFFD9DFDF), CircleShape))
-                    if (routing) key(s.routeDestination?.id, s.routeMode, s.origin) { MapRouteSummary(s, model, onChooseStart = { showStart = true }) }
-                    else if (selected != null) {
+            Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+                Column(Modifier.fillMaxWidth().heightIn(max = if (routing) 160.dp else 200.dp).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (routing) {
+                        val route = s.route
+                        if (s.routeLoading || s.locationLoading) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Finding route…") }
+                        else if (route?.optBoolean("available") == true) Text("%d min · %.1f km · estimate".format(kotlin.math.ceil(route.optDouble("duration_minutes")).toInt(), route.optDouble("distance_km")), style = MaterialTheme.typography.titleMedium, color = Teal)
+                        else Text(route?.optString("message") ?: "Choose a starting location for this route.", style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = { routeDetails = true }) { Text("Route details & navigation app"); Icon(Icons.Outlined.ExpandMore, null) }
+                        if (s.originLatitude == null) TextButton(onClick = { showStart = true }) { Text(if (s.locationCleared) "Starting location cleared — set it again" else "Choose starting location") }
+                    } else if (selected != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(selected.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
-                            IconButton(onClick = { selectedId = null; savedFocus = null }) { Icon(Icons.Outlined.Close, "Close place") }
+                            Text(selected.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            IconButton(onClick = { selectedId = null; savedFocus = null }) { Icon(Icons.Outlined.Close, "Close selected service") }
                         }
-                        Text(selected.type, color = Muted, style = MaterialTheme.typography.bodyMedium)
-                        Text(collectionLocationLabel(selected.json.optString("location_role")), color = Teal, style = MaterialTheme.typography.bodySmall)
-                        Text(selected.address, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        if (selected.json.optString("location_role") == "coordination_site") Text("${accessMethodLabel(selected.json.optString("access_method", "contact_to_confirm"))} · This pin is not a walk-in collection point.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                        if (savedSelection) Text("Suitability not checked for this search", color = Muted, style = MaterialTheme.typography.bodySmall)
-                        OutlinedButton(onClick = { model.detail(selected) }, modifier = Modifier.fillMaxWidth()) { Text("View support details") }
-                        Button(onClick = { savedFocus = null; model.detail(selected); model.route(s.routeMode) }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Outlined.Directions, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text(directionsButtonLabel(selected.json.optString("location_role")).replace("Get directions", "Navigate"))
-                        }
+                        IconFact(collectionLocationLabel(selected.json.optString("location_role")), Icons.Outlined.LocationOn)
+                        IconFact(nextSessionLabel(selected), Icons.Outlined.CalendarMonth)
+                        Availability(selected.availability)
+                        if (savedSelection || !s.hasSearched) Text("Suitability not checked for this search", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = { model.detail(selected) }, modifier = Modifier.fillMaxWidth()) { Text("Review support, contact & directions") }
                     } else if (mapProvider != null) {
                         val provider = mapProvider!!
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(provider.getString("name"), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
-                            IconButton(onClick = { mapProvider = null }) { Icon(Icons.Outlined.Close, "Close provider") }
-                        }
-                        Text(accessMethodLabel(provider.optString("access_method", if (provider.optString("verification_status") == "provider_reviewed") "contact_to_confirm" else "unverified")), color = Teal, style = MaterialTheme.typography.bodyMedium)
-                        Text("No confirmed collection-site address is listed. Contact the provider before travelling.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                        OutlinedButton(onClick = { model.providerDetail(provider) }, modifier = Modifier.fillMaxWidth()) { Text("View support details") }
-                        Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.Directions, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Navigate here") }
+                        Text(provider.optString("name"), style = MaterialTheme.typography.titleMedium)
+                        val linked = s.services.filter { it.json.optString("provider_id") == provider.optString("id") && it.json.optBoolean("active", true) }
+                        Text("${linked.size} linked service location${if (linked.size == 1) "" else "s"}. Review the provider and choose where to go.", color = Muted)
+                        Button(onClick = { model.providerDetail(provider) }, modifier = Modifier.fillMaxWidth()) { Text("View provider & service locations") }
+                        TextButton(onClick = { mapProvider = null }) { Text("Close provider") }
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(when { s.locationLoading -> "Finding your location..."; s.loading -> "Finding nearby support..."; s.hasSearched -> "${s.results.size} nearby services"; else -> "Food support near you" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text(if (s.hasSearched && s.results.isEmpty()) "No matches. Adjust filters or browse providers." else if (s.originLatitude == null) "Choose a starting location to find nearby help." else "Tap a place on the map for details.", color = Muted, style = MaterialTheme.typography.bodySmall)
-                            }
-                            TextButton(onClick = { if (s.originLatitude == null) showStart = true else model.tab("Find") }) { Text(if (s.originLatitude == null) "Set location" else "View list") }
-                        }
+                        Text(when { s.locationCleared -> "Starting location cleared for privacy"; s.loading -> "Finding support…"; s.hasSearched -> "${s.results.size} of ${s.totalMatches} matching services"; else -> "All listed service locations" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(when { s.locationCleared -> "Set a starting location again to continue your search."; s.hasSearched && s.error != null -> "Search could not be completed. Retry or change your address."; s.hasSearched -> "Up to ten nearest matches · straight-line distance from ${s.origin}"; else -> "General listings · filters have not been applied. Set a location to match your needs." }, color = Muted, style = MaterialTheme.typography.bodySmall)
+                        if (s.hasSearched) Text(listOfNotNull("Within ${s.radius} km", s.type.takeIf { it != "All" }, s.searchDiets.joinToString().takeIf { it.isNotBlank() }, "Wheelchair access".takeIf { s.wheelchair }, "Operating at chosen time".takeIf { s.openOnly }, s.preferred.takeIf { it.isNotBlank() }?.let(::readableSearchTime)).joinToString(" · ").ifBlank { "No dietary or access filters" }, color = Muted, style = MaterialTheme.typography.bodySmall)
+                        if (s.hasSearched && !s.loading && s.error == null && s.results.isEmpty()) Text("No matching services. Change filters or browse providers.", color = Muted)
+                        Text("Map key: ✓ confirmed service location · ? coordination/unconfirmed address · × reported unavailable · U availability unknown · ! limited availability", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        if (s.locationCleared || !s.hasSearched) TextButton(onClick = { showStart = true }) { Text("Set starting location") }
                     }
                 }
             }
         }
     }
-    if (filters) SearchFiltersSheet(s, model) { filters = false; selectedId = null; if (s.originLatitude != null || s.origin.isNotBlank()) search() }
-    if (showStart) ModalBottomSheet(onDismissRequest = { showStart = false }, containerColor = Color.White, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Choose starting location", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(s.locationError ?: if (!hasPermission()) "Allow location access or enter an address." else if (!locationEnabled()) "Device location is off. Turn it on or enter an address." else "Use your device location or choose another starting point.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-            FilledTonalButton(onClick = { useDevice() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Outlined.MyLocation, null, Modifier.size(20.dp)); Spacer(Modifier.width(12.dp)); Text("Use your location") }
-            OutlinedTextField(if (s.origin in listOf("Your location", "Selected map area")) "" else s.origin, model::origin, modifier = Modifier.fillMaxWidth(), label = { Text("Address or postal code") }, placeholder = { Text("e.g. 560123") }, singleLine = true,
-                shape = RoundedCornerShape(12.dp), leadingIcon = { Icon(Icons.Outlined.LocationOn, null) }, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { submitStart() }))
-            Button(onClick = { submitStart() }, enabled = s.origin.trim().length >= 3 && s.origin !in listOf("Your location", "Selected map area"), modifier = Modifier.fillMaxWidth()) { Text("Use this starting location") }
+    if (routeDetails) ModalBottomSheet(onDismissRequest = { routeDetails = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).verticalScroll(rememberScrollState()).padding(20.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            MapRouteSummary(s, model) { routeDetails = false; showStart = true }
+            TextButton(onClick = { routeDetails = false }) { Text("Close route details") }
         }
     }
+    if (filters) SearchFiltersSheet(s, model, onDismiss = { filters = false }, onApply = {
+        filters = false; selectedId = null; mapProvider = null
+        val current = model.state.value
+        if (current.originLatitude != null || current.origin.isNotBlank()) model.searchAddress()
+    })
+    if (showStart) key(permissionRevision) { ModalBottomSheet(onDismissRequest = { showStart = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp).imePadding().navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Choose starting location", style = MaterialTheme.typography.titleLarge)
+            Text(s.locationError ?: if (!hasPermission()) "Allow location access in app settings, or enter an address." else if (!locationEnabled()) "Device location is off. Turn it on in location settings, or enter an address." else "Use device location or enter an address.", color = Muted)
+            if (!hasPermission()) OutlinedButton(onClick = { openSettings(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true) }, modifier = Modifier.fillMaxWidth()) { Text("Open app location settings") }
+            if (!locationEnabled()) OutlinedButton(onClick = { openSettings(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS) }, modifier = Modifier.fillMaxWidth()) { Text("Open device location settings") }
+            FilledTonalButton(onClick = ::useDevice, modifier = Modifier.fillMaxWidth()) { Text("Use device location") }
+            OutlinedTextField(if (s.origin in listOf("Your location", "Selected map area")) "" else s.origin, model::origin, modifier = Modifier.fillMaxWidth(), label = { Text("Starting address or postal code") }, singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { focus.clearFocus(); showStart = false; if (routing) model.searchRouteOrigin() else model.searchAddress() }))
+            Button(onClick = { focus.clearFocus(); showStart = false; if (routing) model.searchRouteOrigin() else model.searchAddress() }, enabled = s.origin.trim().length >= 3 && s.origin !in listOf("Your location", "Selected map area"), modifier = Modifier.fillMaxWidth()) { Text("Use this address") }
+        }
+    } }
 }
 
 @Composable private fun MapRouteSummary(s: UiState, model: AppViewModel, onChooseStart: () -> Unit) {
     val destination = s.routeDestination ?: return
     val context = LocalContext.current
-    var stepsExpanded by remember(destination.id, s.routeMode) { mutableStateOf(s.routeMode == "pt") }
+    var stepsExpanded by remember(destination.id, s.routeMode) { mutableStateOf(false) }
     val route = s.route
-    Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(destination.name, style = MaterialTheme.typography.titleLarge)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Route preview · depart now", style = MaterialTheme.typography.titleLarge)
+        Text(destination.name, style = MaterialTheme.typography.titleMedium)
+        destination.json.optString("status_at").takeIf { it.isNotBlank() }?.let { Text("Support checked for ${readableSearchTime(it)}. This route departs now; it does not plan arrival for that session.", color = Muted) }
+        Text("${when (s.routeMode) { "drive" -> "Drive"; "pt" -> "Public transport"; else -> "Walk" }} · from ${s.origin.ifBlank { "starting location needed" }}", color = Muted)
         when {
             s.locationLoading -> { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Finding your location...", color = Muted, style = MaterialTheme.typography.bodyMedium) }
             s.routeLoading -> { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Finding your route…", color = Muted, style = MaterialTheme.typography.bodySmall) }
@@ -324,7 +303,7 @@ import org.json.JSONObject
                 TextButton(onClick = { model.searchRouteOrigin() }) { Text("Try route again") }
             }
         }
-        if (!s.locationLoading && !s.routeLoading && s.originLatitude != null && s.originLongitude != null && route?.optBoolean("available") != true) {
+        if (!s.locationLoading && !s.routeLoading && s.originLatitude != null && s.originLongitude != null) {
             Button(onClick = {
                 val travelMode = when (s.routeMode) { "drive" -> "driving"; "pt" -> "transit"; else -> "walking" }
                 val uri = android.net.Uri.parse("https://www.google.com/maps/dir/").buildUpon()
@@ -335,7 +314,7 @@ import org.json.JSONObject
                 runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
                     .onFailure { model.error("No map app or browser is available. Try again or use the destination address below.") }
             }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Outlined.OpenInNew, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Open in Google Maps")
+                Icon(Icons.Outlined.OpenInNew, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Open navigation app")
             }
         }
         IconFact(collectionLocationLabel(destination.json.optString("location_role")), Icons.Outlined.LocationOn)
@@ -432,13 +411,14 @@ private class MapController(private val view: MapView, private val overlay: Bool
     }
     private fun render() {
         val googleMap = map ?: return
-        val next = services.joinToString { "${it.id}:${it.latitude}:${it.longitude}" } + route.toString() + origin.toString() + focusPoint.toString() + ":$topInset:$bottomInset:${view.width}:${view.height}"
+        val next = services.joinToString { "${it.id}:${it.latitude}:${it.longitude}:${it.json.optString("location_role")}:${it.availability}" } + route.toString() + origin.toString() + focusPoint.toString() + ":$topInset:$bottomInset:${view.width}:${view.height}"
         if (signature == next) return
         signature = next
         googleMap.clear()
         services.forEach { service ->
-            googleMap.addMarker(MarkerOptions().position(LatLng(service.latitude, service.longitude)).title(service.name)
-                .icon(BitmapDescriptorFactory.defaultMarker(183f)))?.tag = service.id
+            googleMap.addMarker(MarkerOptions().position(LatLng(service.latitude, service.longitude)).title("${service.name} · ${collectionLocationLabel(service.json.optString("location_role"))}")
+                .snippet(when (service.availability) { "UNAVAILABLE" -> "Reported unavailable"; "UNKNOWN" -> "Availability unknown"; "LIMITED" -> "Limited availability"; else -> "Reported available · contact before travel" })
+                .icon(markerIcon(service)))?.tag = service.id
         }
         origin?.let {
             googleMap.addCircle(CircleOptions().center(it).radius(32.0).fillColor(android.graphics.Color.argb(45, 66, 133, 244)).strokeWidth(0f).zIndex(1f))
@@ -479,6 +459,35 @@ private class MapController(private val view: MapView, private val overlay: Bool
                 googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(bounds.center, zoom))
             }
         }
+    }
+    private fun markerIcon(service: Service): BitmapDescriptor {
+        val density = view.resources.displayMetrics.density
+        val size = (52 * density).toInt()
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        val confirmed = service.json.optString("location_role") in listOf("collection_site", "confirmed_collection_site")
+        val center = size / 2f
+        paint.color = android.graphics.Color.rgb(0, 83, 91)
+        if (confirmed) canvas.drawCircle(center, center, size * .38f, paint)
+        else {
+            val path = android.graphics.Path().apply { moveTo(center, size * .05f); lineTo(size * .95f, center); lineTo(center, size * .95f); lineTo(size * .05f, center); close() }
+            canvas.drawPath(path, paint)
+        }
+        paint.color = android.graphics.Color.WHITE
+        paint.textAlign = android.graphics.Paint.Align.CENTER
+        paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        paint.textSize = size * .45f
+        canvas.drawText(if (confirmed) "✓" else "?", center, center - (paint.ascent() + paint.descent()) / 2, paint)
+        val status = when (service.availability) { "UNAVAILABLE" -> "×"; "UNKNOWN" -> "U"; "LIMITED" -> "!"; else -> null }
+        if (status != null) {
+            paint.color = android.graphics.Color.rgb(255, 237, 214)
+            canvas.drawCircle(size * .81f, size * .20f, size * .18f, paint)
+            paint.color = android.graphics.Color.rgb(48, 43, 38)
+            paint.textSize = size * .26f
+            canvas.drawText(status, size * .81f, size * .20f - (paint.ascent() + paint.descent()) / 2, paint)
+        }
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
     fun release() { released = true; signature = null; map = null }
 }

@@ -121,7 +121,7 @@
       "passed": true
     }
   ],
-  "search_local_p95_ms": 387.3,
+  "search_local_p95_ms": 474.27,
   "requests": 100,
   "concurrency": 20,
   "dataset_services": 2000,

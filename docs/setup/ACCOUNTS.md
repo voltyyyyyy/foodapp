@@ -527,3 +527,24 @@ git diff --check
 ```
 
 The account suite uses a disposable database, captured mail and locally signed Google tokens with isolated certificates. It covers actual signature/audience/issuer/expiry checks without using real accounts. Configure real SMTP/Google OAuth to validate delivery and the native consent flow before release. Use an emulator/device to check keyboard scrolling, account switching, bookmark isolation, cancellation, and expiry recovery.
+
+
+## Public account return and operator privacy configuration
+
+Email verification and password reset finish on `/account/`, with a **Return to FoodBridge** link to `foodbridge://account/return`. This custom scheme returns to user sign-in, contains no credentials and never proves that email verification succeeded. The server remains authoritative. If Android does not open the link, users can launch FoodBridge from their app list; a computer user continues on their Android device. Custom schemes are not verified HTTPS App Links and another app can register the same scheme. A verified App Link requires a real controlled HTTPS domain and an `assetlinks.json` deployment; no such domain is assumed here.
+
+`GET /api/privacy` and `/account/privacy.html` are available without a session, alongside signed-out Android Help and Privacy. Discovery, saves and reporting still require sign-in. Configure the API process with the actual operator's values:
+
+| Environment variable | Meaning |
+| --- | --- |
+| `PRIVACY_CONTACT_EMAIL` | Monitored operator email for account access, correction, deletion and privacy questions. Must be a valid email address. |
+| `PRIVACY_RETENTION_SUMMARY` | Operator-approved explanation of retention for accounts, reports/audits and backups, including how requests are handled. Up to 4,000 characters. |
+| `PRIVACY_POLICY_URL` | Optional publicly reachable HTTPS privacy-policy page under the operator's control. |
+
+The contact action opens a mail draft titled **FoodBridge account/data request**. It asks the user to identify their account and report references, never their password. Sending a request does not itself delete an account, and the application does not promise a review or deletion timeframe. The operator must monitor the mailbox, authenticate the requester safely, assess retained report/audit/backup records and carry out the applicable process. No automatic server-account deletion endpoint is claimed.
+
+For development only, when all three privacy variables are absent, the API supplies clearly labelled **TEST PLACEHOLDER** values: `privacy-test@example.com`, `https://example.com/privacy` and a statement that retention is not established. `test_placeholder=true` and `configured=false` distinguish these examples from real operator information. The example mailbox is not a real FoodBridge request route; do not send personal data. Partially configured or malformed values are not silently replaced. Production never supplies these test defaults.
+
+Missing or malformed production contact/policy configuration is shown as unavailable. Missing retention is described honestly instead of claiming a policy. **Supply and verify the real monitored contact and approved retention policy before production release.** The code cannot establish those organizational decisions. Set these variables on the API runtime/container; an environment value on the host alone is insufficient unless forwarded into the container. Do not publish private credentials as contact details.
+
+Bookmarks/diets and reminders are separate from encrypted report drafts and receipts on the device. Removing local data does not delete the server account or submitted reports. Receipts contain reference, target/category and submission time; they are evidence of receipt, not a promise of assessment or a live status tracker. Reports sent by current clients include an account-scoped `submission_id` UUID: unchanged retries return the original reference/time even if a listing becomes unavailable. Editing the submitted content uses a new UUID. Legacy clients without the key retain the earlier behavior.

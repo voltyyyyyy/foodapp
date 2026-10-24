@@ -1,0 +1,73 @@
+{
+  "review_date_singapore": "2026-10-24",
+  "device": {
+    "avd": "FoodBridge_Review31",
+    "serial": "emulator-5556",
+    "adb_server_port": 5038,
+    "android_api": 31,
+    "physical_pixels": [1080, 1920],
+    "density_dpi": 480,
+    "viewport_dp": [360, 640],
+    "default_font_scale": 1.0,
+    "additional_map_start_sheet_font_scale": 2.0,
+    "font_scale_restored": 1.0
+  },
+  "build": {
+    "source_commit": "96ef02e",
+    "application_id": "sg.foodbridge.navigator.review",
+    "version": "1.0.0",
+    "apk_sha256": "7C2D53B6C04DA7BAB28BA998A08FDE5D24C79FDCD364475AAA6616F4AACFD8A2",
+    "app_source_modified": false,
+    "build_overrides": ["application ID", "API base URL"],
+    "normal_debug_apk_rebuilt_after_review": true
+  },
+  "fixture": {
+    "synthetic_only": true,
+    "database": "separate SQLite review database",
+    "registered_users": 1,
+    "providers": 2,
+    "services": 3,
+    "geocoding": "deterministic adapter",
+    "routing": "deterministic adapter",
+    "live_data_modified": false
+  },
+  "F24_reminder_observation": {
+    "service": "Review Morning Meals",
+    "session_days": "daily",
+    "session_time_singapore": "06:00-07:00",
+    "reminder_time_singapore": "08:00",
+    "ui_switch_enabled": true,
+    "ui_status": "Around 08:00 on session days · once daily.",
+    "method": "Filtered adb shell dumpsys alarm immediately after enabling the reminder; before signing out",
+    "app_alarm_tags_observed": ["sg.foodbridge.REMINDER_EXPIRY"],
+    "service_reminder_alarm_observed": false,
+    "notification_delivery_tested": false,
+    "screenshot": "07-reminder-enabled.png"
+  },
+  "F35_reminder_switch_hierarchy": {
+    "source_capture": "06-saved-reminder.xml",
+    "class": "android.view.View",
+    "text": "",
+    "content_description": "",
+    "checkable": true,
+    "clickable": true,
+    "focusable": true,
+    "NAF": true,
+    "talkback_audio_tested": false
+  },
+  "F34_keyboard_observation": {
+    "field": "Evidence link (optional)",
+    "submit_and_cancel_covered": true,
+    "additional_form_swipe_revealed_actions": false,
+    "dismiss_keyboard_restored_access": true,
+    "screenshot": "35-report-keyboard-scrolled.png"
+  },
+  "limitations": [
+    "No real Google consent or email delivery",
+    "No live geocoding/routing accuracy test",
+    "No actual notification delivery",
+    "No TalkBack audio or full accessibility audit",
+    "No API 35, landscape or broad device-size matrix",
+    "No representative-user completion study"
+  ]
+}

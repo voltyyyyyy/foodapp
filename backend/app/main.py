@@ -12,7 +12,7 @@ from pathlib import Path
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
@@ -24,8 +24,9 @@ from .db import Admin, Audit, Base, Record, Session, Token, engine, iso, now
 from .domain import Origin, Provider, Report, Search, Service, distance, public_service
 from .onemap import adapter
 from .google_routes import adapter as routing_adapter
-from .auth import router as auth_router, session_account, administrator, login as account_login, Login as AccountLogin
+from .auth import router as auth_router, session_account, administrator, login as account_login, Login as AccountLogin, transaction
 from .db import Account
+from .push import catalogue_publisher, router as push_router, run_dispatcher
 
 hasher = PasswordHasher()
 security = HTTPBearer(auto_error=False)
@@ -60,19 +61,66 @@ async def lifespan(_):
     if os.getenv('DEMO_DATA', 'false').lower() == 'true':
         from .seed import seed
         seed()
-    yield
+    push_task = asyncio.create_task(run_dispatcher())
+    try:
+        yield
+    finally:
+        push_task.cancel()
+        try:
+            await push_task
+        except asyncio.CancelledError:
+            pass
 
 app = FastAPI(title='FoodBridge Navigator', version='1.0.0', lifespan=lifespan)
 app.include_router(auth_router)
+app.include_router(push_router)
 
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(request, exception):
     # Validation output must never echo passwords, bearer credentials, or link tokens.
-    return JSONResponse(status_code=422, content={'detail': [
-        {'loc': list(error['loc']), 'msg': error['msg'], 'type': error['type']} for error in exception.errors()]})
+    errors = []
+    for error in exception.errors():
+        location, message = list(error['loc']), error['msg'].removeprefix('Value error, ')
+        if 'confirmation' in message.lower() and len(location) == 1:
+            location.append('confirmation')
+        errors.append({'loc': location, 'msg': message, 'type': error['type']})
+    return JSONResponse(status_code=422, content={'detail': errors})
 portal_dir = Path(os.getenv('STAFF_PORTAL_DIR', str(Path(__file__).resolve().parents[2] / 'staff-portal')))
 app.mount('/staff', StaticFiles(directory=portal_dir, html=True), name='staff')
 app.mount('/account', StaticFiles(directory=portal_dir / 'account', html=True), name='account')
+
+@app.get('/api/privacy')
+def privacy_information():
+    """Operator policy with explicitly labelled development placeholders when absent."""
+    from .auth import EmailInput
+    email = os.getenv('PRIVACY_CONTACT_EMAIL', '').strip()
+    try:
+        email = str(EmailInput(email=email).email) if email else ''
+    except ValidationError:
+        email = ''
+    policy_url = os.getenv('PRIVACY_POLICY_URL', '').strip()
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(policy_url)
+        valid_policy = parsed.scheme == 'https' and bool(parsed.hostname) and not parsed.username and not parsed.password
+    except ValueError:
+        valid_policy = False
+    if not valid_policy:
+        policy_url = ''
+    retention = os.getenv('PRIVACY_RETENTION_SUMMARY', '').strip()[:4000]
+    configured = bool(email and retention)
+    test_placeholder = (os.getenv('ENVIRONMENT') != 'production'
+                        and not any(os.getenv(name, '').strip() for name in
+                                    ('PRIVACY_CONTACT_EMAIL', 'PRIVACY_POLICY_URL', 'PRIVACY_RETENTION_SUMMARY')))
+    if test_placeholder:
+        email = 'privacy-test@example.com'
+        policy_url = 'https://example.com/privacy'
+        retention = 'TEST PLACEHOLDER — retention policy not established. These development values do not describe a real operator policy.'
+    return {'contact_email': email or None, 'policy_url': policy_url or None,
+            'retention_summary': retention or None, 'configured': configured, 'test_placeholder': test_placeholder,
+            'request_guidance': ('TEST PLACEHOLDER: the example email and policy are for interface testing only. They do not send a request to a FoodBridge operator. Do not send personal data.' if test_placeholder else
+                                 'Contact the operator for account deletion, access or correction requests. Include your account email and any report references; never send your password.'),
+            'local_data_guidance': 'Clearing device data does not delete your server account or submitted reports. Discard drafts in the app. Android Clear storage removes local drafts and receipts and signs you out.'}
 
 @app.middleware('http')
 async def limits(request: Request, call_next):
@@ -149,12 +197,17 @@ def services(account=Depends(session_account)):
         return {'services': with_organisation_names(db, [public_service(r) for r in records if r.data.get('active', True)]), 'last_update': latest_update(db)}
 
 @app.get('/api/services/{service_id}')
-def details(service_id: str, account=Depends(session_account)):
+def details(service_id: str, preferred_time: datetime | None = None, account=Depends(session_account)):
+    if preferred_time is not None:
+        if preferred_time.tzinfo is None:
+            raise HTTPException(422, 'Include a timezone in the preferred time')
+        if preferred_time < now():
+            raise HTTPException(422, 'Choose a future preferred time, or use current time')
     with Session() as db:
         record = item(db, service_id, 'service', True)
         if not record.data.get('active', True):
             raise HTTPException(404, 'Service no longer listed')
-        return with_organisation_names(db, [public_service(record)])[0]
+        return with_organisation_names(db, [public_service(record, preferred_time)])[0]
 
 @app.get('/api/providers')
 def providers(account=Depends(session_account)):
@@ -251,16 +304,28 @@ async def route(body: Route, account=Depends(session_account)):
         return {'available': False, 'message': 'Route unavailable. Service details are still available. Try again or contact the provider.'}
 
 @app.post('/api/reports', status_code=201)
-def report(body: Report, request: Request, account=Depends(session_account)):
-    throttle(request, 'report', 15)
-    with Session.begin() as db:
+def report(body: Report, request: Request, response: Response, account=Depends(session_account)):
+    payload = body.model_dump(mode='json')
+    reference = ('FB-' + hashlib.sha256(f"{account['id']}:{body.submission_id}".encode()).hexdigest()[:32].upper()
+                 if body.submission_id else 'FB-' + secrets.token_hex(8).upper())
+    with transaction() as db:
+        # Account locking serializes retries on PostgreSQL; BEGIN IMMEDIATE does so on SQLite.
+        db.scalar(select(Account).where(Account.id == account['id']).with_for_update())
+        existing = db.get(Record, reference)
+        if existing:
+            if (existing.kind != 'report' or existing.data.get('reporter_account_id') != account['id']
+                    or any(existing.data.get(key) != value for key, value in payload.items())):
+                raise HTTPException(409, 'This submission reference belongs to a different report. Start a new submission for edited input.')
+            response.headers['Idempotency-Replayed'] = 'true'
+            return {'reference': existing.id, 'state': existing.state, 'submitted_at': iso(existing.created_at)}
+        throttle(request, 'report', 15)
         service = item(db, body.service_id, body.target_kind, True)
         if not service.data.get('active', True):
             raise HTTPException(404, 'Service no longer listed')
-        reference = 'FB-' + secrets.token_hex(8).upper()
-        db.add(Record(id=reference, kind='report', state='PENDING', data={**body.model_dump(),
+        submitted = now()
+        db.add(Record(id=reference, kind='report', state='PENDING', created_at=submitted, data={**payload,
             'service_name': service.data['name'], 'base_version': service.version, 'reporter_account_id': account['id']}))
-    return {'reference': reference, 'state': 'PENDING'}
+    return {'reference': reference, 'state': 'PENDING', 'submitted_at': iso(submitted)}
 
 @app.post('/api/admin/login')
 def login(body: AccountLogin, request: Request):
@@ -359,6 +424,8 @@ def publish(db, target, proposal, expected_version):
         .values(data=merged, version=expected_version + 1, updated_at=now()))
     if updated.rowcount != 1:
         raise HTTPException(409, 'Another administrator changed this record')
+    if target.state == 'APPROVED':
+        catalogue_publisher.publish(db, target.kind, target.id, expected_version + 1)
     return before, merged
 
 @app.patch('/api/admin/services/{id_}')
@@ -511,6 +578,7 @@ def approve_provider(id_: str, actor=Depends(administrator)):
         if result.rowcount != 1:
             raise HTTPException(409, 'This provider is not pending publication')
         audit(db, actor, 'PUBLISH_PROVIDER', id_, {'after': record.data})
+        catalogue_publisher.publish(db, 'provider', id_, record.version)
     return {'status': 'published'}
 
 @app.patch('/api/admin/providers/{id_}')
@@ -537,6 +605,7 @@ def approve_import(id_: str, actor=Depends(administrator)):
         if result.rowcount != 1:
             raise HTTPException(409, 'Another administrator already published this service')
         audit(db, actor, 'PUBLISH_IMPORT', id_, {'after': record.data})
+        catalogue_publisher.publish(db, 'service', id_, record.version)
     return {'status': 'published'}
 
 @app.post('/api/admin/organisations/{id_}/publish')
@@ -549,6 +618,7 @@ def approve_organisation(id_: str, actor=Depends(administrator)):
         if result.rowcount != 1:
             raise HTTPException(409, 'This organisation is not pending publication')
         audit(db, actor, 'PUBLISH_ORGANISATION', id_, {'after': record.data})
+        catalogue_publisher.publish(db, 'organisation', id_, record.version)
     return {'status': 'published'}
 
 @app.patch('/api/admin/organisations/{id_}')
@@ -577,6 +647,7 @@ def organisation(body: Organisation, actor=Depends(administrator)):
         data = {**body.model_dump(), 'imported_at': iso(now()), 'verified_at': iso(now())}
         db.add(Record(id=id_, kind='organisation', data=data))
         audit(db, actor, 'CREATE_ORGANISATION', id_, {'after': data})
+        catalogue_publisher.publish(db, 'organisation', id_, 1)
     return {'id': id_}
 
 @app.post('/api/admin/duplicates/{id_}/resolve')

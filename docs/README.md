@@ -3,9 +3,10 @@
 | Folder | Contents |
 | --- | --- |
 | [architecture](architecture/BUILD_PLAN.md) | Requirements, implementation plan and design decisions |
-| [setup](setup/GOOGLE_MAPS_SETUP.md) | Google Maps configuration and reviewed FoodConnect imports |
+| [setup](setup/GOOGLE_MAPS_SETUP.md), [push notifications](setup/PUSH_NOTIFICATIONS.md) | Google Maps, reviewed imports and catalogue push configuration |
 | [operations](operations/STAFF_PORTAL.md) | Staff workflows, deployment, backups and release requirements |
 | [verification](verification/README.md) | Recorded acceptance and performance results |
+| [reviews](reviews/ANDROID_FLOW_FIXES_2026-10-24.md) | Android flow fixes, original review, emulator walkthrough and screenshot evidence |
 | [research](research/FOOD_SUPPORT_REVIEW_2026-10-18.md) | Sourced food-support updates, new providers, meal sites and publication checks |
 | [history](history/HANDOFF.md) | Historical implementation notes and handoffs |
 | [licenses](licenses/AtkinsonHyperlegible-OFL.txt) | Third-party asset licenses |

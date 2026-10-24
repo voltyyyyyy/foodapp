@@ -48,6 +48,17 @@ class SessionStore(context: Context) {
         listOf("token", "account", "expires_at", "last_activity").forEach(data::remove)
         write(data)
     }
+    @Synchronized fun pushInstallationId(): String {
+        val data = read()
+        data.optString("push_installation_id").takeIf { it.isNotBlank() }?.let { return it }
+        val id = java.util.UUID.randomUUID().toString()
+        data.put("push_installation_id", id)
+        write(data)
+        return id
+    }
+    @Synchronized fun savePushToken(token: String) = update { it.put("push_token", token) }
+    @Synchronized fun pushToken(): String? = read().optString("push_token").takeIf { it.isNotBlank() }
+    @Synchronized fun clearPushToken() = update { it.remove("push_token") }
     @Synchronized fun update(change: (JSONObject) -> Unit) {
         val data = read(); change(data); write(data)
     }

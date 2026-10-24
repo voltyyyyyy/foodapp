@@ -12,12 +12,16 @@ from .db import Base, Record, Session, engine, iso, now
 
 def expire():
     from sqlalchemy import delete, or_
-    from .db import AccountSession, AccountLink, GoogleChallenge
+    from .db import AccountSession, AccountLink, GoogleChallenge, CatalogueEvent, PushDevice
     changed = 0
     with Session.begin() as db:
         db.execute(delete(AccountSession).where(or_(AccountSession.expires_at <= now(), AccountSession.last_activity <= now() - timedelta(minutes=30))))
         db.execute(delete(AccountLink).where(AccountLink.expires_at <= now()))
         db.execute(delete(GoogleChallenge).where(GoogleChallenge.expires_at <= now()))
+        # An inactive installation can register again on its next sign-in. Old
+        # invalidations are unnecessary once every new login fetches a snapshot.
+        db.execute(delete(PushDevice).where(PushDevice.updated_at < now() - timedelta(days=90)))
+        db.execute(delete(CatalogueEvent).where(CatalogueEvent.created_at < now() - timedelta(days=7)))
         for record in db.scalars(select(Record).where(Record.kind == 'service')):
             data = dict(record.data)
             observations = [dict(o) for o in data.get('observations', [])]

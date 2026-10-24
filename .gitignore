@@ -1,6 +1,8 @@
 tools/.local/
 android/.gradle/
+android/.kotlin/
 android/local.properties
+android/app/google-services.json
 **/build/
 backend/.venv/
 backend/data/

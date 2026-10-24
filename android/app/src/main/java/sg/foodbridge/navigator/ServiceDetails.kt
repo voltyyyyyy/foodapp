@@ -5,8 +5,10 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -16,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
@@ -53,7 +57,7 @@ fun reportCategoryLabel(category: String) = when (category) {
 @Composable private fun DetailHeading(title: String, icon: ImageVector) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Icon(icon, null, Modifier.size(22.dp), tint = Teal)
-        Text(title, style = MaterialTheme.typography.titleLarge)
+        Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
     }
 }
 
@@ -65,7 +69,7 @@ fun reportCategoryLabel(category: String) = when (category) {
 }
 
 @Composable fun ListingNavigateButton(enabled: Boolean = true, label: String = "Navigate", onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
+    OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(18.dp)) {
         Icon(Icons.Outlined.NearMe, null, Modifier.size(26.dp))
         Spacer(Modifier.width(12.dp))
@@ -97,7 +101,7 @@ fun reportCategoryLabel(category: String) = when (category) {
 }
 
 // Date-specific overrides replace the recurring schedule, including an empty (closed) override.
-private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject> {
+fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject> {
     val exceptions = service.json.optJSONObject("distribution_exceptions")
     fun rows(day: LocalDate): List<JSONObject> {
         val values = if (exceptions?.has(day.toString()) == true) exceptions.optJSONArray(day.toString())
@@ -114,11 +118,46 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
     return (current + continuing).sortedBy { if (it.optBoolean("calendar_continuation")) "00:00" else it.optString("start") }
 }
 
+fun readableSearchTime(value: String): String = runCatching {
+    val time = runCatching { java.time.OffsetDateTime.parse(value).atZoneSameInstant(singaporeZone).toLocalDateTime() }
+        .getOrElse { java.time.LocalDateTime.parse(value) }
+    time.format(DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH)) + " SGT"
+}.getOrDefault("Time not confirmed")
+
+fun nextSessionLabel(service: Service): String {
+    val now = java.time.ZonedDateTime.now(singaporeZone)
+    val hasSchedule = (service.json.optJSONArray("distribution_schedules")?.length() ?: 0) > 0 ||
+        (service.json.optJSONObject("distribution_exceptions")?.length() ?: 0) > 0
+    if (!hasSchedule) return "Collection / meal times not confirmed"
+    for (offset in 0L..366L) {
+        val date = now.toLocalDate().plusDays(offset)
+        scheduleForDate(service, date).forEach { row ->
+            val start = runCatching { java.time.LocalTime.parse(row.optString("start")) }.getOrNull() ?: return@forEach
+            val end = runCatching { java.time.LocalTime.parse(row.optString("end")) }.getOrNull() ?: return@forEach
+            val continuing = row.optBoolean("calendar_continuation")
+            if (start == end) return@forEach
+            val starts = date.atTime(if (continuing) java.time.LocalTime.MIDNIGHT else start).atZone(singaporeZone)
+            val ends = date.plusDays(if (end < start && !continuing) 1L else 0L).atTime(end).atZone(singaporeZone)
+            if (ends.isAfter(now)) return "${if (starts.isBefore(now)) "Recorded session now" else "Next recorded session"}: ${date.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH))}, ${clock(if (continuing) "00:00" else row.optString("start"))} – ${clock(row.optString("end"))}${if (end < start && !continuing) " (next day)" else ""} SGT · food not guaranteed"
+        }
+    }
+    return "No upcoming session recorded in the next year. Ask the provider."
+}
+
+@Composable fun ServiceDecisionSummary(service: Service) {
+    IconFact("Can I use this? ${service.json.detailText("eligibility") ?: "Eligibility unconfirmed. Ask the provider."}", Icons.Outlined.Groups)
+    IconFact(accessMethodDetail(service.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Assignment)
+    IconFact(nextSessionLabel(service), Icons.Outlined.CalendarMonth)
+    IconFact("Where do I go? ${collectionLocationLabel(service.json.optString("location_role"))}", Icons.Outlined.LocationOn)
+}
+
 @Composable private fun DistributionCalendar(service: Service) {
     val today = LocalDate.now(singaporeZone)
-    var selected by remember(service.id) { mutableStateOf(today) }
-    var weekStart by remember(service.id) { mutableStateOf(today.minusDays((today.dayOfWeek.value - 1).toLong())) }
+    val initial = runCatching { service.json.optString("status_at").take(10).let(LocalDate::parse) }.getOrDefault(today)
+    var selected by remember(service.id, initial) { mutableStateOf(initial) }
+    var weekStart by remember(service.id, initial) { mutableStateOf(initial.minusDays((initial.dayOfWeek.value - 1).toLong())) }
     var weeklyExpanded by remember(service.id) { mutableStateOf(false) }
+    var dateList by remember(service.id) { mutableStateOf(false) }
     val recurring = service.json.optJSONArray("distribution_schedules")?.objects() ?: emptyList()
     val exceptions = service.json.optJSONObject("distribution_exceptions")
     val sessions = scheduleForDate(service, selected)
@@ -139,24 +178,30 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
                     TextButton(onClick = { selected = today; weekStart = today.minusDays((today.dayOfWeek.value - 1).toLong()) }, modifier = Modifier.weight(1f)) { Text("Today") }
                     IconButton(onClick = { weekStart = weekStart.plusWeeks(1); selected = weekStart }, modifier = Modifier.size(48.dp)) { Icon(Icons.Outlined.ChevronRight, "Next week") }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     days.forEach { date ->
                         val hasSession = scheduleForDate(service, date).isNotEmpty()
                         val isSelected = date == selected
                         Surface(shape = RoundedCornerShape(12.dp), color = if (isSelected) Teal else MaterialTheme.colorScheme.surface,
-                            modifier = Modifier.weight(1f).semantics { contentDescription = "${date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH))}, ${if (hasSession) "recorded session" else "no recorded session"}" }.selectable(selected = isSelected, role = Role.Tab, onClick = { selected = date })) {
+                            modifier = Modifier.widthIn(min = 56.dp).heightIn(min = 64.dp).semantics { contentDescription = "${date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH))}, ${if (hasSession) "recorded session" else "no recorded session"}" }.selectable(selected = isSelected, role = Role.Tab, onClick = { selected = date })) {
                             Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(date.dayOfWeek.name.take(1), color = if (isSelected) androidx.compose.ui.graphics.Color.White else Muted, style = MaterialTheme.typography.labelMedium)
+                                Text(date.format(DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH)), color = if (isSelected) androidx.compose.ui.graphics.Color.White else Muted, style = MaterialTheme.typography.labelMedium)
                                 Text(date.dayOfMonth.toString(), color = if (isSelected) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                                 Text(if (hasSession) "•" else " ", color = if (isSelected) androidx.compose.ui.graphics.Color.White else Teal, style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
                 }
-                Text("Dots indicate recorded sessions.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text("Swipe dates to see the full week. Dots indicate recorded sessions.", color = Muted, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { dateList = !dateList }) { Text(if (dateList) "Hide date list" else "Show dates as a list") }
+                if (dateList) days.forEach { date ->
+                    TextButton(onClick = { selected = date }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { stateDescription = if (date == selected) "Selected" else "Not selected" }) {
+                        Text("${date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale.ENGLISH))} · ${if (scheduleForDate(service, date).isEmpty()) "no session recorded" else "recorded session"}")
+                    }
+                }
             }
         }
-        Text(selected.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH)), fontWeight = FontWeight.Bold)
+        Text(selected.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.ENGLISH)), fontWeight = FontWeight.Bold)
         if (override) Text("Date-specific schedule", color = Teal, style = MaterialTheme.typography.labelMedium)
         when {
             unknown -> Text("Schedule unconfirmed. Ask the provider for dates and times.", color = Muted)
@@ -191,13 +236,19 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
     fun open(uri: Uri, action: String = Intent.ACTION_VIEW) {
         runCatching { context.startActivity(Intent(action, uri)) }.onFailure { contactError = "No app can open this contact. Use the details below." }
     }
-    val phone = service.json.detailText("phone")
-    val site = service.json.detailText("website")
+    val directoryProvider = s.providers.firstOrNull { it.optString("id") == service.json.optString("provider_id") }
+    val ownPhone = service.json.detailText("phone")
+    val ownSite = service.json.detailText("website")
+    val phone = ownPhone ?: directoryProvider?.detailText("phone")
+    val site = ownSite ?: directoryProvider?.detailText("website")
+    val email = directoryProvider?.detailText("email")
     val hours = service.json.optJSONArray("schedules")?.objects().orEmpty()
     val hasSessions = (service.json.optJSONArray("distribution_schedules")?.length() ?: 0) > 0 ||
         (service.json.optJSONObject("distribution_exceptions")?.length() ?: 0) > 0
-    val directoryProvider = s.providers.firstOrNull { it.optString("id") == service.json.optString("provider_id") }
     Page {
+        if (s.detailLoading) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Checking current listing…", color = Muted) }
+        s.detailError?.let { message -> Banner(message, Icons.Outlined.WarningAmber, Peach); TextButton(onClick = { model.detail(service) }) { Text("Retry checking listing") } }
+        if (s.detailWithdrawn) Banner("This listing is no longer published. Saved information is shown for reference; do not travel based on it.", Icons.Outlined.WarningAmber, Peach)
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             IconFact(service.type, foodSupportIcon(service.type))
             Text(service.name, style = MaterialTheme.typography.headlineMedium)
@@ -209,15 +260,20 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
             IconFact(accessMethodLabel(service.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Groups)
             IconFact(service.address, Icons.Outlined.LocationOn)
             IconFact("Contact the provider before going. Food is not guaranteed.", Icons.Outlined.Info)
-            ListingNavigateButton(enabled = !s.loading, label = directionsButtonLabel(service.json.optString("location_role"))) { model.route(s.routeMode) }
+            service.json.detailText("status_at")?.let { IconFact("Support checked for ${readableSearchTime(it)}. Route estimates depart now.", Icons.Outlined.Event) }
+            ServiceDecisionSummary(service)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             DetailHeading("Contact", Icons.Outlined.ContactPhone)
+            if (((ownPhone == null && phone != null) || (ownSite == null && site != null) || email != null) && directoryProvider != null) Text("Contact from ${directoryProvider.optString("name")} (linked provider)", color = Muted, style = MaterialTheme.typography.bodySmall)
             if (phone != null) Primary("Call $phone", Icons.Outlined.Call) { open(Uri.parse("tel:$phone"), Intent.ACTION_DIAL) }
             if (site != null) OutlinedButton(onClick = { open(Uri.parse(site)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Icon(Icons.Outlined.Language, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Website")
+                Icon(Icons.Outlined.Language, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text(if (ownSite == null) "Provider website" else "Website")
             }
-            if (phone == null && site == null) Text("Contact details not confirmed", color = Muted)
+            email?.let { TextButton(onClick = { open(Uri.fromParts("mailto", it, null), Intent.ACTION_SENDTO) }) { Icon(Icons.Outlined.Email, null); Spacer(Modifier.width(8.dp)); Text("Provider email: $it") } }
+            if (phone == null && site == null && email == null) Text("Contact details not confirmed", color = Muted)
+            directoryProvider?.let { provider -> TextButton(onClick = { model.providerDetail(provider) }) { Text("View ${provider.optString("name")} and programmes"); Icon(Icons.Outlined.ChevronRight, null) } }
+            ListingNavigateButton(enabled = !s.detailLoading && !s.detailWithdrawn && service.json.optBoolean("active", true), label = directionsButtonLabel(service.json.optString("location_role"))) { model.route(s.routeMode) }
             contactError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -263,11 +319,11 @@ private fun scheduleForDate(service: Service, date: LocalDate): List<JSONObject>
             reasons.forEach { IconFact(it, Icons.Outlined.Check) }
         }
         ExpandableSection("Sources & checks", Icons.Outlined.FactCheck) {
-            IconFact("Checked ${formatTime(service.json.optString("verified_at"))}", Icons.Outlined.FactCheck)
+            IconFact("Source checked ${formatTime(service.json.optString("verified_at"))}", Icons.Outlined.FactCheck)
             service.json.detailText("imported_at")?.let { IconFact("Imported ${formatTime(it)}", Icons.Outlined.History) }
             service.evidence?.let { evidence ->
                 DetailFact("Availability source", evidence.optString("source").ifBlank { "Not confirmed" }, Icons.Outlined.Info)
-                Text("Observed ${formatTime(evidence.optString("observed_at"))}\nValid until ${formatTime(evidence.optString("valid_until"))}\nConfidence: ${evidence.detailText("confidence") ?: "Not confirmed"}", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Text("Availability observed ${formatTime(evidence.optString("observed_at"))}\nValid until ${formatTime(evidence.optString("valid_until"))}\nConfidence: ${evidence.detailText("confidence") ?: "Not confirmed"}", color = Muted, style = MaterialTheme.typography.bodySmall)
             } ?: Text("Availability evidence not confirmed", color = Muted)
             service.json.detailText("source")?.let { source ->
                 Text(source, color = Muted, style = MaterialTheme.typography.bodySmall)

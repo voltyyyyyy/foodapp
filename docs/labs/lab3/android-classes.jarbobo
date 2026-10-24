@@ -162,7 +162,37 @@
             "lineText": "    private val sessions = SessionStore(context)"
           }
         }
-      ]
+      ],
+      "_layout": {
+        "v": 2,
+        "nodes": {
+          "activity": {
+            "x": 103.3671875,
+            "y": 452.5
+          },
+          "viewmodel": {
+            "x": 138.3671875,
+            "y": 302
+          },
+          "repository": {
+            "x": 128.3671875,
+            "y": 170
+          },
+          "receiver": {
+            "x": 372.0816650390625,
+            "y": 302
+          },
+          "reminders": {
+            "x": 362.0816650390625,
+            "y": 170
+          },
+          "session": {
+            "x": 249.8980712890625,
+            "y": 46.5
+          }
+        },
+        "edgeLabels": {}
+      }
     }
   ]
 }

@@ -26,6 +26,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -113,7 +118,19 @@ class MainActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleAccountReturn(intent)
         setContent { FoodBridgeTheme { FoodBridge(model) } }
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAccountReturn(intent)
+    }
+    private fun handleAccountReturn(intent: Intent?) {
+        if (intent?.data?.scheme == "foodbridge" && intent.data?.host == "account" && intent.data?.path == "/return") {
+            intent.data = null
+            model.accountReturn()
+        }
     }
     override fun onStop() {
         super.onStop()
@@ -160,7 +177,14 @@ class MainActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize().background(Canvas), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Teal) }
         return
     }
-    if (s.account == null) { AccountEntryScreen(s, model); return }
+    if (s.account == null) {
+        BackHandler(s.page in listOf("help", "privacy")) { model.update { it.copy(page = "home") } }
+        if (s.page in listOf("help", "privacy")) Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            TextButton(onClick = { model.update { it.copy(page = "home") } }) { Icon(Icons.Outlined.ArrowBack, null); Text("Back to sign in") }
+            if (s.page == "help") HelpScreen(model, authenticated = false) else PrivacyScreen(s, model)
+        } else AccountEntryScreen(s, model, onHelp = { model.update { it.copy(page = "help") } }, onPrivacy = { model.update { it.copy(page = "privacy") } })
+        return
+    }
     val context = LocalContext.current
     LaunchedEffect(s.authChecking) {
         val activity = context as? MainActivity
@@ -172,10 +196,11 @@ class MainActivity : ComponentActivity() {
         }
     }
     var showDemoInfo by remember { mutableStateOf(false) }
-    BackHandler((s.page != "home" && s.page != "results") || (s.tab == "Map" && s.routeDestination != null)) { model.back() }
+    val screenStates = rememberSaveableStateHolder()
+    BackHandler((s.page != "home") || (s.tab == "Map" && s.routeDestination != null)) { model.back() }
     Scaffold(containerColor = Canvas, topBar = {
         if (s.tab == "Map" && (s.page == "home" || s.page == "results")) Spacer(Modifier.statusBarsPadding()) else Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (s.page != "home" && s.page != "results") IconButton(onClick = model::back) { Icon(Icons.Outlined.ArrowBack, "Back") }
+            if (s.page != "home") IconButton(onClick = model::back) { Icon(Icons.Outlined.ArrowBack, "Back") }
             else { Icon(Icons.Outlined.Spa, null, Modifier.size(24.dp), tint = Teal); Spacer(Modifier.width(8.dp)) }
             Text("foodbridge", fontSize = 19.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.6).sp)
             Spacer(Modifier.weight(1f))
@@ -211,15 +236,19 @@ class MainActivity : ComponentActivity() {
             if (s.offline) Banner("Offline · saved ${formatTime(s.lastUpdate.orEmpty())}", Icons.Outlined.CloudOff, Peach)
             s.error?.let { Banner(it, Icons.Outlined.Info, Color(0xFFFFE9E6), onClose = { model.error(null) }) }
             s.notice?.let { Banner(it, Icons.Outlined.CheckCircle, Mint, onClose = { model.update { it.copy(notice = null) } }) }
-            if (model.hasReportDraft() && s.page !in listOf("report", "confirmation")) TextButton(onClick = model::openReport, modifier = Modifier.padding(horizontal = 24.dp)) { Text("Resume unfinished report") }
-            when (s.page) {
+            if (model.hasReportDraft() && s.page !in listOf("report", "confirmation")) TextButton(onClick = model::resumeReport, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Resume unfinished report") }
+            BookmarkUndo(s, model)
+            if (s.locationCleared && s.page !in listOf("report", "confirmation") && s.tab in listOf("Find", "Map")) Banner("Location cleared for privacy. Enter it again.", Icons.Outlined.LocationOff, Peach, onClose = { model.update { it.copy(locationCleared = false) } })
+            val listingKey = if (s.page == "detail") s.selected?.id else if (s.page == "providerDetail") s.selectedProvider?.optString("id") else null
+            screenStates.SaveableStateProvider("${s.tab}:${s.page}:${listingKey.orEmpty()}") { when (s.page) {
                 "detail" -> s.selected?.let { DetailScreen(it, s, model) }
                 "nameResults" -> OrganisationResultsScreen(s, model)
                 "allSupport" -> OrganisationResultsScreen(s, model, browseAll = true)
                 "report" -> ReportScreen(s, model)
                 "confirmation" -> Confirmation(s, model)
-                "help" -> HelpScreen()
-                "privacy" -> PrivacyScreen()
+                "reportHistory" -> ReportHistoryScreen(s, model)
+                "help" -> HelpScreen(model)
+                "privacy" -> PrivacyScreen(s, model)
                 "providers" -> ProvidersScreen(s, model)
                 "providerDetail" -> s.selectedProvider?.let { ProviderDetailScreen(it, model) }
                 "password" -> ChangePasswordScreen(s, model)
@@ -229,7 +258,7 @@ class MainActivity : ComponentActivity() {
                     "Preferences" -> PreferencesScreen(s, model)
                     else -> FindScreen(s, model)
                 }
-            }
+            } }
         }
         if (s.candidates.isNotEmpty()) AlertDialog(onDismissRequest = { model.update { it.copy(candidates = emptyList()) } },
             title = { Text("Choose your location") }, text = { Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -238,13 +267,8 @@ class MainActivity : ComponentActivity() {
         if (showDemoInfo) AlertDialog(onDismissRequest = { showDemoInfo = false }, title = { Text("About this preview") },
             text = { Text("This workspace includes fictional listings marked Demo. Do not travel to those locations for support. Other listings retain their reviewed source information.") },
             confirmButton = { TextButton(onClick = { showDemoInfo = false }) { Text("Got it") } })
-        if (s.reportLeavePrompt) AlertDialog(onDismissRequest = { model.update { it.copy(reportLeavePrompt = false) } },
-            title = { Text("Leave this report?") }, text = { Text("Keep your draft to finish later, or discard the category, description and evidence link.") },
-            confirmButton = { TextButton(onClick = { model.leaveReport(false) }) { Text("Keep draft and leave") } },
-            dismissButton = { Column {
-                TextButton(onClick = { model.leaveReport(true) }) { Text("Discard draft and leave") }
-                TextButton(onClick = { model.update { it.copy(reportLeavePrompt = false) } }) { Text("Continue editing") }
-            } })
+        if (s.reportLeavePrompt) LeaveReportDialog(onKeep = { model.leaveReport(false) }, onDiscard = { model.leaveReport(true) }, onContinue = { model.update { it.copy(reportLeavePrompt = false) } })
+        if (s.reportTargetPrompt) ReportTargetDialog(s, model)
     }
 }
 
@@ -255,12 +279,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 @Composable fun Page(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(24.dp), content = content)
+    Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(top = 12.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
 }
 @Composable fun Panel(color: Color = Color.White, content: @Composable ColumnScope.() -> Unit) {
     Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = color, shadowElevation = 0.dp,
         border = if (color == Color.White) BorderStroke(1.dp, Color(0xFFE8ECE9)) else null) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
     }
 }
 @Composable fun Eyebrow(text: String) { Text(text, color = Muted, fontSize = 12.sp) }
@@ -281,14 +305,14 @@ class MainActivity : ComponentActivity() {
 fun SearchSummary(s: UiState): String = buildList {
     add(if (s.radius >= 80) "Across Singapore" else "Within ${s.radius} km")
     add(if (s.type == "All") "Any support" else s.type)
-    if (s.diets.isNotEmpty()) add(s.diets.joinToString())
+    if (s.searchDiets.isNotEmpty()) add(s.searchDiets.joinToString())
     if (s.openOnly) add(if (s.preferred.isBlank()) "Within operating hours now" else "Open at selected time")
     if (s.wheelchair) add("Wheelchair access")
-    if (s.preferred.isNotBlank()) add(s.preferred.replace("T", " at "))
+    if (s.preferred.isNotBlank()) add(readableSearchTime(s.preferred))
 }.joinToString(" · ")
 
 @Composable fun SearchOptionsRow(s: UiState, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onClick).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Tune, null, Modifier.size(20.dp), tint = Teal)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -304,69 +328,81 @@ fun SearchSummary(s: UiState): String = buildList {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     var filters by remember { mutableStateOf(false) }
+    LaunchedEffect(s.filtersRequested) { if (s.filtersRequested) filters = true }
+    var permissionRequested by remember { mutableStateOf(false) }
     fun locate() { (context as? MainActivity)?.requestCurrentLocation() }
     fun search() { focus.clearFocus(); model.search() }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        if (permissions.values.any { it }) locate() else model.error("Location permission was declined. Enter a postal code instead.")
+        if (permissions.values.any { it }) locate() else model.locationFailed("Location access is off. Open app location settings or enter an address.")
     }
     Page {
         if (s.locationLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
         s.locationError?.let { Text(it, color = Muted) }
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Find food support", style = MaterialTheme.typography.headlineLarge)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Find food support", style = MaterialTheme.typography.headlineMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(onClick = model::browseAllSupport) { Text("Browse A–Z") }
+                TextButton(onClick = model::browseProviders) { Text("Providers") }
+                TextButton(onClick = { model.update { it.copy(page = "help") } }) { Text("Help") }
+            }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(s.origin, model::origin, label = { Text("Address or organisation") },
-                placeholder = { Text("e.g. 560123 or Willing Hearts") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+            OutlinedTextField(s.origin, model::origin, label = { Text("Address or organisation name") },
+                supportingText = { Text("Nearby: use an address. For names, choose a match below.") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                 shape = RoundedCornerShape(14.dp), leadingIcon = { Icon(Icons.Outlined.LocationOn, null, tint = Muted) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }))
             SearchSuggestions(s, model) { focus.clearFocus() }
             TextButton(onClick = {
                 focus.clearFocus()
                 if (context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) locate()
-                else permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+                else if (permissionRequested && !(context as MainActivity).shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                    context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+                } else { permissionRequested = true; permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)) }
             }, contentPadding = PaddingValues(horizontal = 0.dp), modifier = Modifier.heightIn(min = 48.dp)) {
                 Icon(Icons.Outlined.MyLocation, null, Modifier.size(17.dp)); Spacer(Modifier.width(8.dp)); Text("Use my location", fontSize = 14.sp)
             }
-            HorizontalDivider(color = Color(0xFFE4E8E5))
+            if (permissionRequested && context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) TextButton(onClick = {
+                runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) }
+                    .onFailure { model.locationFailed("Open Android Settings, then Apps, FoodBridge, Permissions, Location, or enter an address.") }
+            }) { Text("Open app location settings") }
+            if (s.locationError != null && !context.getSystemService(LocationManager::class.java).isLocationEnabled) TextButton(onClick = {
+                runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+                    .onFailure { model.locationFailed("Open Android location settings, or enter an address.") }
+            }) { Text("Open device location settings") }
             SearchOptionsRow(s) { focus.clearFocus(); filters = true }
             HorizontalDivider(color = Color(0xFFE4E8E5))
         }
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Primary(if (s.loading) "Finding support…" else "Find support", Icons.Outlined.Search, !s.loading && s.origin.isNotBlank()) { search() }
-            if (s.origin.isBlank()) Text("Search an address to use filters. Browse A–Z without matching.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-            OutlinedButton(onClick = model::browseAllSupport, enabled = !s.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.FormatListBulleted, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Browse all (A–Z)") }
+            Primary(if (s.loading) "Finding support…" else "Search near this address", Icons.Outlined.Search, !s.loading && s.origin.isNotBlank()) { search() }
+            Text("Address searches match your filters. Browse A–Z lists all active support.", color = Muted, style = MaterialTheme.typography.bodySmall)
         }
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = model::browseProviders, contentPadding = PaddingValues(0.dp)) {
-                Icon(Icons.Outlined.Groups, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Providers", fontSize = 14.sp)
-            }
-            TextButton(onClick = { model.update { it.copy(page = "help") } }, contentPadding = PaddingValues(0.dp)) { Icon(Icons.Outlined.HelpOutline, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("How to find support", fontSize = 14.sp) }
-        }
+
     }
-    if (filters) SearchFiltersSheet(s, model) { filters = false }
+    if (filters) SearchFiltersSheet(s, model, onDismiss = { filters = false; model.update { it.copy(filtersRequested = false) } }, onApply = { filters = false; if (s.origin.isNotBlank()) search() })
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable fun SearchFiltersSheet(s: UiState, model: AppViewModel, onDismiss: () -> Unit) {
+@Composable fun SearchFiltersSheet(s: UiState, model: AppViewModel, onDismiss: () -> Unit, onApply: () -> Unit = {}) {
     val context = LocalContext.current
+    var draft by remember { mutableStateOf(s) }
+    var timeError by remember { mutableStateOf<String?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Canvas) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.88f)) {
             Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
                 Text("Refine your search", style = MaterialTheme.typography.headlineMedium)
-                Text("Choose what you need.", color = Muted, modifier = Modifier.padding(top = 6.dp))
+                Text("Changes apply only when you choose Apply filters.", color = Muted, modifier = Modifier.padding(top = 6.dp))
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column {
                     Text("Search area", fontWeight = FontWeight.SemiBold)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(80, 1, 3, 5, 10, 20).forEach { r -> Filter(if (r == 80) "Across Singapore" else "$r km", r == s.radius) { model.update { it.copy(radius = r) } } }
+                        listOf(80, 1, 3, 5, 10, 20).forEach { r -> Filter(if (r == 80) "Across Singapore" else "$r km", r == draft.radius) { draft = draft.copy(radius = r) } }
                     }
                 }
                 Column {
                     Text("Type of support", fontWeight = FontWeight.SemiBold)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("All", "Hot meals", "Groceries", "Food bank", "Delivery").forEach { type -> Filter(if (type == "All") "Any" else type, s.type == type) { model.update { it.copy(type = type) } } }
+                        listOf("All", "Hot meals", "Groceries", "Food bank", "Delivery").forEach { type -> Filter(if (type == "All") "Any" else type, draft.type == type) { draft = draft.copy(type = type) } }
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -378,42 +414,51 @@ fun SearchSummary(s: UiState): String = buildList {
                             val time = LocalTime.now(ZoneId.of("Asia/Singapore"))
                             TimePickerDialog(context, { _, hour, minute ->
                                 val chosen = LocalDateTime.of(date, LocalTime.of(hour, minute))
-                                if (chosen.isAfter(LocalDateTime.now(ZoneId.of("Asia/Singapore")))) model.update { it.copy(preferred = chosen.toString()) }
-                                else model.error("Choose a future preferred time, or use current time.")
+                                if (chosen.isAfter(LocalDateTime.now(ZoneId.of("Asia/Singapore")))) { draft = draft.copy(preferred = chosen.toString(), openOnly = true); timeError = null }
+                                else { timeError = "Choose a future time, or use current time." }
                             }, time.hour, time.minute, false).show()
                         }, today.year, today.monthValue - 1, today.dayOfMonth).apply {
                             datePicker.minDate = today.atStartOfDay(ZoneId.of("Asia/Singapore")).toInstant().toEpochMilli()
                         }.show()
                     }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                         Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                        Text(if (s.preferred.isBlank()) "Now · change time" else s.preferred.replace("T", " at "))
+                        Text(if (draft.preferred.isBlank()) "Now · change time" else readableSearchTime(draft.preferred))
                     }
-                    if (s.preferred.isNotBlank()) TextButton(onClick = { model.update { it.copy(preferred = "") } }) { Text("Use current time") }
+                    if (draft.preferred.isNotBlank()) TextButton(onClick = { draft = draft.copy(preferred = ""); timeError = null }) { Text("Use current time") }
                 }
                 Column {
                     Text("Dietary needs", fontWeight = FontWeight.SemiBold)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Halal", "Vegetarian", "Vegan", "Gluten-free", "Nut-free").forEach { diet -> Filter(diet, diet in s.diets) { model.toggleDiet(diet) } }
+                        listOf("Halal", "Vegetarian", "Vegan", "Gluten-free", "Nut-free").forEach { diet -> Filter(diet, diet in draft.searchDiets) { draft = draft.copy(searchDiets = if (diet in draft.searchDiets) draft.searchDiets - diet else draft.searchDiets + diet) } }
                     }
-                    Text("Must match all selections. Ask about allergens.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+                    Text("For this search only. Must match all selections. Ask about allergens.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
                 }
                 Column {
                     HorizontalDivider(color = Color(0xFFE4E8E5))
-                    Toggle(if (s.preferred.isBlank()) "Within operating hours now" else "Open at selected time", s.openOnly) { value -> model.update { it.copy(openOnly = value) } }
-                    Text("Opening hours do not mean food is available.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-                    Toggle("Wheelchair accessible", s.wheelchair) { value -> model.update { it.copy(wheelchair = value) } }
+                    Toggle(if (draft.preferred.isBlank()) "Within operating hours now" else "Open at selected time", draft.openOnly) { value -> draft = draft.copy(openOnly = value, preferred = if (!value) "" else draft.preferred) }
+                    Text(if (draft.preferred.isBlank()) "Opening hours do not mean food is available." else "A preferred time requires confirmed opening hours. Turning this off returns to current time.", color = Muted, style = MaterialTheme.typography.bodyMedium)
+                    Toggle("Wheelchair accessible", draft.wheelchair) { value -> draft = draft.copy(wheelchair = value) }
                     HorizontalDivider(color = Color(0xFFE4E8E5))
                 }
             }
             Surface(color = Canvas) {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) { Primary("Done", Icons.Outlined.Check, onClick = onDismiss) }
+                Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) { Column {
+                    timeError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    Primary("Apply filters", Icons.Outlined.Check) { model.applySearchFilters(draft); onApply() }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = { draft = draft.copy(radius = 80, type = "All", searchDiets = emptySet(), preferred = "", openOnly = false, wheelchair = false); timeError = null }) { Text("Reset all") }
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                    }
+                } }
             }
         }
     }
 }
 
 @Composable fun ResultsScreen(s: UiState, model: AppViewModel) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    val listState = rememberLazyListState(s.resultListIndex, s.resultListOffset)
+    LaunchedEffect(listState) { snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.distinctUntilChanged().collect { (index, offset) -> model.update { it.copy(resultListIndex = index, resultListOffset = offset) } } }
+    LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -432,18 +477,18 @@ fun SearchSummary(s: UiState): String = buildList {
                 }
             }
         }
-        if (s.results.isEmpty()) item { Empty("No confirmed matches", "No service confirms all your needs. Change filters or ask a provider.", Icons.Outlined.SearchOff) { Primary("Change filters", Icons.Outlined.Tune) { model.update { it.copy(page = "home") } }; TextButton(onClick = model::browseProviders) { Text("Browse provider contacts") } } }
+        if (s.results.isEmpty()) item { Empty("No confirmed matches", "No published service confirms every selected need in this area. Active filters: ${SearchSummary(s)}. You can change the area, time or needs; unknown details are excluded by confirmation filters.", Icons.Outlined.SearchOff) { Primary("Change filters", Icons.Outlined.Tune) { model.update { it.copy(page = "home", filtersRequested = true) } }; TextButton(onClick = model::browseProviders) { Text("Browse provider contacts") } } }
         items(s.results, key = { it.id }) { ServiceCard(it, s, model) }
         item { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Contact the provider before going. Food is not guaranteed.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-            Text("Updated ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, fontSize = 14.sp)
+            Text("Snapshot fetched ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, fontSize = 14.sp)
             if (s.results.any { it.demo }) DemoNotice()
         } }
     }
 }
 
 @Composable fun Toggle(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) { Text(label, Modifier.weight(1f)); Switch(checked, onChange) }
+    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).toggleable(checked, role = Role.Switch, onValueChange = onChange), verticalAlignment = Alignment.CenterVertically) { Text(label, Modifier.weight(1f)); Switch(checked, null) }
 }
 @Composable fun DemoNotice() { Text("Listings marked Demo are fictional. Do not travel to those locations for food support.", color = Color(0xFF8A6035), fontSize = 12.sp, lineHeight = 18.sp) }
 @Composable fun Availability(status: String) {
@@ -470,18 +515,20 @@ fun SearchSummary(s: UiState): String = buildList {
             if (service.demo) Text("Demo · do not travel here", color = Color(0xFF8A6035), style = MaterialTheme.typography.labelMedium)
             Availability(service.availability)
             IconFact(accessMethodLabel(service.json.optString("access_method", "contact_to_confirm")), Icons.Outlined.Groups)
-            IconFact(collectionLocationLabel(service.json.optString("location_role")), Icons.Outlined.LocationOn)
+            IconFact("${collectionLocationLabel(service.json.optString("location_role"))}: ${service.address}", Icons.Outlined.LocationOn)
+            IconFact("Diets: ${service.strings("diets").joinToString().ifBlank { "Not confirmed. Ask the provider." }}", Icons.Outlined.RestaurantMenu)
+            IconFact(nextSessionLabel(service), Icons.Outlined.CalendarMonth)
             IconFact(operatingLabel(service), Icons.Outlined.Schedule)
             s.eta[service.id]?.let { IconFact(it, Icons.Outlined.NearMe) }
         }
     }
 }
-fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPattern("d MMM, h:mm a").withZone(ZoneId.of("Asia/Singapore")).format(OffsetDateTime.parse(value).toInstant()) }.getOrDefault("Not confirmed")
+fun formatTime(value: String): String = runCatching { DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a").withZone(ZoneId.of("Asia/Singapore")).format(OffsetDateTime.parse(value).toInstant()) }.getOrDefault("Not confirmed")
 fun operatingLabel(service: Service): String {
     val at = service.json.optString("status_at").takeIf { it.isNotBlank() }
     return when (service.operating) {
-        "OPEN" -> if (at == null) "Within operating hours now" else "Open at selected time: ${at.replace("T", " at ")}"
-        "CLOSED" -> if (at == null) "Outside operating hours now" else "Closed at selected time: ${at.replace("T", " at ")}"
+        "OPEN" -> if (at == null) "Within operating hours now" else "Open when checked: ${readableSearchTime(at)}"
+        "CLOSED" -> if (at == null) "Outside operating hours now" else "Closed when checked: ${readableSearchTime(at)}"
         else -> "Operating hours not confirmed"
     }
 }
@@ -498,80 +545,6 @@ fun operatingLabel(service: Service): String {
 @Composable fun Empty(title: String, detail: String, icon: ImageVector, action: @Composable () -> Unit = {}) {
     Panel { Icon(icon, null, Modifier.size(32.dp), tint = Teal); Text(title, style = MaterialTheme.typography.titleLarge); Text(detail, color = Muted); action() }
 }
-@Composable fun SavedScreen(s: UiState, model: AppViewModel) { Page {
-    Text("Saved", style = MaterialTheme.typography.headlineMedium); Text("Your saved support, on this device.", color = Muted)
-    Text("Updated ${formatTime(s.lastUpdate.orEmpty())}", color = Muted, style = MaterialTheme.typography.bodyMedium)
-    ExpandableSection("How reminders work", Icons.Outlined.NotificationsNone) {
-        Text("One daily time for all saved services, in Singapore time. Reminders need a confirmed session and do not reserve food. Android may delay delivery.", color = Muted)
-        Text("Signing out stops reminders. If your session expires, notifications hide listing details until you sign in.", color = Muted)
-    }
-    DailyReminderTime(s, model)
-    if (!s.notificationsAllowed) NotificationSettings(model)
-    val services = s.services.filter { it.id in s.saved }
-    if (s.saved.isEmpty()) Empty("No saved services", "Tap a service’s bookmark to keep it here.", Icons.Outlined.BookmarkBorder) { Primary("Find food support", Icons.Outlined.Search) { model.tab("Find") } }
-    services.forEach { service -> ServiceCard(service, s, model); ReminderControls(service, s, model) }
-    s.providers.filter { providerBookmarkId(it) in s.saved }.forEach { provider -> SavedProviderCard(provider, s, model) }
-    val listedIds = s.services.map { it.id }.toSet() + s.providers.map(::providerBookmarkId)
-    (s.saved - listedIds).forEach { id ->
-        val provider = id.startsWith("provider:")
-        Panel { Text(if (provider) "Provider details unavailable" else "Service no longer listed", fontWeight = FontWeight.Bold)
-            Text(if (provider) "This saved provider is not in the latest directory available to this device."
-                else "This saved service is no longer in the latest approved information available to this device.", color = Muted)
-            OutlinedButton(onClick = { model.removeOrSave(id) }) { Text("Remove bookmark") }
-        }
-    }
-} }
-
-@Composable fun NotificationSettings(model: AppViewModel) {
-    val context = LocalContext.current
-    Panel(Peach) {
-        Text("Notifications are blocked", fontWeight = FontWeight.Bold)
-        Text("Allow notifications in Android settings. Your reminder choices are kept.")
-        OutlinedButton(onClick = {
-            runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)) }
-                .onFailure { model.error("Open Android Settings, then Apps, FoodBridge, Notifications to allow reminders.") }
-        }) { Text("Open notification settings") }
-    }
-}
-
-@Composable fun DailyReminderTime(s: UiState, model: AppViewModel) {
-    val context = LocalContext.current
-    OutlinedButton(onClick = {
-        val time = LocalTime.parse(s.reminderTime)
-        TimePickerDialog(context, { _, hour, minute ->
-            model.reminderTime("%02d:%02d".format(java.util.Locale.ROOT, hour, minute))
-        }, time.hour, time.minute, false).show()
-    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Icon(Icons.Outlined.NotificationsNone, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Remind me at ${s.reminderTime} · Singapore") }
-}
-
-@Composable fun ReminderControls(service: Service, s: UiState, model: AppViewModel) {
-    val context = LocalContext.current
-    val enabled = service.id in s.reminders
-    val hasSessions = service.json.optJSONArray("distribution_schedules")?.length()?.let { it > 0 } == true ||
-        service.json.optJSONObject("distribution_exceptions")?.let { dates -> dates.keys().asSequence().any { dates.optJSONArray(it)?.length()?.let { length -> length > 0 } == true } } == true
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        model.notificationState()
-        if (!granted) model.error("Notification permission was declined. Your reminder stays enabled, with no notification while blocked. You can allow notifications in Android settings.")
-    }
-    Panel {
-        IconFact("${service.name} reminder", Icons.Outlined.NotificationsNone)
-        if (!hasSessions) IconFact("Schedule unconfirmed. Reminders wait for a confirmed session.", Icons.Outlined.EventBusy)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Session-day reminder", Modifier.weight(1f))
-            Switch(checked = enabled, onCheckedChange = { value ->
-                model.reminder(service, value)
-                if (value && model.state.value.account != null && android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-                    permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-            })
-        }
-        Text(if (enabled && !s.notificationsAllowed) "Paused: notifications are blocked. Your time is kept."
-            else if (enabled && !hasSessions) "Waiting for a confirmed schedule."
-            else if (enabled) "Around ${s.reminderTime} on session days · once daily."
-            else "Off", color = Muted, style = MaterialTheme.typography.bodyMedium)
-
-    }
-}
-
 @Composable fun PreferencesScreen(s: UiState, model: AppViewModel) {
     var clearConfirmation by remember { mutableStateOf(false) }
     if (clearConfirmation) AlertDialog(onDismissRequest = { clearConfirmation = false },
@@ -582,6 +555,7 @@ fun operatingLabel(service: Service): String {
     Page {
     Text("Your profile", style = MaterialTheme.typography.headlineMedium)
     ProfilePanel(s, model)
+    TextButton(onClick = { model.update { it.copy(page = "reportHistory") } }) { Text("Your report receipts") }
     Column { Text("Dietary preferences", style = MaterialTheme.typography.titleLarge); Text("Used for your searches. Change them at any time.", color = Muted)
         listOf("Halal", "Vegetarian", "Vegan", "Gluten-free", "Nut-free").forEach { diet -> Toggle(diet, diet in s.diets) { model.toggleDiet(diet) } }
     }
@@ -593,45 +567,14 @@ fun operatingLabel(service: Service): String {
     Text("FoodBridge Navigator · 1.0.0", color = Muted, fontSize = 12.sp)
 } }
 
-@Composable fun ReportScreen(s: UiState, model: AppViewModel) {
-    val category = s.reportCategory
-    var categoryMenu by remember { mutableStateOf(false) }
-    val description = s.reportDescription
-    val evidence = s.reportEvidence
-    Page {
-        Text("Report an issue", style = MaterialTheme.typography.headlineMedium); Text("For ${s.selected?.name ?: s.selectedProvider?.optString("name").orEmpty()}", color = Teal)
-        Panel {
-            Text("What is incorrect?", fontWeight = FontWeight.SemiBold)
-            Box {
-                OutlinedButton(onClick = { categoryMenu = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(12.dp)) {
-                    Text(reportCategoryLabel(category).ifBlank { "Choose a category" }, modifier = Modifier.weight(1f)); Icon(Icons.Outlined.ExpandMore, null)
-                }
-                DropdownMenu(expanded = categoryMenu, onDismissRequest = { categoryMenu = false }) {
-                    listOf("Address", "Contact", "Hours", "Service details", "Permanently closed", "Food unavailable", "Other").forEach { value ->
-                        DropdownMenuItem(text = { Text(reportCategoryLabel(value)) }, onClick = { model.update { it.copy(reportCategory = value) }; categoryMenu = false })
-                    }
-                }
-            }
-            OutlinedTextField(description, { value -> if (value.length <= 1000) model.update { it.copy(reportDescription = value) } }, label = { Text("Describe the issue") }, supportingText = { Text("${description.length} / 1000 characters") }, modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp), minLines = 4)
-            OutlinedTextField(evidence, { value -> model.update { it.copy(reportEvidence = value) } }, label = { Text("Evidence link (optional)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-            Text("Linked to your account. Leave out personal details.", color = Muted, style = MaterialTheme.typography.bodyMedium)
-            Text("Add a public source if you can. Staff review reports before making changes.", color = Muted, style = MaterialTheme.typography.bodySmall)
-            Primary("Submit report", Icons.Outlined.Send, !s.loading && category.isNotBlank() && description.isNotBlank()) { model.report(category, description, evidence) }
-            OutlinedButton(onClick = model::cancelReport, enabled = !s.loading, modifier = Modifier.fillMaxWidth()) { Text("Cancel report") }
-        }
-    }
-}
-@Composable fun Confirmation(s: UiState, model: AppViewModel) { Page {
-    Spacer(Modifier.height(24.dp)); Icon(Icons.Outlined.CheckCircle, null, Modifier.size(64.dp), tint = Teal)
-    Text("Report sent", style = MaterialTheme.typography.headlineMedium); Text("Staff will review it before changing the listing.", color = Muted)
-    Panel(Mint) { Eyebrow("Your report reference"); Text(s.reference.orEmpty(), fontWeight = FontWeight.Bold, fontSize = 20.sp) }
-    Primary("Back to support", Icons.Outlined.ArrowBack) { model.returnToInformation() }
-} }
-
-@Composable fun HelpScreen() {
+@Composable fun HelpScreen(model: AppViewModel, authenticated: Boolean = true) {
     var linkError by remember { mutableStateOf<String?>(null) }
     Page {
     Text("How to find support", style = MaterialTheme.typography.headlineMedium)
+    if (authenticated) {
+        Primary("Search nearby support", Icons.Outlined.Search) { model.tab("Find") }
+        OutlinedButton(onClick = model::browseProviders, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Browse provider contacts") }
+    } else Text("Sign in to discover, save and report listings. Official assistance below is available without signing in.", color = Muted)
     Panel(Mint) {
         IconFact("Search an address for nearby support.", Icons.Outlined.Search)
         IconFact("Check eligibility, diets and collection details.", Icons.Outlined.Checklist)
@@ -650,8 +593,12 @@ fun operatingLabel(service: Service): String {
     Text("FoodBridge cannot arrange emergency food support.", color = Muted)
     }
 }
-@Composable fun PrivacyScreen() { Page {
+@Composable fun PrivacyScreen(s: UiState, model: AppViewModel) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { model.loadPrivacy() }
+    Page {
     Text("Privacy & data use", style = MaterialTheme.typography.headlineMedium)
+    s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     IconFact("Saved support stays on this device. Location is temporary.", Icons.Outlined.Shield)
     ExpandableSection("Your account", Icons.Outlined.AccountCircle) {
         Text("Sign in to search, view support, get directions, save listings, set reminders and report issues.")
@@ -667,9 +614,24 @@ fun operatingLabel(service: Service): String {
         Text("After session expiry, reminders hide listing details. Sign in to the same account to open them. Signing out, switching accounts or known session revocation cancels pending notifications.")
     }
     ExpandableSection("Correction reports", Icons.Outlined.Flag) {
-        Text("Reports include your account ID for staff review. Drafts are encrypted on this device by account until sent or discarded. Leave out sensitive personal details.")
+        Text("Reports include your account ID for staff review. Drafts and submission receipts are encrypted on this device by account. Drafts stay until sent or discarded; receipts stay until app data is cleared. Clearing saves and preferences does not delete reports, receipts or your account. Contact the operator for account or report data requests. Leave out sensitive personal details.")
     }
     ExpandableSection("Contact & retention", Icons.Outlined.Policy) {
-        Text("The operator must publish contact details and a data retention policy before production release.")
+        val info = s.privacyInfo
+        s.privacyError?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = model::loadPrivacy) { Text("Retry contact information") } }
+        if (info == null && s.privacyError == null) Text("Loading operator information...")
+        info?.let {
+            if (it.optBoolean("test_placeholder")) Text("Test placeholder", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+            Text(it.optString("request_guidance"))
+            val email = it.optString("contact_email").takeUnless { value -> value.isBlank() || value == "null" }
+            val policy = it.optString("policy_url").takeUnless { value -> value.isBlank() || value == "null" }
+            val retention = it.optString("retention_summary").takeUnless { value -> value.isBlank() || value == "null" }
+            if (email != null) TextButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email"))) }.onFailure { model.error("No email app is available. Contact $email.") } }) { Text(if (it.optBoolean("test_placeholder")) "Test email: $email" else "Contact operator: $email") }
+            else Text("Operator contact has not been published.")
+            if (policy != null) TextButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(policy))) }.onFailure { model.error("No browser is available to open the policy.") } }) { Text(if (it.optBoolean("test_placeholder")) "Example privacy page" else "Read privacy policy") }
+            else Text("A privacy policy has not been published.")
+            Text(retention ?: "Retention periods have not been published.")
+            Text(it.optString("local_data_guidance"))
+        }
     }
 } }

@@ -21,7 +21,14 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
+      GOOGLE_ROUTES_API_KEY: ${GOOGLE_ROUTES_API_KEY:-}
+      PUSH_ENABLED: ${PUSH_ENABLED:-false}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
       AUTH_PUBLIC_URL: ${AUTH_PUBLIC_URL:-}
+      PRIVACY_CONTACT_EMAIL: ${PRIVACY_CONTACT_EMAIL:-}
+      PRIVACY_POLICY_URL: ${PRIVACY_POLICY_URL:-}
+      PRIVACY_RETENTION_SUMMARY: ${PRIVACY_RETENTION_SUMMARY:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_FROM: ${SMTP_FROM:-}
@@ -36,6 +43,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_FILE:-./backend/data/firebase-service-account.json}:/run/secrets/firebase-service-account.json:ro
     ports: ["8000:8000"]
     restart: unless-stopped
   maintenance:

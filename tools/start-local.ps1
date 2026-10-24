@@ -23,6 +23,18 @@ $staffId = (Get-Content -LiteralPath $staffIdPath -Raw).Trim()
 $staffEmailPath = Join-Path $localData 'local-staff-email.txt'
 if (!$env:ADMIN_EMAIL -and (Test-Path -LiteralPath $staffEmailPath)) { $env:ADMIN_EMAIL = (Get-Content -LiteralPath $staffEmailPath -Raw).Trim() }
 if ($env:ADMIN_EMAIL) { $env:ADMIN_EMAIL.Trim().ToLowerInvariant() | Set-Content -LiteralPath $staffEmailPath }
+$firebaseMountArgs = @()
+$env:PUSH_ENABLED = 'false'
+$env:GOOGLE_APPLICATION_CREDENTIALS = ''
+if ($env:FIREBASE_PROJECT_ID -and $env:FIREBASE_SERVICE_ACCOUNT_FILE) {
+    if (!(Test-Path -LiteralPath $env:FIREBASE_SERVICE_ACCOUNT_FILE -PathType Leaf)) {
+        throw 'FIREBASE_SERVICE_ACCOUNT_FILE must point to an existing service-account JSON file.'
+    }
+    $firebaseServiceAccountPath = (Resolve-Path -LiteralPath $env:FIREBASE_SERVICE_ACCOUNT_FILE).Path
+    $firebaseMountArgs = @('-v', "${firebaseServiceAccountPath}:/run/secrets/firebase-service-account.json:ro")
+    $env:PUSH_ENABLED = 'true'
+    $env:GOOGLE_APPLICATION_CREDENTIALS = '/run/secrets/firebase-service-account.json'
+}
 docker info --format '{{.ServerVersion}}' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Start Docker Desktop, then run this script again.' }
 docker build -q -t foodbridge-api:local -f "$repoRoot/backend/Dockerfile" "$repoRoot"
@@ -40,7 +52,7 @@ $databaseUrl = "postgresql+psycopg://foodbridge:$dbPassword@foodbridge-postgres:
 foreach ($name in @('foodbridge-api', 'foodbridge-maintenance')) {
     if (docker ps -a --filter "name=^/$name`$" --format '{{.ID}}') { docker rm -f $name | Out-Null }
 }
-docker run -d --name foodbridge-api --network foodbridge-development --restart unless-stopped -p 127.0.0.1:8000:8000 -e "DATABASE_URL=$databaseUrl" -e "ADMIN_USERNAME=$staffId" -e "ADMIN_PASSWORD=$staffPassword" -e DEMO_DATA=false -e GOOGLE_ROUTES_API_KEY -e GOOGLE_WEB_CLIENT_ID -e ADMIN_EMAIL -e SMTP_HOST -e SMTP_PORT -e SMTP_FROM -e SMTP_USERNAME -e SMTP_PASSWORD -e SMTP_SSL -e AUTH_PUBLIC_URL -e ONEMAP_EMAIL -e ONEMAP_PASSWORD -e ENVIRONMENT=development foodbridge-api:local | Out-Null
+docker run -d --name foodbridge-api --network foodbridge-development --restart unless-stopped -p 127.0.0.1:8000:8000 -e "DATABASE_URL=$databaseUrl" -e "ADMIN_USERNAME=$staffId" -e "ADMIN_PASSWORD=$staffPassword" -e DEMO_DATA=false -e GOOGLE_ROUTES_API_KEY -e GOOGLE_WEB_CLIENT_ID -e ADMIN_EMAIL -e SMTP_HOST -e SMTP_PORT -e SMTP_FROM -e SMTP_USERNAME -e SMTP_PASSWORD -e SMTP_SSL -e AUTH_PUBLIC_URL -e PRIVACY_CONTACT_EMAIL -e PRIVACY_POLICY_URL -e PRIVACY_RETENTION_SUMMARY -e ONEMAP_EMAIL -e ONEMAP_PASSWORD -e PUSH_ENABLED -e FIREBASE_PROJECT_ID -e GOOGLE_APPLICATION_CREDENTIALS @firebaseMountArgs -e ENVIRONMENT=development foodbridge-api:local | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'API startup failed' }
 docker run -d --name foodbridge-maintenance --network foodbridge-development --restart unless-stopped -e "DATABASE_URL=$databaseUrl" -e API_READY_URL=http://foodbridge-api:8000/health/ready -e BACKUP_DIR=/backups -v foodbridge-local-backups:/backups foodbridge-api:local python -m app.scheduler | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Maintenance startup failed' }

@@ -7,7 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -60,7 +61,13 @@ fun organisationMatches(s: UiState): List<OrganisationMatch> {
 
 @Composable fun OrganisationResultsScreen(s: UiState, model: AppViewModel, browseAll: Boolean = false) {
     val matches = if (browseAll) supportEntries(s).sortedWith(compareBy<OrganisationMatch> { it.name.lowercase(Locale.ROOT) }.thenBy { it.id }) else organisationMatches(s)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val listState = rememberLazyListState(if (browseAll) s.browseListIndex else s.nameListIndex, if (browseAll) s.browseListOffset else s.nameListOffset)
+    LaunchedEffect(listState, browseAll) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index, offset) ->
+            model.update { if (browseAll) it.copy(browseListIndex = index, browseListOffset = offset) else it.copy(nameListIndex = index, nameListOffset = offset) }
+        }
+    }
+    LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(if (browseAll) "All food support" else "Name matches", style = MaterialTheme.typography.headlineMedium)

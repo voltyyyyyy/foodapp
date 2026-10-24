@@ -13,6 +13,9 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/** The same eligible instant used by the alarm scheduler; it is not a delivery guarantee. */
+data class ReminderPreview(val nextAt: ZonedDateTime?, val reason: String, val todayCutoffPassed: Boolean = false)
+
 /** Account-scoped cached reminders; only an authenticated owner can change settings. */
 class ReminderStore(private val context: Context) {
     companion object { private val requestLock = Any() }
@@ -30,6 +33,8 @@ class ReminderStore(private val context: Context) {
     }
     fun hasOwner() = owner() != null
     fun hasEnabled() = owner()?.let { id -> rows().any { it.second.optString("account") == id } } == true
+    fun permissionRequested() = signedInAccount()?.let { prefs.getBoolean("permission_requested:$it", false) } == true
+    fun markPermissionRequested() { signedInAccount()?.let { prefs.edit().putBoolean("permission_requested:$it", true).apply() } }
     fun dailyTime(): String = signedInAccount()?.let { prefs.getString("daily_time:$it", "08:00") } ?: "08:00"
     private fun dailyTime(account: String): LocalTime = runCatching { LocalTime.parse(prefs.getString("daily_time:$account", "08:00")) }.getOrDefault(LocalTime.of(8, 0))
     fun setDailyTime(time: String) {
@@ -62,11 +67,14 @@ class ReminderStore(private val context: Context) {
         val time = dailyTime(account).toString()
         return rows().filter { it.second.optString("account") == account }.associate { it.second.getJSONObject("service").getString("id") to time }
     }
+    private fun cachedService(source: JSONObject) = JSONObject(source.toString()).apply {
+        listOf("distance_km", "travel_time", "explanations", "status_at", "requested_time").forEach(::remove)
+    }
     fun set(service: Service, enabled: Boolean) {
         if (!repository.sessionValid()) return
         val account = signedInAccount() ?: return
         if (!enabled) { remove(service.id); return }
-        val snapshot = JSONObject(service.json.toString()).apply { listOf("distance_km", "travel_time", "explanations", "status_at").forEach(::remove) }
+        val snapshot = cachedService(service.json)
         prefs.edit().putString("enabled:${key(account, service.id)}", JSONObject().put("account", account).put("service", snapshot).toString()).apply()
         // Keep enabled preferences even without permission or a confirmed schedule.
         activate(account)
@@ -75,6 +83,17 @@ class ReminderStore(private val context: Context) {
         val key = key(signedInAccount() ?: return, service)
         alarms.cancel(alarm(key)); notifications.cancel(key, 0)
         prefs.edit().remove("enabled:$key").apply()
+    }
+    /** Preserve the enabled choice for bookmark Undo without carrying it into another account. */
+    fun snapshot(service: String): String? = signedInAccount()?.let { prefs.getString("enabled:${key(it, service)}", null) }
+    fun restore(service: String, snapshot: String?) {
+        if (snapshot == null || !repository.sessionValid()) return
+        val account = signedInAccount() ?: return
+        val row = runCatching { JSONObject(snapshot) }.getOrNull() ?: return
+        if (row.optString("account") != account || row.optJSONObject("service")?.optString("id") != service) return
+        row.optJSONObject("service")?.let { row.put("service", cachedService(it)) }
+        prefs.edit().putString("enabled:${key(account, service)}", row.toString()).apply()
+        activate(account)
     }
     fun clear() {
         val account = signedInAccount() ?: return
@@ -109,7 +128,7 @@ class ReminderStore(private val context: Context) {
         rows().filter { it.second.optString("account") == current }.forEach { (key, row) ->
             val fresh = services.firstOrNull { it.id == row.getJSONObject("service").getString("id") }
             if (fresh == null || !fresh.json.optBoolean("active", true)) remove(row.getJSONObject("service").getString("id"))
-            else prefs.edit().putString("enabled:$key", row.put("service", fresh.json).toString()).apply()
+            else prefs.edit().putString("enabled:$key", row.put("service", cachedService(fresh.json)).toString()).apply()
         }
         resume()
     }
@@ -131,6 +150,21 @@ class ReminderStore(private val context: Context) {
         if (overrides?.has(date.toString()) == true && overrides.optJSONArray(date.toString())?.length() == 0) return emptyList()
         return (onDate(service, date.minusDays(1)) + onDate(service, date)).filter { it.end.isAfter(instant) && it.start.toLocalDate() <= date }.sortedBy { it.start }
     }
+    private fun nextCandidate(service: JSONObject, account: String, serviceKey: String, now: ZonedDateTime): ZonedDateTime? {
+        val time = dailyTime(account)
+        return (0L..366L).asSequence().map { now.toLocalDate().plusDays(it).atTime(time).atZone(zone) }.firstOrNull { candidate ->
+            candidate.isAfter(now) && !prefs.contains("request:$serviceKey/${candidate.toLocalDate()}") && qualifying(service, candidate).isNotEmpty()
+        }
+    }
+    fun nextReminder(service: Service): ReminderPreview {
+        val account = signedInAccount() ?: return ReminderPreview(null, "Sign in to configure a reminder.")
+        if (!service.json.optBoolean("active", true)) return ReminderPreview(null, "This service is no longer active.")
+        val now = ZonedDateTime.now(zone)
+        val passed = !now.toLocalTime().isBefore(dailyTime(account))
+        val next = nextCandidate(service.json, account, key(account, service.id), now)
+        return ReminderPreview(next, if (next == null) "No reminder can be scheduled at this time. No recorded session remains open at your shared time in the next year."
+            else "Based on recorded sessions. Android may deliver later, and a session does not guarantee food or access.", passed)
+    }
     private fun schedule(key: String, row: JSONObject) {
         alarms.cancel(alarm(key))
         val account = row.optString("account")
@@ -138,10 +172,7 @@ class ReminderStore(private val context: Context) {
         val service = row.getJSONObject("service")
         if (!service.optBoolean("active", true)) return
         val now = ZonedDateTime.now(zone)
-        val time = dailyTime(account)
-        val next = (0L..366L).asSequence().map { now.toLocalDate().plusDays(it).atTime(time).atZone(zone) }.firstOrNull { candidate ->
-            candidate.isAfter(now) && !prefs.contains("request:$key/${candidate.toLocalDate()}") && qualifying(service, candidate).isNotEmpty()
-        } ?: return
+        val next = nextCandidate(service, account, key, now) ?: return
         alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next.toInstant().toEpochMilli(), alarm(key, next.toLocalDate()))
     }
     private fun claim(key: String, date: LocalDate, account: String, serviceId: String): Boolean = synchronized(requestLock) {
