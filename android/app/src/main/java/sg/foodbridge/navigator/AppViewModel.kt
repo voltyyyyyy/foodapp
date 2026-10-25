@@ -193,14 +193,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .put("last_activity", System.currentTimeMillis()) }
         signedIn(response.getJSONObject("account"))
     }
-    private fun authAction(action: suspend () -> Unit) {
+    private fun authAction(showFieldErrors: Boolean = true, action: suspend () -> Unit) {
         if (state.value.authBusy) return
         val generation = sessionGeneration
         val scope = if (state.value.account == null) viewModelScope else userScope
         update { it.copy(authBusy = true, authError = null, authMessage = null, authFieldErrors = emptyMap()) }
         scope.launch {
             try { action() } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { if (generation == sessionGeneration) update { it.copy(authError = e.message ?: "Could not complete this request. Please retry.", authFieldErrors = (e as? ApiError)?.fieldErrors.orEmpty()) } }
+            catch (e: Exception) { if (generation == sessionGeneration) update { it.copy(authError = e.message ?: "Could not complete this request. Please retry.", authFieldErrors = if (showFieldErrors) (e as? ApiError)?.fieldErrors.orEmpty() else emptyMap()) } }
             finally { if (generation == sessionGeneration) update { it.copy(authBusy = false) } }
         }
     }
@@ -214,7 +214,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             "POST", JSONObject().put("email", email)))
         update { it.copy(authMessage = response.getString("message")) }
     }
-    fun googleSignIn(context: android.content.Context) = authAction {
+    fun googleSignIn(context: android.content.Context) = authAction(showFieldErrors = false) {
         if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) throw IllegalStateException("Google sign-in is not configured yet. Use email and password.")
         val challenge = JSONObject(repo.request("/api/auth/google/challenge", "POST"))
         val nonce = challenge.getString("nonce")

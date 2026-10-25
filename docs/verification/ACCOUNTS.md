@@ -46,3 +46,15 @@ An attempted Google login on the API 31 emulator returned the app's Google-sign-
 Gmail delivery awaits the sender address and a locally supplied app password. Staff email migration awaits the chosen full email address; existing staff passwords have not been reset. Browser control remained unavailable.
 
 The checkout also contained ongoing browsing and reminder edits. The installed build allowed guest browsing at the time of these checks; authentication checks above do not claim that this build enforces the SRS sign-in requirement for every discovery screen. The earlier isolated checks and screenshot describe their respective builds.
+
+## Google sign-in and account reuse — 25 October 2026
+
+- Reproduced the API 31 emulator failure: Google Play services 22.50.14 returned `SERVICE_VERSION_UPDATE_REQUIRED`. Created a separate API 35 Google Play emulator, preserving the old virtual device. The new image has Play services 24.23.35 and opens Google's account sign-in screen.
+- Fixed the existing-email rejection for Google-authoritative Gmail and matching verified Workspace identities. Existing active registered-user accounts retain their ID, password, name and lockout state. Pending registrations discard unverified credentials and links before activation. Third-party email, conflicting Google subjects, staff and suspended accounts remain protected.
+- Google errors no longer mark the manual email field invalid or focus its keyboard.
+- Passed 22 new Google account-reuse checks, 74 existing account checks and 22 flow-recovery checks using disposable databases. Repeated both account suites inside the new server image with networking disabled and signed fixture tokens.
+- Built and installed the standard Android package against the hosted development API, retaining the installed signing certificate and app data.
+- Took and downloaded a PostgreSQL backup before deployment. Retained the previous source and image for rollback. Deployed the API and maintenance image; readiness passed and the running auth source hash matched the tested file.
+- On the API 35 emulator, signed out of an existing Gmail/password account, selected the same Google identity, and returned to the signed-in app without the email-collision error. A read-only backend check confirmed the Google subject and an account session. Authenticated browsing displayed the approved provider/service catalogue. No account address or token is included in this evidence.
+
+These checks establish the exercised Gmail flow. A real Workspace identity and non-Google third-party Google account were covered only by signed fixtures. They do not establish production uptime or representative-user completion targets.

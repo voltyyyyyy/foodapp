@@ -161,7 +161,7 @@ with patch.object(auth, 'send_link', side_effect=send), TestClient(app) as clien
         repeated = client.post('/api/auth/google', json=google_payload())
         check('Google subject maps to stable account', repeated.json()['account']['id'] == google.json()['account']['id'])
         nonce = client.post('/api/auth/google/challenge').json()['nonce']
-        check('email collision never links an account silently', client.post('/api/auth/google', json=google_payload(sub='different-subject', email='seeker@example.com')).status_code == 409)
+        check('third-party email collision requires existing credentials', client.post('/api/auth/google', json=google_payload(sub='different-subject', email='seeker@example.com')).status_code == 409)
     with Session.begin() as db:
         db.add(Account(id='concurrent-account', email='concurrent@example.com', display_name='Concurrent fixture',
                        password_hash=auth.hasher.hash('concurrent-account-password'), role='REGISTERED_USER', state='ACTIVE'))

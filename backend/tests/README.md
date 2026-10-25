@@ -4,6 +4,7 @@ Run from the repository root after installing `backend/requirements.txt` in `bac
 
 ```powershell
 ./backend/.venv/Scripts/python.exe backend/tests/verify_accounts.py
+./backend/.venv/Scripts/python.exe backend/tests/verify_google_linking.py
 ./backend/.venv/Scripts/python.exe backend/tests/verify_flow_recovery.py
 ./backend/.venv/Scripts/python.exe backend/tests/verify_backend.py
 ./backend/.venv/Scripts/python.exe backend/tests/verify_staff_portal.py
@@ -14,6 +15,8 @@ Run from the repository root after installing `backend/requirements.txt` in `bac
 These executable acceptance suites create disposable databases and exercise the API through FastAPI's TestClient. They do not write to the running application database. `verify_backend.py` checks discovery, moderation, imports, publication, backups and concurrent search performance; its results go to `docs/verification/`. `verify_staff_portal.py` checks administrator authorisation, report views, update validation, audit rollback, retries and operational status.
 
 `verify_accounts.py` checks registration, email verification, password recovery, authenticated access, roles, lockout, session expiry/revocation and signed Google identity tokens. Mail and Google certificates are isolated fixtures; real mail/Google OAuth configuration is described in [Accounts](../../docs/setup/ACCOUNTS.md). Run the performance suite on its own to avoid contention from password-hashing checks.
+
+`verify_google_linking.py` checks reuse of existing registered-user accounts through verified Gmail/Workspace identities, preservation of active account data and password lockout, safe recovery of unfinished registrations, and rejection of third-party email, conflicting Google subjects, suspended accounts and staff linking. It uses a disposable SQLite database and signed fixture tokens.
 
 `verify_flow_recovery.py` checks public privacy information and development-only test placeholders, safe field validation, preferred-time detail status and account-scoped report retry deduplication, including concurrent sends and replay after a target is retired. It uses a disposable SQLite database under `tmp/` and no live accounts or mail delivery.
 

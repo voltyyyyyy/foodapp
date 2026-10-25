@@ -340,6 +340,15 @@ def verify_google_token(token, client_id):
             return super().__call__(*args, **kwargs)
     return id_token.verify_oauth2_token(token, BoundedRequest(), client_id)
 
+def google_owns_email(claims, email):
+    # A verified third-party address can outlive its ownership in a Google account.
+    # Google is authoritative only for Gmail or a verified hosted-domain address.
+    domain = email.rsplit('@', 1)[1]
+    hosted_domain = claims.get('hd')
+    return claims.get('email_verified') is True and (
+        domain == 'gmail.com' or
+        (isinstance(hosted_domain, str) and hosted_domain.lower() == domain))
+
 @router.post('/google')
 def google_login(body: GoogleInput, request: Request):
     from google.auth.exceptions import GoogleAuthError, TransportError
@@ -369,12 +378,26 @@ def google_login(body: GoogleInput, request: Request):
             if not account:
                 existing = db.scalar(select(Account).where(Account.email == email).with_for_update())
                 if existing:
-                    # Never link by email alone. Existing accounts keep their existing credentials.
-                    raise HTTPException(409, 'This email already has an account. Sign in with your password or reset it.')
-                account = Account(id=str(uuid4()), email=email, display_name=(claims.get('name') or email.split('@')[0]).strip()[:100] or 'FoodBridge user',
-                                  google_subject=claims['sub'], role='REGISTERED_USER', state='ACTIVE')
-                db.add(account)
-                db.flush()
+                    if (not google_owns_email(claims, email) or existing.google_subject is not None
+                            or existing.role != 'REGISTERED_USER'
+                            or existing.state not in ('ACTIVE', 'PENDING_VERIFICATION')):
+                        raise HTTPException(409, 'This email already has an account. Sign in with your password or reset it.')
+                    account = existing
+                    if account.state == 'PENDING_VERIFICATION':
+                        # Do not retain credentials set by someone who never proved email ownership.
+                        account.password_hash = None
+                        account.failed_attempts = 0
+                        account.blocked_until = None
+                        account.display_name = (claims.get('name') or email.split('@')[0]).strip()[:100] or 'FoodBridge user'
+                        revoke(db, account.id)
+                        db.execute(delete(AccountLink).where(AccountLink.account_id == account.id))
+                        account.state = 'ACTIVE'
+                    account.google_subject = claims['sub']
+                else:
+                    account = Account(id=str(uuid4()), email=email, display_name=(claims.get('name') or email.split('@')[0]).strip()[:100] or 'FoodBridge user',
+                                      google_subject=claims['sub'], role='REGISTERED_USER', state='ACTIVE')
+                    db.add(account)
+                    db.flush()
             if account.state != 'ACTIVE':
                 raise HTTPException(401, INVALID)
             return new_session(db, account)
